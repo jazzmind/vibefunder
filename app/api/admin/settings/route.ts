@@ -17,7 +17,7 @@ export async function GET() {
       // Create default settings if none exist
       settings = await prisma.adminSettings.create({
         data: {
-          signupsEnabled: true,
+          waitlistEnabled: false,
           organizationApprovalRequired: true,
         }
       });
@@ -40,14 +40,14 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { signupsEnabled, organizationApprovalRequired } = body;
+    const { waitlistEnabled, organizationApprovalRequired } = body;
 
     let settings = await prisma.adminSettings.findFirst();
     
     if (!settings) {
       settings = await prisma.adminSettings.create({
         data: {
-          signupsEnabled: signupsEnabled ?? true,
+          waitlistEnabled: waitlistEnabled ?? false,
           organizationApprovalRequired: organizationApprovalRequired ?? true,
           updatedBy: session.user.id,
         }
@@ -56,7 +56,7 @@ export async function PUT(request: NextRequest) {
       settings = await prisma.adminSettings.update({
         where: { id: settings.id },
         data: {
-          signupsEnabled,
+          waitlistEnabled,
           organizationApprovalRequired,
           updatedBy: session.user.id,
         }

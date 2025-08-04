@@ -1,6 +1,53 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
+import { auth } from "@/lib/auth";
 import { CampaignSearch } from "./search";
+
+// Demo campaigns for non-authenticated users
+const DEMO_CAMPAIGNS = [
+  {
+    id: 'demo-1',
+    title: 'TaskBuddy - AI-Powered Project Manager',
+    summary: 'Revolutionary AI tool that helps teams organize and prioritize tasks automatically',
+    raisedDollars: 45000,
+    fundingGoalDollars: 100000,
+    status: 'live',
+    deployModes: ['cloud', 'saas'],
+    maker: { name: 'Sarah Chen', email: 'sarah@example.com' },
+    pledges: [],
+    _count: { pledges: 127 },
+    createdAt: new Date('2024-01-15'),
+    endsAt: new Date('2024-02-15')
+  },
+  {
+    id: 'demo-2', 
+    title: 'CodeFlow - Developer Workflow Optimizer',
+    summary: 'Streamline your development process with intelligent code review and deployment automation',
+    raisedDollars: 78000,
+    fundingGoalDollars: 120000,
+    status: 'live',
+    deployModes: ['on-premise', 'cloud'],
+    maker: { name: 'Alex Rivera', email: 'alex@example.com' },
+    pledges: [],
+    _count: { pledges: 203 },
+    createdAt: new Date('2024-01-10'),
+    endsAt: new Date('2024-02-10')
+  },
+  {
+    id: 'demo-3',
+    title: 'DataViz Pro - Interactive Analytics Dashboard',
+    summary: 'Transform complex data into beautiful, interactive visualizations with no coding required',
+    raisedDollars: 92000,
+    fundingGoalDollars: 80000,
+    status: 'funded',
+    deployModes: ['saas', 'self-hosted'],
+    maker: { name: 'Jamie Park', email: 'jamie@example.com' },
+    pledges: [],
+    _count: { pledges: 156 },
+    createdAt: new Date('2024-01-05'),
+    endsAt: new Date('2024-02-05')
+  }
+];
 
 export default async function Campaigns({
   searchParams
@@ -15,55 +62,94 @@ export default async function Campaigns({
   const params = await searchParams;
   const { search, status, sort, deployment } = params;
   
-  // Build the where clause based on filters
-  const where: any = {
-    status: { in: ['live', 'funded', 'completed'] } // Only show public campaigns
-  };
+  // Check if user is authenticated
+  const session = await auth();
+  const isAuthenticated = !!session?.user;
   
-  // Add search filter
-  if (search) {
-    where.OR = [
-      { title: { contains: search, mode: 'insensitive' } },
-      { summary: { contains: search, mode: 'insensitive' } },
-      { description: { contains: search, mode: 'insensitive' } }
-    ];
-  }
-  
-  // Add status filter
-  if (status && status !== 'all') {
-    where.status = status;
-  }
-  
-  // Add deployment mode filter
-  if (deployment && deployment !== 'all') {
-    where.deployModes = { has: deployment };
-  }
-  
-  // Build the orderBy clause
-  let orderBy: any = { createdAt: "desc" };
-  if (sort === 'funding') {
-    orderBy = { raisedDollars: "desc" };
-  } else if (sort === 'goal') {
-    orderBy = { fundingGoalDollars: "desc" };
-  } else if (sort === 'progress') {
-    // For progress, we'll need to sort by calculated field later
-    orderBy = { createdAt: "desc" };
-  }
-  
-  const campaigns = await prisma.campaign.findMany({
-    where,
-    orderBy,
-    include: { 
-      maker: true,
-      _count: {
-        select: {
-          pledges: true,
-          comments: true
+  let campaigns: any[] = [];
+
+  if (isAuthenticated) {
+    // Build the where clause based on filters for authenticated users
+    const where: any = {
+      status: { in: ['live', 'funded', 'completed'] } // Only show public campaigns
+    };
+    
+    // Add search filter
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { summary: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } }
+      ];
+    }
+    
+    // Add status filter
+    if (status && status !== 'all') {
+      where.status = status;
+    }
+    
+    // Add deployment mode filter
+    if (deployment && deployment !== 'all') {
+      where.deployModes = { has: deployment };
+    }
+    
+    // Build the orderBy clause
+    let orderBy: any = { createdAt: "desc" };
+    if (sort === 'funding') {
+      orderBy = { raisedDollars: "desc" };
+    } else if (sort === 'goal') {
+      orderBy = { fundingGoalDollars: "desc" };
+    } else if (sort === 'progress') {
+      // For progress, we'll need to sort by calculated field later
+      orderBy = { createdAt: "desc" };
+    }
+    
+    campaigns = await prisma.campaign.findMany({
+      where,
+      orderBy,
+      include: { 
+        maker: true,
+        _count: {
+          select: {
+            pledges: true,
+            comments: true
+          }
         }
+      },
+      distinct: ['id'] // Prevent duplicates
+    });
+  } else {
+    // Use demo campaigns for non-authenticated users
+    campaigns = DEMO_CAMPAIGNS.filter(campaign => {
+      // Apply search filter
+      if (search) {
+        const searchTerm = search.toLowerCase();
+        return campaign.title.toLowerCase().includes(searchTerm) ||
+               campaign.summary.toLowerCase().includes(searchTerm);
       }
-    },
-    distinct: ['id'] // Prevent duplicates
-  });
+      
+      // Apply status filter  
+      if (status && status !== 'all') {
+        return campaign.status === status;
+      }
+      
+      // Apply deployment filter
+      if (deployment && deployment !== 'all') {
+        return campaign.deployModes.includes(deployment);
+      }
+      
+      return true;
+    });
+    
+    // Apply sorting for demo campaigns
+    if (sort === 'funding') {
+      campaigns.sort((a, b) => b.raisedDollars - a.raisedDollars);
+    } else if (sort === 'goal') {
+      campaigns.sort((a, b) => b.fundingGoalDollars - a.fundingGoalDollars);
+    } else {
+      campaigns.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+  }
   
   // Sort by progress if requested (calculated field)
   let sortedCampaigns = campaigns;
@@ -173,7 +259,7 @@ export default async function Campaigns({
                         by {campaign.maker.name || campaign.maker.email.split('@')[0]}
                       </span>
                       <div className="flex gap-1">
-                        {campaign.deployModes.slice(0, 2).map(mode => (
+                        {campaign.deployModes.slice(0, 2).map((mode: any) => (
                           <span key={mode} className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded">
                             {mode.toUpperCase()}
                           </span>
@@ -205,12 +291,62 @@ export default async function Campaigns({
           </div>
         )}
         
+        {/* Signup prompt for non-authenticated users */}
+        {!isAuthenticated && (
+          <div className="bg-gradient-to-r from-brand/10 to-purple-600/10 rounded-2xl p-8 mb-8 border border-brand/20">
+            <div className="text-center">
+              <div className="text-4xl mb-4">🚀</div>
+              <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+                Want to see more campaigns and back projects?
+              </h3>
+              <p className="text-gray-600 dark:text-gray-300 mb-6 max-w-2xl mx-auto">
+                Join VibeFunder to access our complete catalog of innovative campaigns, back projects you believe in, 
+                and connect with creators building the future of AI-native software.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Link className="btn" href="/signin">
+                  Join the Community
+                </Link>
+                <a 
+                  href="#demo-campaigns" 
+                  className="btn-secondary"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    document.querySelector('.grid')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                >
+                  View Demo Campaigns
+                </a>
+              </div>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">
+                These are example campaigns to show you what VibeFunder offers
+              </p>
+            </div>
+          </div>
+        )}
+        
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-sm border border-gray-200 dark:border-gray-700">
-          <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Ready to launch your campaign?</h3>
-          <p className="text-gray-600 dark:text-gray-300 mb-6">Turn your demo into dependable software with milestone-based escrow funding. Connect with charter customers who need what you're building.</p>
+          <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+            {isAuthenticated ? 'Ready to launch your campaign?' : 'Interested in creating your own campaign?'}
+          </h3>
+          <p className="text-gray-600 dark:text-gray-300 mb-6">
+            {isAuthenticated 
+              ? 'Turn your demo into dependable software with milestone-based escrow funding. Connect with charter customers who need what you\'re building.'
+              : 'VibeFunder helps creators turn demos into dependable software with milestone-based escrow funding. Join our community to start your journey.'
+            }
+          </p>
           <div className="flex flex-col sm:flex-row gap-4">
-            <Link className="btn" href="/dashboard/new-campaign">Create Campaign</Link>
-            <Link className="btn-secondary" href="/#how">Learn How It Works</Link>
+            {isAuthenticated ? (
+              <>
+                <Link className="btn" href="/dashboard/new-campaign">Create Campaign</Link>
+                <Link className="btn-secondary" href="/#how">Learn How It Works</Link>
+              </>
+            ) : (
+              <>
+                <Link className="btn" href="/signin">Join VibeFunder</Link>
+                <Link className="btn-secondary" href="/#how">Learn How It Works</Link>
+              </>
+            )}
           </div>
         </div>
       </div>

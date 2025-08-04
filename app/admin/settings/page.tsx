@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 
 interface AdminSettings {
   id: string;
-  signupsEnabled: boolean;
+  waitlistEnabled: boolean;
   organizationApprovalRequired: boolean;
   updatedAt: string;
 }
@@ -48,7 +48,7 @@ export default function AdminSettingsPage() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          signupsEnabled: settings.signupsEnabled,
+          waitlistEnabled: settings.waitlistEnabled,
           organizationApprovalRequired: settings.organizationApprovalRequired,
         }),
       });
@@ -110,21 +110,21 @@ export default function AdminSettingsPage() {
                 <div className="flex items-start">
                   <div className="flex items-center h-5">
                     <input
-                      id="signups-enabled"
+                      id="waitlist-enabled"
                       type="checkbox"
-                      checked={settings?.signupsEnabled || false}
+                      checked={settings?.waitlistEnabled || false}
                       onChange={(e) => 
-                        settings && setSettings({ ...settings, signupsEnabled: e.target.checked })
+                        settings && setSettings({ ...settings, waitlistEnabled: e.target.checked })
                       }
                       className="w-4 h-4 text-brand border-gray-300 rounded focus:ring-brand focus:ring-2"
                     />
                   </div>
                   <div className="ml-3 text-sm">
-                    <label htmlFor="signups-enabled" className="font-medium text-gray-700 dark:text-gray-300">
-                      Enable user signups
+                    <label htmlFor="waitlist-enabled" className="font-medium text-gray-700 dark:text-gray-300">
+                      Waitlist for backers
                     </label>
                     <p className="text-gray-500 dark:text-gray-400">
-                      When disabled, new users will be directed to join the waitlist instead of signing up directly.
+                      When enabled, new users will be directed to join the waitlist instead of signing up directly.
                     </p>
                   </div>
                 </div>

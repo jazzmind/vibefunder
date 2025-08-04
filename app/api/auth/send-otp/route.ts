@@ -15,9 +15,9 @@ export async function POST(request: NextRequest) {
 
     // Check admin settings first
     const settings = await prisma.adminSettings.findFirst();
-    const signupsEnabled = settings?.signupsEnabled ?? true;
+    const waitlistEnabled = settings?.waitlistEnabled ?? false;
     
-    if (!signupsEnabled) {
+    if (waitlistEnabled) {
       // Check if user is on approved waitlist
       const waitlistEntry = await prisma.waitlist.findUnique({
         where: { email: email.toLowerCase() }

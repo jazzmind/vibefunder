@@ -72,7 +72,7 @@ export default function SignIn() {
     setLoading(true);
     setError('');
 
-    // If signups are disabled, redirect to waitlist
+    // If waitlist is enabled (signups disabled), redirect to waitlist
     if (!signupsEnabled) {
       setStep('waitlist');
       setLoading(false);

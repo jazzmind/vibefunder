@@ -198,7 +198,7 @@ model Passkey {
 
 model AdminSettings {
   id                      String   @id @default(cuid())
-  signupsEnabled          Boolean  @default(true)
+  waitlistEnabled         Boolean  @default(false)
   organizationApprovalRequired Boolean @default(true)
   updatedAt               DateTime @updatedAt
   updatedBy               String?

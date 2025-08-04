@@ -1,0 +1,98 @@
+@import 'tailwindcss';
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+
+:root {
+  --brand: #6757f5;
+  --brand-light: #8b7aff;
+  --brand-dark: #5a49e3;
+  --background: #ffffff;
+  --foreground: #171717;
+  --muted: #f8fafc;
+  --border: #e2e8f0;
+  --card: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0f172a;
+    --foreground: #f1f5f9;
+    --muted: #1e293b;
+    --border: #334155;
+    --card: #1e293b;
+    --brand: #7c6bff;
+    --brand-light: #9d93ff;
+    --brand-dark: #6b59e6;
+  }
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background-color: var(--background);
+  color: var(--foreground);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  .btn {
+    @apply inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-200;
+    background-color: var(--brand);
+    border: 1px solid var(--brand);
+  }
+  
+  .btn:hover {
+    background-color: var(--brand-dark);
+    border-color: var(--brand-dark);
+  }
+  
+  .btn:focus {
+    ring-color: var(--brand);
+  }
+  
+  .btn-secondary {
+    @apply inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-200;
+    color: var(--brand);
+    background-color: transparent;
+    border: 1px solid var(--brand);
+  }
+  
+  .btn-secondary:hover {
+    background-color: var(--brand);
+    color: white;
+  }
+  
+  .text-brand {
+    color: var(--brand);
+  }
+  
+  .bg-brand {
+    background-color: var(--brand);
+  }
+  
+  .bg-brand-dark {
+    background-color: var(--brand-dark);
+  }
+  
+  .bg-muted {
+    background-color: var(--muted);
+  }
+  
+  .bg-card {
+    background-color: var(--card);
+  }
+  
+  .border-custom {
+    border-color: var(--border);
+  }
+  
+  .hover\:bg-brand-dark:hover {
+    background-color: var(--brand-dark);
+  }
+  
+  .hover\:text-brand-dark:hover {
+    color: var(--brand-dark);
+  }
+}

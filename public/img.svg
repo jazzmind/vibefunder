@@ -1,0 +1,82 @@
+<svg width="720" height="340" viewBox="0 0 720 340" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .title { font: 700 20px Inter, sans-serif; fill: #372ecb }
+    .step { font: 600 15px Inter, sans-serif; fill: #222 }
+    .desc { font: 400 13px Inter, sans-serif; fill: #555 }
+    .arrow { stroke: #A7A6F7; stroke-width: 4; marker-end: url(#arrowhead); }
+    .icon-bg { fill: #ecebff; }
+    .icon-ring { stroke: #6757f5; stroke-width: 2; }
+    .escrow { fill: #fffbe6; stroke: #e7d97b; stroke-width: 2; }
+    .cert { fill: #e4fbec; stroke: #42b47a; stroke-width: 2; }
+    .badge { fill: #6757f5; font: 700 11px Inter, sans-serif; fill: #fff; }
+  </style>
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto" markerUnits="strokeWidth">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#A7A6F7"/>
+    </marker>
+  </defs>
+  <!-- Step 1 -->
+  <g>
+    <rect x="20" y="50" width="110" height="70" rx="18" class="icon-bg"/>
+    <circle cx="45" cy="85" r="17" class="icon-ring"/>
+    <rect x="38" y="73" width="14" height="24" rx="4" fill="#6757f5"/>
+    <rect x="42" y="76" width="6" height="6" rx="1.5" fill="#fff"/>
+    <text x="80" y="74" class="step">MVP Prototype</text>
+    <text x="80" y="94" class="desc">Cool, but not robust</text>
+  </g>
+  <!-- Step 2 -->
+  <g>
+    <rect x="150" y="32" width="120" height="70" rx="18" class="icon-bg"/>
+    <circle cx="175" cy="67" r="17" class="icon-ring"/>
+    <rect x="165" y="58" width="20" height="11" rx="3" fill="#7ad4fd"/>
+    <rect x="166" y="61" width="18" height="5" rx="2" fill="#fff"/>
+    <rect x="170" y="74" width="10" height="5" rx="1.5" fill="#6757f5"/>
+    <text x="200" y="53" class="step">AI Gap Analysis</text>
+    <text x="200" y="73" class="desc">Checks security, scale, compliance</text>
+  </g>
+  <!-- Step 3 -->
+  <g>
+    <rect x="290" y="50" width="105" height="70" rx="18" class="icon-bg"/>
+    <circle cx="315" cy="85" r="17" class="icon-ring"/>
+    <rect x="305" y="73" width="20" height="24" rx="6" fill="#ffe7a6"/>
+    <rect x="308" y="77" width="14" height="6" rx="1.5" fill="#fff"/>
+    <rect x="312" y="87" width="8" height="7" rx="1.5" fill="#6757f5"/>
+    <text x="340" y="80" class="step">Campaign</text>
+    <text x="340" y="100" class="desc">Roadmap, partners, story</text>
+  </g>
+  <!-- Step 4 -->
+  <g>
+    <rect x="410" y="30" width="120" height="70" rx="18" class="icon-bg"/>
+    <ellipse cx="435" cy="65" rx="17" ry="17" class="icon-ring"/>
+    <rect x="426" y="55" width="18" height="10" rx="3" fill="#fbe87e"/>
+    <rect x="429" y="58" width="12" height="5" rx="2" fill="#fff"/>
+    <ellipse cx="445" cy="75" rx="6" ry="6" fill="#6757f5"/>
+    <rect x="465" y="55" width="30" height="15" class="escrow"/>
+    <text x="470" y="68" font-size="12" fill="#7b7224">ESCROW</text>
+    <text x="480" y="52" class="step">Early Backers</text>
+    <text x="480" y="72" class="desc">Funds & code held safely</text>
+  </g>
+  <!-- Step 5 -->
+  <g>
+    <rect x="560" y="48" width="140" height="80" rx="18" class="icon-bg"/>
+    <circle cx="590" cy="85" r="17" class="icon-ring"/>
+    <rect x="579" y="70" width="22" height="12" rx="4" fill="#b1f5b0"/>
+    <rect x="581" y="74" width="18" height="6" rx="2" fill="#fff"/>
+    <circle cx="605" cy="103" r="6" fill="#42b47a"/>
+    <rect x="625" y="72" width="54" height="30" class="cert"/>
+    <text x="640" y="90" font-size="13" fill="#2c8657">Certified</text>
+    <g>
+      <circle cx="670" cy="70" r="13" fill="#fbe87e"/>
+      <text x="660" y="75" class="badge">No Equity</text>
+    </g>
+    <text x="605" y="60" class="step">Production Ready!</text>
+    <text x="605" y="110" class="desc">Delivery guaranteed, all win</text>
+  </g>
+  <!-- Arrows -->
+  <polyline points="130,85 150,67" class="arrow"/>
+  <polyline points="270,67 290,85" class="arrow"/>
+  <polyline points="395,85 410,65" class="arrow"/>
+  <polyline points="530,85 560,85" class="arrow"/>
+  <!-- Main title -->
+  <text x="40" y="32" class="title">How it works</text>
+</svg>

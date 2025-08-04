@@ -1,0 +1,20 @@
+```mermaid
+flowchart LR
+A[Submitter URL] --> B[Retriever & Extractor]
+B --> C[Draft Application Fields]
+C -->|Secure Link| D[Submitter Copilot]
+D --> E[Validated Application]
+E --> F[Enrichment: Market/Comps/Risks]
+F --> G[Explainability & Citations]
+G --> H[Auto-Score + Human Review]
+H --> I[Go/No-Go Summary]
+I --> J[(CRM/ATS Export)]
+subgraph Security
+SSO[SSO (SAML/OIDC)]
+RBAC[RBAC]
+AL[Audit Log]
+end
+SSO --> H
+RBAC --> H
+AL --> H
+```

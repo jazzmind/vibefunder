@@ -1,0 +1,149 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "VibeFunder API",
+    "version": "0.1.0"
+  },
+  "servers": [
+    {
+      "url": "https://api.vibefunder.ai"
+    }
+  ],
+  "paths": {
+    "/auth/login": {
+      "post": {
+        "summary": "OIDC callback",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/campaigns": {
+      "get": {
+        "summary": "List campaigns",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create campaign",
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        }
+      }
+    },
+    "/campaigns/{id}": {
+      "get": {
+        "summary": "Get campaign",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update campaign",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/campaigns/{id}/milestones": {
+      "get": {
+        "summary": "List milestones",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create milestone",
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        }
+      }
+    },
+    "/milestones/{id}/submit": {
+      "post": {
+        "summary": "Submit milestone for review",
+        "responses": {
+          "200": {
+            "description": "Submitted"
+          }
+        }
+      }
+    },
+    "/milestones/{id}/accept": {
+      "post": {
+        "summary": "Accept milestone",
+        "responses": {
+          "200": {
+            "description": "Accepted"
+          }
+        }
+      }
+    },
+    "/milestones/{id}/reject": {
+      "post": {
+        "summary": "Reject milestone",
+        "responses": {
+          "200": {
+            "description": "Rejected"
+          }
+        }
+      }
+    },
+    "/pledges": {
+      "post": {
+        "summary": "Create pledge (authorize payment)",
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        }
+      }
+    },
+    "/escrow/{campaignId}/release": {
+      "post": {
+        "summary": "Release escrow for a milestone",
+        "responses": {
+          "200": {
+            "description": "Released"
+          }
+        }
+      }
+    },
+    "/artifacts": {
+      "post": {
+        "summary": "Upload artifact metadata",
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        }
+      }
+    },
+    "/badges/{campaignId}": {
+      "get": {
+        "summary": "List badges",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  },
+  "components": {}
+}

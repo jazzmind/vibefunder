@@ -1,0 +1,136 @@
+import { JWTPayload, SignJWT, jwtVerify } from 'jose';
+import { prisma } from './db';
+import crypto from 'crypto';
+
+// Use HMAC with a shared secret for simplicity and better compatibility
+const jwtSecret = new TextEncoder().encode(
+  process.env.JWT_SECRET || 'your-very-long-secret-key-change-this-in-production'
+);
+
+const alg = 'HS256'; // HMAC SHA-256 is widely supported and simpler
+
+export interface SessionPayload {
+  userId: string;
+  email: string;
+  roles: string[];
+}
+
+export async function createSession(payload: SessionPayload) {
+  return await new SignJWT(payload as unknown as JWTPayload)
+    .setProtectedHeader({ alg })
+    .setIssuedAt()
+    .setExpirationTime('7d')
+    .sign(jwtSecret);
+}
+
+export async function verifySession(token: string): Promise<SessionPayload | null> {
+  try {
+    const { payload } = await jwtVerify(token, jwtSecret);
+    return payload as unknown as SessionPayload;
+  } catch {
+    return null;
+  }
+}
+
+export function generateOtpCode(): string {
+  return crypto.randomInt(100000, 999999).toString();
+}
+
+export async function createOtpCode(userId: string): Promise<string> {
+  // Invalidate existing codes
+  await prisma.otpCode.updateMany({
+    where: { userId, used: false },
+    data: { used: true }
+  });
+
+  // Create new code
+  const code = generateOtpCode();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+  await prisma.otpCode.create({
+    data: {
+      userId,
+      code,
+      expiresAt
+    }
+  });
+
+  return code;
+}
+
+export async function verifyOtpCode(userId: string, code: string): Promise<boolean> {
+  const otpCode = await prisma.otpCode.findFirst({
+    where: {
+      userId,
+      code,
+      used: false,
+      expiresAt: { gt: new Date() }
+    }
+  });
+
+  if (!otpCode) return false;
+
+  // Mark as used
+  await prisma.otpCode.update({
+    where: { id: otpCode.id },
+    data: { used: true }
+  });
+
+  return true;
+}
+
+export async function findOrCreateUser(email: string): Promise<{ id: string; name: string | null; roles: string[] }> {
+  let user = await prisma.user.findUnique({
+    where: { email },
+    select: { id: true, name: true, roles: true }
+  });
+
+  if (!user) {
+    user = await prisma.user.create({
+      data: {
+        email,
+        name: email.split('@')[0],
+        roles: []
+      },
+      select: { id: true, name: true, roles: true }
+    });
+  }
+
+  return user;
+}
+
+export async function getUserPasskeys(userId: string) {
+  return await prisma.passkey.findMany({
+    where: { userId },
+    orderBy: { lastUsed: 'desc' }
+  });
+}
+
+export async function createPasskey(userId: string, credentialId: string, publicKey: string, name?: string) {
+  return await prisma.passkey.create({
+    data: {
+      userId,
+      credentialId,
+      publicKey,
+      name,
+      counter: 0
+    }
+  });
+}
+
+export async function getPasskeyByCredentialId(credentialId: string) {
+  return await prisma.passkey.findUnique({
+    where: { credentialId },
+    include: { user: true }
+  });
+}
+
+export async function updatePasskeyCounter(credentialId: string, counter: number) {
+  return await prisma.passkey.update({
+    where: { credentialId },
+    data: { 
+      counter,
+      lastUsed: new Date()
+    }
+  });
+}

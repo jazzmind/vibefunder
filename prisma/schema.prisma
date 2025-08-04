@@ -1,0 +1,191 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String       @id @default(cuid())
+  email     String       @unique
+  name      String?
+  org       String?
+  roles     String[]     @default([])
+  createdAt DateTime     @default(now())
+  campaigns Campaign[]   @relation("MakerCampaigns")
+  pledges   Pledge[]
+  comments  Comment[]
+  otpCodes  OtpCode[]
+  passkeys  Passkey[]
+  teamMemberships TeamMember[]
+  campaignUpdates CampaignUpdate[]
+}
+
+model Campaign {
+  id              String        @id @default(cuid())
+  makerId         String
+  maker           User          @relation("MakerCampaigns", fields: [makerId], references: [id], onDelete: Restrict)
+  title           String
+  summary         String
+  description     String?
+  budgetDollars     Int @default(0) // in dollars 
+  fundingGoalDollars Int  @default(0) 
+  raisedDollars     Int           @default(0)
+  currency        String        @default("USD")
+  status          String        @default("draft")
+  repoUrl         String?
+  videoUrl        String?
+  deployModes     String[]      @default([])
+  requireBackerAccount Boolean   @default(true)
+  onlyBackersComment Boolean     @default(false)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @default(now()) @updatedAt
+  endsAt          DateTime?
+  milestones      Milestone[]
+  pledges         Pledge[]
+  badges          Badge[]
+  license         License?
+  stretchGoals    StretchGoal[]
+  pledgeTiers     PledgeTier[]
+  comments        Comment[]
+  teamMembers     TeamMember[]
+  updates         CampaignUpdate[]
+}
+
+model Milestone {
+  id            String   @id @default(cuid())
+  campaignId    String
+  campaign      Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  name          String
+  pct           Int
+  dueDate       DateTime?
+  acceptance    Json
+  status        String   @default("pending")
+  evidence      Json     @default("[]")
+  createdAt     DateTime @default(now())
+}
+
+model Pledge {
+  id          String   @id @default(cuid())
+  campaignId  String
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  backerId    String
+  backer      User     @relation(fields: [backerId], references: [id], onDelete: Restrict)
+  amountDollars Int
+  status      String   @default("authorized")
+  paymentRef  String?
+  createdAt   DateTime @default(now())
+}
+
+model Badge {
+  id         String   @id @default(cuid())
+  campaignId String
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  code       String
+  status     String
+  evidence   Json
+}
+
+model License {
+  id          String   @id @default(cuid())
+  campaignId  String   @unique
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  kind        String
+  termsUrl    String?
+  triggers    Json
+}
+
+model StretchGoal {
+  id              String   @id @default(cuid())
+  campaignId      String
+  campaign        Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  title           String
+  description     String
+  targetDollars   Int @default(0) // in dollars 
+  isUnlocked      Boolean  @default(false)
+  order           Int
+  createdAt       DateTime @default(now())
+}
+
+model PledgeTier {
+  id              String   @id @default(cuid())
+  campaignId      String
+  campaign        Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  title           String
+  description     String?
+  amountDollars   Int      // in dollars
+  benefits        Json     @default("[]") // Array of benefits/perks
+  isActive        Boolean  @default(true)
+  order           Int      @default(1)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Comment {
+  id         String   @id @default(cuid())
+  campaignId String
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  content    String
+  parentId   String?
+  parent     Comment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies    Comment[] @relation("CommentReplies")
+  isTeamMember Boolean @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model TeamMember {
+  id         String   @id @default(cuid())
+  campaignId String
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  role       String   @default("member") // "owner", "admin", "member"
+  joinedAt   DateTime @default(now())
+
+  @@unique([campaignId, userId])
+}
+
+model CampaignUpdate {
+  id         String   @id @default(cuid())
+  campaignId String
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  authorId   String
+  author     User     @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  title      String
+  content    String
+  isPublic   Boolean  @default(true)
+  emailSent  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model OtpCode {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  code      String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, code])
+}
+
+model Passkey {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  credentialId  String   @unique
+  publicKey     String
+  counter       Int      @default(0)
+  name          String?
+  createdAt     DateTime @default(now())
+  lastUsed      DateTime?
+
+  @@index([userId])
+}

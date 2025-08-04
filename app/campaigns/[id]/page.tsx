@@ -5,6 +5,8 @@ import { CommentSection } from "./comments";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import Link from "next/link";
+import ImageGenerator from "@/app/components/campaign/ImageGenerator";
+import AutoImageGenerationWrapper from "./AutoImageGenerationWrapper";
 
 // Demo campaigns data (should match the ones in campaigns/page.tsx)
 const DEMO_CAMPAIGNS = [
@@ -169,6 +171,15 @@ export default async function CampaignPage({params}:{params:Promise<{id:string}>
   
   return(
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Auto Image Generation for new campaigns */}
+      {!isDemo && (
+        <AutoImageGenerationWrapper 
+          campaignId={campaign.id}
+          hasImage={!!campaign.image}
+          isOwner={!!isOwner}
+        />
+      )}
+      
       {/* Demo Banner */}
       {isDemo && (
         <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white">
@@ -470,6 +481,14 @@ export default async function CampaignPage({params}:{params:Promise<{id:string}>
           
           <div className="lg:col-span-1 space-y-6">
             {!isDemo && <ArtifactUploader campaignId={campaign.id} />}
+            
+            {/* Image Generator for campaign owners */}
+            {!isDemo && canEdit && (
+              <ImageGenerator 
+                campaignId={campaign.id} 
+                currentImage={campaign.image} 
+              />
+            )}
             
             {/* Campaign Stats */}
             <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">

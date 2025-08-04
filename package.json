@@ -3,8 +3,8 @@
   "private": true,
   "version": "0.1.1",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "lsof -ti:3900 | xargs -r kill -9 2>/dev/null || true && next dev --port 3900",
+    "build": "lsof -ti:3900 | xargs -r kill -9 2>/dev/null || true && next build",
     "postinstall": "prisma generate",
     "start": "next start",
     "lint": "next lint",

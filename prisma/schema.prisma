@@ -43,6 +43,7 @@ model Campaign {
   status          String        @default("draft")
   repoUrl         String?
   videoUrl        String?
+  image           String?
   deployModes     String[]      @default([])
   requireBackerAccount Boolean   @default(true)
   onlyBackersComment Boolean     @default(false)

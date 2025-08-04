@@ -80,8 +80,8 @@ export async function POST(request: NextRequest) {
       expectedOrigin: process.env.EXPECTED_ORIGIN || 'http://localhost:3000',
       expectedRPID: process.env.RP_ID || 'localhost',
       authenticator: {
-        credentialID: Buffer.from(passkey.credentialId, 'base64url'),
-        credentialPublicKey: Buffer.from(passkey.publicKey, 'base64'),
+        credentialID: passkey.credentialId,
+        credentialPublicKey: new Uint8Array(Buffer.from(passkey.publicKey, 'base64')),
         counter: passkey.counter,
       },
     });

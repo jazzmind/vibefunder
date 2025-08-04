@@ -301,7 +301,7 @@ export default async function CampaignPage({params}:{params:Promise<{id:string}>
                 <div>
                   <span className="text-sm text-gray-600 dark:text-gray-400">Deployment Options</span>
                   <div className="flex flex-wrap gap-1 mt-1">
-                    {campaign.deployModes.map(mode => (
+                    {campaign.deployModes.map((mode: any) => (
                       <span key={mode} className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded">
                         {mode.toUpperCase()}
                       </span>

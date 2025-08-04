@@ -46,7 +46,7 @@ export default async function EditCampaign({
 
   // Check if user has permission to edit
   const isOwner = campaign.makerId === session.userId;
-  const isTeamMember = campaign.teamMembers.some(tm => tm.userId === session.userId);
+  const isTeamMember = campaign.teamMembers.some((tm: any) => tm.userId === session.userId);
   const isAdmin = session.roles?.includes('admin') || false;
   
   if (!isOwner && !isTeamMember && !isAdmin) {
@@ -601,7 +601,7 @@ export default async function EditCampaign({
                 </div>
                 {campaign.milestones.length > 0 && (
                   <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-                    {campaign.milestones.slice(0, 3).map((milestone) => (
+                    {campaign.milestones.slice(0, 3).map((milestone: any) => (
                       <div key={milestone.id} className="flex justify-between">
                         <span className="truncate">{milestone.name}</span>
                         <span>{milestone.pct}%</span>
@@ -645,7 +645,7 @@ export default async function EditCampaign({
                 </div>
                 {campaign.stretchGoals.length > 0 && (
                   <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-                    {campaign.stretchGoals.slice(0, 3).map((goal) => (
+                    {campaign.stretchGoals.slice(0, 3).map((goal: any) => (
                       <div key={goal.id} className="flex justify-between">
                         <span className="truncate">{goal.title}</span>
                         <span>${(goal.targetDollars / 1000).toFixed(0)}k</span>
@@ -689,7 +689,7 @@ export default async function EditCampaign({
                 </div>
                 {campaign.pledgeTiers.length > 0 && (
                   <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-                    {campaign.pledgeTiers.slice(0, 3).map((tier) => (
+                    {campaign.pledgeTiers.slice(0, 3).map((tier: any) => (
                       <div key={tier.id} className="flex justify-between">
                         <span className="truncate">{tier.title}</span>
                         <span>${(tier.amountDollars / 1000).toFixed(0)}k</span>

@@ -24,13 +24,13 @@ const DEMO_CAMPAIGNS = [
     maker: { name: 'Sarah Chen', email: 'sarah@example.com', id: 'demo-maker-1' },
     pledges: [],
     milestones: [
-      { title: 'MVP Development', targetAmount: 3000, description: 'Core AI engine and basic UI', status: 'completed' },
-      { title: 'Beta Release', targetAmount: 6000, description: 'Public beta with 100 test users', status: 'in_progress' },
-      { title: 'Production Launch', targetAmount: 10000, description: 'Full feature set and enterprise support', status: 'pending' }
+      { id: 'demo-milestone-1', name: 'MVP Development', pct: 30, acceptance: { checklist: ['Core AI engine', 'Basic UI', 'User authentication'] }, status: 'completed' },
+      { id: 'demo-milestone-2', name: 'Beta Release', pct: 60, acceptance: { checklist: ['Public beta launch', '100 test users', 'User feedback collection'] }, status: 'in_progress' },
+      { id: 'demo-milestone-3', name: 'Production Launch', pct: 100, acceptance: { checklist: ['Full feature set', 'Enterprise support', 'Payment processing'] }, status: 'pending' }
     ],
     stretchGoals: [
-      { title: 'Mobile App', targetAmount: 12000, description: 'Native iOS and Android applications' },
-      { title: 'Enterprise Features', targetAmount: 15000, description: 'Advanced security and compliance features' }
+      { title: 'Mobile App', targetDollars: 12000, description: 'Native iOS and Android applications' },
+      { title: 'Enterprise Features', targetDollars: 15000, description: 'Advanced security and compliance features' }
     ],
     pledgeTiers: [
       { title: 'Early Bird', amount: 29, description: '6 months free access + beta features', maxBackers: 50, currentBackers: 8 },
@@ -60,13 +60,13 @@ const DEMO_CAMPAIGNS = [
     maker: { name: 'Alex Rivera', email: 'alex@example.com', id: 'demo-maker-2' },
     pledges: [],
     milestones: [
-      { title: 'Core Engine', targetAmount: 4000, description: 'AI code analysis engine', status: 'completed' },
-      { title: 'Platform Integrations', targetAmount: 8000, description: 'GitHub, GitLab, Bitbucket support', status: 'in_progress' },
-      { title: 'Enterprise Features', targetAmount: 12000, description: 'Advanced security and compliance', status: 'pending' }
+      { id: 'demo-milestone-4', name: 'Core Engine', pct: 33, acceptance: { checklist: ['AI code analysis', 'Pattern detection', 'Performance optimization'] }, status: 'completed' },
+      { id: 'demo-milestone-5', name: 'Platform Integrations', pct: 67, acceptance: { checklist: ['GitHub integration', 'GitLab support', 'Bitbucket connectivity'] }, status: 'in_progress' },
+      { id: 'demo-milestone-6', name: 'Enterprise Features', pct: 100, acceptance: { checklist: ['Security compliance', 'SSO integration', 'Audit logging'] }, status: 'pending' }
     ],
     stretchGoals: [
-      { title: 'VS Code Extension', targetAmount: 15000, description: 'Native IDE integration' },
-      { title: 'Mobile Dashboard', targetAmount: 18000, description: 'Monitor deployments on mobile' }
+      { title: 'VS Code Extension', targetDollars: 15000, description: 'Native IDE integration' },
+      { title: 'Mobile Dashboard', targetDollars: 18000, description: 'Monitor deployments on mobile' }
     ],
     pledgeTiers: [
       { title: 'Developer', amount: 49, description: '1 year license for individual developers', maxBackers: 200, currentBackers: 15 },
@@ -97,13 +97,13 @@ const DEMO_CAMPAIGNS = [
     maker: { name: 'Jamie Park', email: 'jamie@example.com', id: 'demo-maker-3' },
     pledges: [],
     milestones: [
-      { title: 'Core Platform', targetAmount: 3000, description: 'Basic visualization engine', status: 'completed' },
-      { title: 'Advanced Features', targetAmount: 6000, description: 'AI recommendations and real-time data', status: 'completed' },
-      { title: 'Enterprise Launch', targetAmount: 8000, description: 'White-label and enterprise features', status: 'completed' }
+      { id: 'demo-milestone-7', name: 'Core Platform', pct: 38, acceptance: { checklist: ['Basic charts', 'Data connectors', 'Dashboard builder'] }, status: 'completed' },
+      { id: 'demo-milestone-8', name: 'Advanced Features', pct: 75, acceptance: { checklist: ['AI recommendations', 'Real-time data', 'Interactive filters'] }, status: 'completed' },
+      { id: 'demo-milestone-9', name: 'Enterprise Launch', pct: 100, acceptance: { checklist: ['White-label features', 'Enterprise security', 'Custom branding'] }, status: 'completed' }
     ],
     stretchGoals: [
-      { title: 'Mobile App', targetAmount: 10000, description: 'Native mobile dashboard viewing' },
-      { title: 'Advanced AI', targetAmount: 12000, description: 'Predictive analytics and forecasting' }
+      { title: 'Mobile App', targetDollars: 10000, description: 'Native mobile dashboard viewing' },
+      { title: 'Advanced AI', targetDollars: 12000, description: 'Predictive analytics and forecasting' }
     ],
     pledgeTiers: [
       { title: 'Starter', amount: 19, description: '6 months access + 5 dashboards', maxBackers: 100, currentBackers: 8 },
@@ -368,8 +368,8 @@ export default async function CampaignPage({params}:{params:Promise<{id:string}>
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-2">
-                          <h4 className="text-lg font-semibold text-gray-900 dark:text-white">{milestone.name}</h4>
-                          <span className="text-sm font-medium text-gray-600 dark:text-gray-400">{milestone.pct}%</span>
+                          <h4 className="text-lg font-semibold text-gray-900 dark:text-white">{milestone.name || 'Untitled Milestone'}</h4>
+                          <span className="text-sm font-medium text-gray-600 dark:text-gray-400">{milestone.pct || 0}%</span>
                         </div>
                         <div className="text-gray-600 dark:text-gray-300 mb-3">
                           {(milestone.acceptance as any)?.checklist && (
@@ -425,7 +425,7 @@ export default async function CampaignPage({params}:{params:Promise<{id:string}>
                           </div>
                           <div className="text-right ml-4">
                             <div className="text-lg font-bold text-gray-900 dark:text-white">
-                              ${(goal.targetDollars).toLocaleString()}
+                              ${goal.targetDollars ? goal.targetDollars.toLocaleString() : '0'}
                             </div>
                             {isUnlocked ? (
                               <span className="inline-flex items-center px-2 py-1 text-xs font-semibold bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full">

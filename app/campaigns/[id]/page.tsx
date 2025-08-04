@@ -3,34 +3,156 @@ import { PledgeButton } from "./client";
 import { ArtifactUploader } from "./uploader";
 import { CommentSection } from "./comments";
 import { notFound } from "next/navigation";
-import { verifySession } from "@/lib/auth";
-import { cookies } from "next/headers";
+import { auth } from "@/lib/auth";
 import Link from "next/link";
+
+// Demo campaigns data (should match the ones in campaigns/page.tsx)
+const DEMO_CAMPAIGNS = [
+  {
+    id: 'demo-1',
+    title: 'TaskBuddy - AI-Powered Project Manager',
+    summary: 'Revolutionary AI tool that helps teams organize and prioritize tasks automatically',
+    image: '/images/demo/demo-1.jpg',
+    description: 'TaskBuddy is a cutting-edge AI-powered project management tool designed to revolutionize how teams organize, prioritize, and execute their work. Built with advanced machine learning algorithms, TaskBuddy automatically analyzes project requirements, team capacity, and deadlines to suggest optimal task allocation and scheduling.\n\nKey Features:\n• AI-driven task prioritization based on impact and urgency\n• Automated resource allocation and workload balancing\n• Smart deadline prediction with risk assessment\n• Intelligent notification system that adapts to team preferences\n• Real-time collaboration tools with AI-assisted communication\n• Advanced analytics and project insights\n\nOur mission is to eliminate the overhead of project management, allowing teams to focus on what they do best - creating amazing products.',
+    raisedDollars: 4500,
+    fundingGoalDollars: 10000,
+    budgetDollars: 8000,
+    status: 'live',
+    deployModes: ['cloud', 'saas'],
+    maker: { name: 'Sarah Chen', email: 'sarah@example.com', id: 'demo-maker-1' },
+    pledges: [],
+    milestones: [
+      { title: 'MVP Development', targetAmount: 3000, description: 'Core AI engine and basic UI', isCompleted: true },
+      { title: 'Beta Release', targetAmount: 6000, description: 'Public beta with 100 test users', isCompleted: false },
+      { title: 'Production Launch', targetAmount: 10000, description: 'Full feature set and enterprise support', isCompleted: false }
+    ],
+    stretchGoals: [
+      { title: 'Mobile App', targetAmount: 12000, description: 'Native iOS and Android applications' },
+      { title: 'Enterprise Features', targetAmount: 15000, description: 'Advanced security and compliance features' }
+    ],
+    pledgeTiers: [
+      { title: 'Early Bird', amount: 29, description: '6 months free access + beta features', maxBackers: 50, currentBackers: 8 },
+      { title: 'Professional', amount: 99, description: '1 year access + priority support', maxBackers: 100, currentBackers: 4 },
+      { title: 'Enterprise', amount: 299, description: 'Lifetime access + custom integrations', maxBackers: 20, currentBackers: 0 }
+    ],
+    teamMembers: [
+      { user: { name: 'Sarah Chen', email: 'sarah@example.com' }, role: 'Founder & CEO' },
+      { user: { name: 'Mike Johnson', email: 'mike@example.com' }, role: 'Lead Developer' }
+    ],
+    comments: [],
+    _count: { pledges: 12, comments: 7 },
+    createdAt: new Date('2024-12-01'),
+    endsAt: new Date('2025-01-15')
+  },
+  {
+    id: 'demo-2', 
+    title: 'CodeFlow - Developer Workflow Optimizer',
+    summary: 'Streamline your development process with intelligent code review and deployment automation',
+    image: '/images/demo/demo-2.jpg',
+    description: 'CodeFlow is an intelligent developer workflow optimizer that transforms how development teams write, review, and deploy code. Using advanced AI and machine learning, CodeFlow provides real-time code analysis, automated review suggestions, and intelligent deployment orchestration.\n\nKey Features:\n• AI-powered code review with security and performance insights\n• Automated testing pipeline generation\n• Intelligent merge conflict resolution\n• Smart deployment strategies based on risk assessment\n• Team productivity analytics and optimization suggestions\n• Integration with all major version control and CI/CD platforms\n\nCodeFlow reduces development cycle time by up to 40% while improving code quality and reducing bugs in production.',
+    raisedDollars: 7800,
+    fundingGoalDollars: 12000,
+    budgetDollars: 9500,
+    status: 'live',
+    deployModes: ['on-premise', 'cloud'],
+    maker: { name: 'Alex Rivera', email: 'alex@example.com', id: 'demo-maker-2' },
+    pledges: [],
+    milestones: [
+      { title: 'Core Engine', targetAmount: 4000, description: 'AI code analysis engine', isCompleted: true },
+      { title: 'Platform Integrations', targetAmount: 8000, description: 'GitHub, GitLab, Bitbucket support', isCompleted: false },
+      { title: 'Enterprise Features', targetAmount: 12000, description: 'Advanced security and compliance', isCompleted: false }
+    ],
+    stretchGoals: [
+      { title: 'VS Code Extension', targetAmount: 15000, description: 'Native IDE integration' },
+      { title: 'Mobile Dashboard', targetAmount: 18000, description: 'Monitor deployments on mobile' }
+    ],
+    pledgeTiers: [
+      { title: 'Developer', amount: 49, description: '1 year license for individual developers', maxBackers: 200, currentBackers: 15 },
+      { title: 'Team', amount: 199, description: 'Team license for up to 10 developers', maxBackers: 50, currentBackers: 3 },
+      { title: 'Enterprise', amount: 999, description: 'Unlimited license + priority support', maxBackers: 10, currentBackers: 0 }
+    ],
+    teamMembers: [
+      { user: { name: 'Alex Rivera', email: 'alex@example.com' }, role: 'Founder & CTO' },
+      { user: { name: 'Lisa Wong', email: 'lisa@example.com' }, role: 'AI Engineer' },
+      { user: { name: 'David Kim', email: 'david@example.com' }, role: 'DevOps Lead' }
+    ],
+    comments: [],
+    _count: { pledges: 18, comments: 12 },
+    createdAt: new Date('2024-11-20'),
+    endsAt: new Date('2025-01-20')
+  },
+  {
+    id: 'demo-3',
+    title: 'DataViz Pro - Interactive Analytics Dashboard',
+    summary: 'Transform complex data into beautiful, interactive visualizations with no coding required',
+    image: '/images/demo/demo-3.jpg',
+    description: 'DataViz Pro is a revolutionary no-code data visualization platform that empowers anyone to create stunning, interactive dashboards and reports. Using advanced AI and intuitive drag-and-drop interfaces, DataViz Pro automatically detects data patterns and suggests optimal visualization strategies.\n\nKey Features:\n• AI-powered visualization recommendations\n• Drag-and-drop dashboard builder\n• Real-time data connectivity to 100+ sources\n• Interactive charts and dynamic filtering\n• Collaborative sharing and commenting\n• White-label embedding for client reports\n• Advanced analytics with predictive insights\n\nDataViz Pro has already helped over 500 businesses transform their data into actionable insights, leading to an average 25% improvement in decision-making speed.',
+    raisedDollars: 8200,
+    fundingGoalDollars: 8000,
+    budgetDollars: 7500,
+    status: 'funded',
+    deployModes: ['saas', 'self-hosted'],
+    maker: { name: 'Jamie Park', email: 'jamie@example.com', id: 'demo-maker-3' },
+    pledges: [],
+    milestones: [
+      { title: 'Core Platform', targetAmount: 3000, description: 'Basic visualization engine', isCompleted: true },
+      { title: 'Advanced Features', targetAmount: 6000, description: 'AI recommendations and real-time data', isCompleted: true },
+      { title: 'Enterprise Launch', targetAmount: 8000, description: 'White-label and enterprise features', isCompleted: true }
+    ],
+    stretchGoals: [
+      { title: 'Mobile App', targetAmount: 10000, description: 'Native mobile dashboard viewing' },
+      { title: 'Advanced AI', targetAmount: 12000, description: 'Predictive analytics and forecasting' }
+    ],
+    pledgeTiers: [
+      { title: 'Starter', amount: 19, description: '6 months access + 5 dashboards', maxBackers: 100, currentBackers: 8 },
+      { title: 'Professional', amount: 79, description: '1 year access + unlimited dashboards', maxBackers: 50, currentBackers: 5 },
+      { title: 'Enterprise', amount: 299, description: 'Lifetime access + white-label features', maxBackers: 20, currentBackers: 2 }
+    ],
+    teamMembers: [
+      { user: { name: 'Jamie Park', email: 'jamie@example.com' }, role: 'Founder & CEO' },
+      { user: { name: 'Sam Taylor', email: 'sam@example.com' }, role: 'Data Scientist' },
+      { user: { name: 'Chris Lee', email: 'chris@example.com' }, role: 'Frontend Lead' }
+    ],
+    comments: [],
+    _count: { pledges: 15, comments: 9 },
+    createdAt: new Date('2024-11-01'),
+    endsAt: new Date('2024-12-15')
+  }
+];
 
 export default async function CampaignPage({params}:{params:Promise<{id:string}>}){
   const resolvedParams = await params;
   
   // Get current user session
-  const cookieStore = await cookies();
-  const sessionToken = cookieStore.get('session')?.value;
-  const session = sessionToken ? await verifySession(sessionToken) : null;
+  const session = await auth();
   
-  const campaign = await prisma.campaign.findUnique({
-    where: { id: resolvedParams.id },
-    include: { 
-      milestones: true, 
-      stretchGoals: { orderBy: { order: 'asc' } },
-      pledgeTiers: { where: { isActive: true }, orderBy: { order: 'asc' } },
-      maker: true,
-      teamMembers: { include: { user: true } },
-      comments: {
-        include: { user: true, replies: { include: { user: true } } },
-        where: { parentId: null },
-        orderBy: { createdAt: 'desc' }
-      },
-      pledges: session ? { where: { backerId: session.userId } } : false
-    }
-  }) as any;
+  // Check if this is a demo campaign
+  const demoCampaign = DEMO_CAMPAIGNS.find(c => c.id === resolvedParams.id);
+  
+  let campaign;
+  
+  if (demoCampaign) {
+    // Use demo campaign data
+    campaign = demoCampaign;
+  } else {
+    // Fetch real campaign from database
+    campaign = await prisma.campaign.findUnique({
+      where: { id: resolvedParams.id },
+      include: { 
+        milestones: true, 
+        stretchGoals: { orderBy: { order: 'asc' } },
+        pledgeTiers: { where: { isActive: true }, orderBy: { order: 'asc' } },
+        maker: true,
+        teamMembers: { include: { user: true } },
+        comments: {
+          include: { user: true, replies: { include: { user: true } } },
+          where: { parentId: null },
+          orderBy: { createdAt: 'desc' }
+        },
+        pledges: session ? { where: { backerId: session.user.id } } : false
+      }
+    }) as any;
+  }
   
   if (!campaign) return notFound();
   
@@ -38,19 +160,51 @@ export default async function CampaignPage({params}:{params:Promise<{id:string}>
   const daysLeft = campaign.endsAt ? Math.max(0, Math.ceil((campaign.endsAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24))) : null;
   
   // Check user permissions
-  const isOwner = session && campaign.makerId === session.userId;
-  const isTeamMember = session && campaign.teamMembers?.some((tm: any) => tm.userId === session.userId);
+  const isDemo = demoCampaign ? true : false;
+  const isOwner = session && campaign.maker?.id === session.user?.id;
+  const isTeamMember = session && campaign.teamMembers?.some((tm: any) => tm.userId === session.user?.id);
   const canEdit = isOwner || isTeamMember;
   const isBacker = (campaign.pledges as any)?.length > 0;
   const canComment = session && (!campaign.onlyBackersComment || isBacker || canEdit);
   
   return(
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Demo Banner */}
+      {isDemo && (
+        <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+            <div className="flex items-center justify-center text-center">
+              <div className="flex items-center space-x-2">
+                <span className="text-lg">🎭</span>
+                <span className="font-semibold">DEMO CAMPAIGN</span>
+                <span>•</span>
+                <span className="text-sm">This is an example campaign to showcase VibeFunder's features</span>
+                <span>•</span>
+                <Link href="/signin" className="text-sm underline hover:no-underline">
+                  Sign up to view real campaigns
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Hero Section */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="grid lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2">
+              {/* Campaign Image */}
+              {campaign.image && (
+                <div className="aspect-video w-full overflow-hidden rounded-2xl mb-8">
+                  <img 
+                    src={campaign.image} 
+                    alt={campaign.title}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
+              
               <div className="mb-6">
                 <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 mb-4">
                   {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
@@ -58,7 +212,7 @@ export default async function CampaignPage({params}:{params:Promise<{id:string}>
                 <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">{campaign.title}</h1>
                 <p className="text-xl text-gray-600 dark:text-gray-300 mb-6">{campaign.summary}</p>
                 {campaign.description && (
-                  <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{campaign.description}</p>
+                  <div className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">{campaign.description}</div>
                 )}
               </div>
               
@@ -69,7 +223,7 @@ export default async function CampaignPage({params}:{params:Promise<{id:string}>
                   <span>{campaign.deployModes.join(", ")} deployment</span>
                 </div>
                 
-                {canEdit && (
+                {canEdit && !isDemo && (
                   <div className="flex gap-2">
                     <Link 
                       href={`/campaigns/${campaign.id}/edit`}
@@ -128,11 +282,11 @@ export default async function CampaignPage({params}:{params:Promise<{id:string}>
                   <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-3 mb-4">
                     <div 
                       className="bg-brand h-3 rounded-full transition-all duration-500"
-                      style={{ width: `${Math.min(100, fundingProgress)}%` }}
+                      style={{ width: `${Math.min(100, fundingProgress * 100)}%` }}
                     />
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400">{Math.round(fundingProgress)}% funded</span>
+                    <span className="text-gray-600 dark:text-gray-400">{Math.round(fundingProgress * 100)}% funded</span>
                     {daysLeft !== null && (
                       <span className="text-gray-600 dark:text-gray-400">
                         {daysLeft === 0 ? 'Last day!' : `${daysLeft} days left`}
@@ -140,7 +294,31 @@ export default async function CampaignPage({params}:{params:Promise<{id:string}>
                     )}
                   </div>
                 </div>
-                <PledgeButton campaignId={campaign.id} pledgeTiers={campaign.pledgeTiers} />
+                {isDemo ? (
+                  <div className="text-center">
+                    <div className="bg-gray-100 dark:bg-gray-600 rounded-lg p-4 mb-4">
+                      <p className="text-sm text-gray-600 dark:text-gray-300">
+                        🎭 This is a demo campaign. <Link href="/signin" className="text-brand hover:underline">Sign up</Link> to back real campaigns!
+                      </p>
+                    </div>
+                    <div className="space-y-3">
+                      {campaign.pledgeTiers.map((tier: any, index: number) => (
+                        <div key={index} className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 opacity-60">
+                          <div className="flex justify-between items-start mb-2">
+                            <h4 className="font-semibold">{tier.title}</h4>
+                            <span className="font-bold text-brand">${tier.amount}</span>
+                          </div>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{tier.description}</p>
+                          <div className="text-xs text-gray-500">
+                            {tier.currentBackers} / {tier.maxBackers} claimed
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <PledgeButton campaignId={campaign.id} pledgeTiers={campaign.pledgeTiers} />
+                )}
               </div>
             </div>
           </div>
@@ -154,7 +332,7 @@ export default async function CampaignPage({params}:{params:Promise<{id:string}>
             <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-sm border border-gray-200 dark:border-gray-700">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Development Milestones</h3>
-                {canEdit && (
+                {canEdit && !isDemo && (
                   <Link 
                     href={`/campaigns/${campaign.id}/milestones`}
                     className="btn-secondary text-sm px-4 py-2"
@@ -262,17 +440,36 @@ export default async function CampaignPage({params}:{params:Promise<{id:string}>
               </div>
             )}
 
-            <CommentSection 
-              campaignId={campaign.id} 
-              comments={(campaign.comments as any) || []} 
-              currentUser={session}
-              canComment={!!canComment}
-              teamMemberIds={(campaign.teamMembers as any)?.map((tm: any) => tm.userId) || []}
-            />
+            {isDemo ? (
+              <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-sm border border-gray-200 dark:border-gray-700">
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Comments</h3>
+                <div className="text-center py-8">
+                  <div className="text-4xl mb-4">💬</div>
+                  <p className="text-gray-500 dark:text-gray-400 mb-4">
+                    Comments are available on real campaigns
+                  </p>
+                  <Link href="/signin" className="btn">
+                    Sign up to join discussions
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <CommentSection 
+                campaignId={campaign.id} 
+                comments={(campaign.comments as any) || []} 
+                currentUser={session ? {
+                  userId: session.user.id,
+                  email: session.user.email,
+                  roles: session.user.roles
+                } : null}
+                canComment={!!canComment}
+                teamMemberIds={(campaign.teamMembers as any)?.map((tm: any) => tm.userId) || []}
+              />
+            )}
           </div>
           
           <div className="lg:col-span-1 space-y-6">
-            <ArtifactUploader campaignId={campaign.id} />
+            {!isDemo && <ArtifactUploader campaignId={campaign.id} />}
             
             {/* Campaign Stats */}
             <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">

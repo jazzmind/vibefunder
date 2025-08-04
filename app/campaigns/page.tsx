@@ -9,46 +9,49 @@ const DEMO_CAMPAIGNS = [
     id: 'demo-1',
     title: 'TaskBuddy - AI-Powered Project Manager',
     summary: 'Revolutionary AI tool that helps teams organize and prioritize tasks automatically',
-    raisedDollars: 45000,
-    fundingGoalDollars: 100000,
-    budgetDollars: 80000,
+    image: '/images/demo/demo-1.jpg',
+    raisedDollars: 4500,
+    fundingGoalDollars: 10000,
+    budgetDollars: 8000,
     status: 'live',
     deployModes: ['cloud', 'saas'],
     maker: { name: 'Sarah Chen', email: 'sarah@example.com' },
     pledges: [],
-    _count: { pledges: 127, comments: 23 },
-    createdAt: new Date('2024-01-15'),
-    endsAt: new Date('2024-02-15')
+    _count: { pledges: 12, comments: 7 },
+    createdAt: new Date('2024-12-01'),
+    endsAt: new Date('2025-01-15') // Future date
   },
   {
     id: 'demo-2', 
     title: 'CodeFlow - Developer Workflow Optimizer',
     summary: 'Streamline your development process with intelligent code review and deployment automation',
-    raisedDollars: 78000,
-    fundingGoalDollars: 120000,
-    budgetDollars: 95000,
+    image: '/images/demo/demo-2.jpg',
+    raisedDollars: 7800,
+    fundingGoalDollars: 12000,
+    budgetDollars: 9500,
     status: 'live',
     deployModes: ['on-premise', 'cloud'],
     maker: { name: 'Alex Rivera', email: 'alex@example.com' },
     pledges: [],
-    _count: { pledges: 203, comments: 45 },
-    createdAt: new Date('2024-01-10'),
-    endsAt: new Date('2024-02-10')
+    _count: { pledges: 18, comments: 12 },
+    createdAt: new Date('2024-11-20'),
+    endsAt: new Date('2025-01-20') // Future date
   },
   {
     id: 'demo-3',
     title: 'DataViz Pro - Interactive Analytics Dashboard',
     summary: 'Transform complex data into beautiful, interactive visualizations with no coding required',
-    raisedDollars: 92000,
-    fundingGoalDollars: 80000,
-    budgetDollars: 75000,
+    image: '/images/demo/demo-3.jpg',
+    raisedDollars: 8200,
+    fundingGoalDollars: 8000,
+    budgetDollars: 7500,
     status: 'funded',
     deployModes: ['saas', 'self-hosted'],
     maker: { name: 'Jamie Park', email: 'jamie@example.com' },
     pledges: [],
-    _count: { pledges: 156, comments: 34 },
-    createdAt: new Date('2024-01-05'),
-    endsAt: new Date('2024-02-05')
+    _count: { pledges: 15, comments: 9 },
+    createdAt: new Date('2024-11-01'),
+    endsAt: new Date('2024-12-15') // Past date for funded campaign
   }
 ];
 
@@ -174,7 +177,7 @@ export default async function Campaigns({
           <p className="text-xl text-gray-600 dark:text-gray-300">
             {search 
               ? `Found ${sortedCampaigns.length} campaign${sortedCampaigns.length !== 1 ? 's' : ''}`
-              : 'Discover and back innovative AI-native micro-SaaS projects'
+              : 'Discover and gain early access to innovative AI-native companies'
             }
           </p>
         </div>
@@ -212,6 +215,16 @@ export default async function Campaigns({
             return (
               <Link key={campaign.id} href={`/campaigns/${campaign.id}`}>
                 <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-lg transition-all duration-300 group">
+                  {/* Campaign Image */}
+                  {campaign.image && (
+                    <div className="aspect-video w-full overflow-hidden">
+                      <img 
+                        src={campaign.image} 
+                        alt={campaign.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    </div>
+                  )}
                   <div className="p-6">
                     <div className="flex items-start justify-between mb-4">
                       <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
@@ -248,11 +261,11 @@ export default async function Campaigns({
                       <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
                         <div 
                           className="bg-brand h-2 rounded-full transition-all duration-500"
-                          style={{ width: `${Math.min(100, fundingProgress)}%` }}
+                          style={{ width: `${Math.min(100, fundingProgress * 100)}%` }}
                         />
                       </div>
                       <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        <span>{Math.round(fundingProgress)}% funded</span>
+                        <span>{Math.round(fundingProgress * 100)}% funded</span>
                         <span>Budget: ${(campaign.budgetDollars).toLocaleString()}</span>
                       </div>
                     </div>

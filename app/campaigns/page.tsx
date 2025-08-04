@@ -204,7 +204,7 @@ export default async function Campaigns({
             )}
           </div>
         ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+          <div id="campaigns-grid" className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
             {sortedCampaigns.map(campaign => {
             const fundingProgress = (campaign.raisedDollars / campaign.fundingGoalDollars);
             const daysLeft = campaign.endsAt ? Math.max(0, Math.ceil((campaign.endsAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24))) : null;
@@ -311,12 +311,8 @@ export default async function Campaigns({
                   Join the Community
                 </Link>
                 <a 
-                  href="#demo-campaigns" 
+                  href="#campaigns-grid" 
                   className="btn-secondary"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    document.querySelector('.grid')?.scrollIntoView({ behavior: 'smooth' });
-                  }}
                 >
                   View Demo Campaigns
                 </a>

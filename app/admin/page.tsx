@@ -1,15 +1,12 @@
 import { redirect } from "next/navigation";
-import { verifySession } from "@/lib/auth";
-import { cookies } from "next/headers";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import Link from "next/link";
 
 export default async function AdminDashboard() {
-  const cookieStore = await cookies();
-  const sessionToken = cookieStore.get('session')?.value;
-  const session = sessionToken ? await verifySession(sessionToken) : null;
+  const session = await auth();
   
-  if (!session || !session.roles.includes('admin')) {
+  if (!session?.user?.roles?.includes('admin')) {
     redirect('/signin');
   }
 

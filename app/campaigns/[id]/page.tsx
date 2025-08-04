@@ -24,9 +24,9 @@ const DEMO_CAMPAIGNS = [
     maker: { name: 'Sarah Chen', email: 'sarah@example.com', id: 'demo-maker-1' },
     pledges: [],
     milestones: [
-      { title: 'MVP Development', targetAmount: 3000, description: 'Core AI engine and basic UI', isCompleted: true },
-      { title: 'Beta Release', targetAmount: 6000, description: 'Public beta with 100 test users', isCompleted: false },
-      { title: 'Production Launch', targetAmount: 10000, description: 'Full feature set and enterprise support', isCompleted: false }
+      { title: 'MVP Development', targetAmount: 3000, description: 'Core AI engine and basic UI', status: 'completed' },
+      { title: 'Beta Release', targetAmount: 6000, description: 'Public beta with 100 test users', status: 'in_progress' },
+      { title: 'Production Launch', targetAmount: 10000, description: 'Full feature set and enterprise support', status: 'pending' }
     ],
     stretchGoals: [
       { title: 'Mobile App', targetAmount: 12000, description: 'Native iOS and Android applications' },
@@ -60,9 +60,9 @@ const DEMO_CAMPAIGNS = [
     maker: { name: 'Alex Rivera', email: 'alex@example.com', id: 'demo-maker-2' },
     pledges: [],
     milestones: [
-      { title: 'Core Engine', targetAmount: 4000, description: 'AI code analysis engine', isCompleted: true },
-      { title: 'Platform Integrations', targetAmount: 8000, description: 'GitHub, GitLab, Bitbucket support', isCompleted: false },
-      { title: 'Enterprise Features', targetAmount: 12000, description: 'Advanced security and compliance', isCompleted: false }
+      { title: 'Core Engine', targetAmount: 4000, description: 'AI code analysis engine', status: 'completed' },
+      { title: 'Platform Integrations', targetAmount: 8000, description: 'GitHub, GitLab, Bitbucket support', status: 'in_progress' },
+      { title: 'Enterprise Features', targetAmount: 12000, description: 'Advanced security and compliance', status: 'pending' }
     ],
     stretchGoals: [
       { title: 'VS Code Extension', targetAmount: 15000, description: 'Native IDE integration' },
@@ -97,9 +97,9 @@ const DEMO_CAMPAIGNS = [
     maker: { name: 'Jamie Park', email: 'jamie@example.com', id: 'demo-maker-3' },
     pledges: [],
     milestones: [
-      { title: 'Core Platform', targetAmount: 3000, description: 'Basic visualization engine', isCompleted: true },
-      { title: 'Advanced Features', targetAmount: 6000, description: 'AI recommendations and real-time data', isCompleted: true },
-      { title: 'Enterprise Launch', targetAmount: 8000, description: 'White-label and enterprise features', isCompleted: true }
+      { title: 'Core Platform', targetAmount: 3000, description: 'Basic visualization engine', status: 'completed' },
+      { title: 'Advanced Features', targetAmount: 6000, description: 'AI recommendations and real-time data', status: 'completed' },
+      { title: 'Enterprise Launch', targetAmount: 8000, description: 'White-label and enterprise features', status: 'completed' }
     ],
     stretchGoals: [
       { title: 'Mobile App', targetAmount: 10000, description: 'Native mobile dashboard viewing' },
@@ -384,7 +384,7 @@ export default async function CampaignPage({params}:{params:Promise<{id:string}>
                           ${milestone.status === 'completed' ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' :
                             milestone.status === 'in_progress' ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200' :
                             'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200'}`}>
-                          {milestone.status.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                          {milestone.status ? milestone.status.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) : 'Unknown'}
                         </span>
                       </div>
                     </div>

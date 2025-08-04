@@ -140,6 +140,246 @@ View more updates: ${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/campai
   }
 }
 
+export async function sendWaitlistConfirmationEmail(email: string, reason: string) {
+  const subject = 'Welcome to the VibeFunder Waitlist!';
+  
+  const reasonText = reason === 'back_campaign' ? 'back campaigns' : 'create campaigns';
+  
+  const html = `
+    <div style="font-family: system-ui, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: linear-gradient(135deg, #6757f5 0%, #9d93ff 100%); padding: 30px; border-radius: 12px; text-align: center; margin-bottom: 30px;">
+        <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 800;">VibeFunder</h1>
+        <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 16px;">Ship the vibe. Not the pitch deck.</p>
+      </div>
+      
+      <div style="background: #f8fafc; padding: 30px; border-radius: 12px; text-align: center; margin-bottom: 30px;">
+        <h2 style="color: #1e293b; margin: 0 0 16px 0; font-size: 24px;">You're on the waitlist! 🎉</h2>
+        <p style="color: #374151; margin: 0 0 24px 0; font-size: 16px;">Thank you for your interest in joining VibeFunder to <strong>${reasonText}</strong>.</p>
+        
+        <div style="background: white; padding: 24px; border-radius: 8px; border: 2px solid #6757f5; margin: 20px 0;">
+          <p style="color: #374151; margin: 0; font-size: 16px; line-height: 1.6;">
+            We're currently in early access and carefully onboarding new users. 
+            You'll be notified as soon as your account is approved!
+          </p>
+        </div>
+      </div>
+      
+      <div style="text-align: center; color: #64748b; font-size: 14px;">
+        <p>We'll send you an email when your account is ready.</p>
+        <p style="margin-top: 20px;">
+          <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}" style="color: #6757f5; text-decoration: none;">Visit VibeFunder</a>
+        </p>
+      </div>
+    </div>
+  `;
+
+  const text = `
+Welcome to the VibeFunder Waitlist!
+
+Thank you for your interest in joining VibeFunder to ${reasonText}.
+
+We're currently in early access and carefully onboarding new users. You'll be notified as soon as your account is approved!
+
+Visit VibeFunder: ${process.env.NEXTAUTH_URL || 'http://localhost:3000'}
+  `;
+
+  try {
+    await transporter.sendMail({
+      from: process.env.SMTP_FROM || 'noreply@vibefunder.ai',
+      to: email,
+      subject,
+      text,
+      html,
+    });
+    
+    console.log(`✓ Waitlist confirmation email sent to ${email}`);
+    return true;
+  } catch (error) {
+    console.error('Failed to send waitlist confirmation email:', error);
+    return false;
+  }
+}
+
+export async function sendWaitlistApprovalEmail(email: string, reason: string) {
+  const subject = 'Your VibeFunder Account is Ready!';
+  
+  const reasonText = reason === 'back_campaign' ? 'back campaigns' : 'create campaigns';
+  
+  const html = `
+    <div style="font-family: system-ui, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: linear-gradient(135deg, #6757f5 0%, #9d93ff 100%); padding: 30px; border-radius: 12px; text-align: center; margin-bottom: 30px;">
+        <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 800;">VibeFunder</h1>
+        <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 16px;">Ship the vibe. Not the pitch deck.</p>
+      </div>
+      
+      <div style="background: #f8fafc; padding: 30px; border-radius: 12px; text-align: center; margin-bottom: 30px;">
+        <h2 style="color: #1e293b; margin: 0 0 16px 0; font-size: 24px;">Welcome to VibeFunder! 🚀</h2>
+        <p style="color: #374151; margin: 0 0 24px 0; font-size: 16px;">Your account has been approved and you can now start to <strong>${reasonText}</strong>!</p>
+        
+        <div style="background: white; padding: 24px; border-radius: 8px; border: 2px solid #10b981; margin: 20px 0;">
+          <p style="color: #10b981; margin: 0 0 8px 0; font-size: 18px; font-weight: 600;">✅ Account Activated</p>
+          <p style="color: #374151; margin: 0; font-size: 16px;">You can now sign in and explore the platform!</p>
+        </div>
+      </div>
+      
+      <div style="text-align: center;">
+        <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/signin" 
+           style="display: inline-block; background: #6757f5; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; margin-right: 12px;">
+          Sign In Now
+        </a>
+        <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/campaigns" 
+           style="display: inline-block; background: #374151; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600;">
+          Browse Campaigns
+        </a>
+      </div>
+      
+      <div style="text-align: center; color: #64748b; font-size: 14px; margin-top: 30px;">
+        <p>Welcome to the future of crowdfunding!</p>
+        <p style="margin-top: 20px;">
+          <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}" style="color: #6757f5; text-decoration: none;">Visit VibeFunder</a>
+        </p>
+      </div>
+    </div>
+  `;
+
+  const text = `
+Your VibeFunder Account is Ready!
+
+Welcome to VibeFunder! Your account has been approved and you can now start to ${reasonText}!
+
+✅ Account Activated
+
+You can now sign in and explore the platform!
+
+Sign in: ${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/signin
+Browse campaigns: ${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/campaigns
+  `;
+
+  try {
+    await transporter.sendMail({
+      from: process.env.SMTP_FROM || 'noreply@vibefunder.ai',
+      to: email,
+      subject,
+      text,
+      html,
+    });
+    
+    console.log(`✓ Waitlist approval email sent to ${email}`);
+    return true;
+  } catch (error) {
+    console.error('Failed to send waitlist approval email:', error);
+    return false;
+  }
+}
+
+export async function sendCustomWaitlistEmail(email: string, subject: string, content: string) {
+  const html = `
+    <div style="font-family: system-ui, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: linear-gradient(135deg, #6757f5 0%, #9d93ff 100%); padding: 30px; border-radius: 12px; text-align: center; margin-bottom: 30px;">
+        <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 800;">VibeFunder</h1>
+        <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 16px;">Ship the vibe. Not the pitch deck.</p>
+      </div>
+      
+      <div style="background: #f8fafc; padding: 30px; border-radius: 12px; margin-bottom: 30px;">
+        <div style="background: white; padding: 24px; border-radius: 8px; border: 1px solid #e2e8f0; text-align: left;">
+          <div style="color: #374151; line-height: 1.6; white-space: pre-wrap;">${content}</div>
+        </div>
+      </div>
+      
+      <div style="text-align: center; color: #64748b; font-size: 14px;">
+        <p style="margin-top: 20px;">
+          <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}" style="color: #6757f5; text-decoration: none;">Visit VibeFunder</a>
+        </p>
+      </div>
+    </div>
+  `;
+
+  const text = content;
+
+  try {
+    await transporter.sendMail({
+      from: process.env.SMTP_FROM || 'noreply@vibefunder.ai',
+      to: email,
+      subject,
+      text,
+      html,
+    });
+    
+    console.log(`✓ Custom waitlist email sent to ${email}`);
+    return true;
+  } catch (error) {
+    console.error('Failed to send custom waitlist email:', error);
+    return false;
+  }
+}
+
+export async function sendOrganizationApprovalEmail(email: string, organizationName: string) {
+  const subject = `${organizationName} Organization Approved!`;
+  
+  const html = `
+    <div style="font-family: system-ui, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: linear-gradient(135deg, #6757f5 0%, #9d93ff 100%); padding: 30px; border-radius: 12px; text-align: center; margin-bottom: 30px;">
+        <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 800;">VibeFunder</h1>
+        <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 16px;">Ship the vibe. Not the pitch deck.</p>
+      </div>
+      
+      <div style="background: #f8fafc; padding: 30px; border-radius: 12px; text-align: center; margin-bottom: 30px;">
+        <h2 style="color: #1e293b; margin: 0 0 16px 0; font-size: 24px;">Organization Approved! 🎉</h2>
+        <p style="color: #374151; margin: 0 0 24px 0; font-size: 16px;"><strong>${organizationName}</strong> has been approved to create campaigns on VibeFunder!</p>
+        
+        <div style="background: white; padding: 24px; border-radius: 8px; border: 2px solid #10b981; margin: 20px 0;">
+          <p style="color: #10b981; margin: 0 0 8px 0; font-size: 18px; font-weight: 600;">✅ Organization Activated</p>
+          <p style="color: #374151; margin: 0; font-size: 16px;">You can now create and manage campaigns!</p>
+        </div>
+      </div>
+      
+      <div style="text-align: center;">
+        <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/dashboard/new-campaign" 
+           style="display: inline-block; background: #6757f5; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; margin-right: 12px;">
+          Create Campaign
+        </a>
+        <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/dashboard" 
+           style="display: inline-block; background: #374151; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600;">
+          Go to Dashboard
+        </a>
+      </div>
+      
+      <div style="text-align: center; color: #64748b; font-size: 14px; margin-top: 30px;">
+        <p>Start building amazing campaigns and connect with backers!</p>
+      </div>
+    </div>
+  `;
+
+  const text = `
+${organizationName} Organization Approved!
+
+${organizationName} has been approved to create campaigns on VibeFunder!
+
+✅ Organization Activated
+
+You can now create and manage campaigns!
+
+Create campaign: ${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/dashboard/new-campaign
+Go to dashboard: ${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/dashboard
+  `;
+
+  try {
+    await transporter.sendMail({
+      from: process.env.SMTP_FROM || 'noreply@vibefunder.ai',
+      to: email,
+      subject,
+      text,
+      html,
+    });
+    
+    console.log(`✓ Organization approval email sent to ${email}`);
+    return true;
+  } catch (error) {
+    console.error('Failed to send organization approval email:', error);
+    return false;
+  }
+}
+
 export async function sendPledgeConfirmationEmail(email: string, data: {
   campaignTitle: string;
   campaignId: string;

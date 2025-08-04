@@ -21,12 +21,18 @@ model User {
   passkeys  Passkey[]
   teamMemberships TeamMember[]
   campaignUpdates CampaignUpdate[]
+  adminSettingsUpdates AdminSettings[]
+  waitlistApprovals Waitlist[]
+  organizations Organization[]
+  organizationApprovals Organization[] @relation("OrganizationApprover")
 }
 
 model Campaign {
   id              String        @id @default(cuid())
   makerId         String
   maker           User          @relation("MakerCampaigns", fields: [makerId], references: [id], onDelete: Restrict)
+  organizationId  String?
+  organization    Organization? @relation("OrganizationCampaigns", fields: [organizationId], references: [id], onDelete: SetNull)
   title           String
   summary         String
   description     String?
@@ -188,4 +194,48 @@ model Passkey {
   lastUsed      DateTime?
 
   @@index([userId])
+}
+
+model AdminSettings {
+  id                      String   @id @default(cuid())
+  signupsEnabled          Boolean  @default(true)
+  organizationApprovalRequired Boolean @default(true)
+  updatedAt               DateTime @updatedAt
+  updatedBy               String?
+  updater                 User?    @relation(fields: [updatedBy], references: [id], onDelete: SetNull)
+}
+
+model Waitlist {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  reason        String   // "back_campaign" or "create_campaign"
+  status        String   @default("pending") // "pending", "approved", "rejected"
+  notes         String?  // Admin notes
+  approvedAt    DateTime?
+  approvedBy    String?
+  approver      User?    @relation(fields: [approvedBy], references: [id], onDelete: SetNull)
+  createdAt     DateTime @default(now())
+}
+
+model Organization {
+  id                String    @id @default(cuid())
+  name              String
+  description       String?
+  website           String?
+  email             String
+  ownerId           String
+  owner             User      @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  status            String    @default("pending") // "pending", "approved", "rejected"
+  stripeAccountId   String?   @unique
+  stripeAccountStatus String? // "pending", "active", "restricted"
+  businessType      String?   // "individual", "company", "non_profit"
+  taxId             String?
+  address           Json?     // Address information
+  notes             String?   // Admin notes
+  approvedAt        DateTime?
+  approvedBy        String?
+  approver          User?     @relation("OrganizationApprover", fields: [approvedBy], references: [id], onDelete: SetNull)
+  campaigns         Campaign[] @relation("OrganizationCampaigns")
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 }

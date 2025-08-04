@@ -98,6 +98,7 @@ export async function POST(request: NextRequest) {
 
     // Create session
     const sessionToken = await createSession({
+      id: passkey.user.id,
       userId: passkey.user.id,
       email: passkey.user.email,
       roles: passkey.user.roles

@@ -1,5 +1,6 @@
 import { JWTPayload, SignJWT, jwtVerify } from 'jose';
 import { prisma } from './db';
+import { cookies } from 'next/headers';
 import crypto from 'crypto';
 
 // Use HMAC with a shared secret for simplicity and better compatibility
@@ -10,6 +11,7 @@ const jwtSecret = new TextEncoder().encode(
 const alg = 'HS256'; // HMAC SHA-256 is widely supported and simpler
 
 export interface SessionPayload {
+  id: string;
   userId: string;
   email: string;
   roles: string[];
@@ -133,4 +135,24 @@ export async function updatePasskeyCounter(credentialId: string, counter: number
       lastUsed: new Date()
     }
   });
+}
+
+export async function auth(): Promise<{ user: SessionPayload } | null> {
+  try {
+    const cookieStore = await cookies();
+    const sessionToken = cookieStore.get('session')?.value;
+    
+    if (!sessionToken) {
+      return null;
+    }
+
+    const payload = await verifySession(sessionToken);
+    if (!payload) {
+      return null;
+    }
+
+    return { user: payload };
+  } catch (error) {
+    return null;
+  }
 }

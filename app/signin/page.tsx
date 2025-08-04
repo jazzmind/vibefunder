@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { startAuthentication, startRegistration, browserSupportsWebAuthn } from '@simplewebauthn/browser';
 
-type AuthStep = 'email' | 'otp' | 'passkey-setup' | 'passkey-auto';
+type AuthStep = 'email' | 'otp' | 'passkey-setup' | 'passkey-auto' | 'waitlist';
 
 export default function SignIn() {
   const [step, setStep] = useState<AuthStep>('email');
@@ -15,8 +15,10 @@ export default function SignIn() {
   const [message, setMessage] = useState('');
   const [user, setUser] = useState<any>(null);
   const [hasPasskeys, setHasPasskeys] = useState(false);
+  const [signupsEnabled, setSignupsEnabled] = useState(true);
+  const [waitlistReason, setWaitlistReason] = useState('back_campaign');
 
-  // Check for existing passkeys on component mount
+  // Check for existing passkeys and signup status on component mount
   useEffect(() => {
     const checkForPasskeys = () => {
       if (!browserSupportsWebAuthn()) {
@@ -32,8 +34,21 @@ export default function SignIn() {
       }
     };
 
+    const checkSignupStatus = async () => {
+      try {
+        const response = await fetch('/api/auth/check-signup-status');
+        if (response.ok) {
+          const data = await response.json();
+          setSignupsEnabled(data.signupsEnabled);
+        }
+      } catch (error) {
+        console.error('Error checking signup status:', error);
+      }
+    };
+
     // Check immediately on mount
     checkForPasskeys();
+    checkSignupStatus();
   }, []);
 
   // Check if user already has passkeys after OTP login
@@ -57,6 +72,13 @@ export default function SignIn() {
     setLoading(true);
     setError('');
 
+    // If signups are disabled, redirect to waitlist
+    if (!signupsEnabled) {
+      setStep('waitlist');
+      setLoading(false);
+      return;
+    }
+
     try {
       const response = await fetch('/api/auth/send-otp', {
         method: 'POST',
@@ -71,6 +93,32 @@ export default function SignIn() {
         setStep('otp');
       } else {
         setError(data.error || 'Failed to send code');
+      }
+    } catch (err) {
+      setError('Network error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleWaitlistSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/waitlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, reason: waitlistReason }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setMessage('Successfully added to waitlist! Check your email for confirmation.');
+      } else {
+        setError(data.error || 'Failed to join waitlist');
       }
     } catch (err) {
       setError('Network error');
@@ -210,12 +258,14 @@ export default function SignIn() {
             {step === 'otp' && 'Enter your code'}
             {step === 'passkey-setup' && 'Set up secure sign-in'}
             {step === 'passkey-auto' && 'Sign in with your passkey'}
+            {step === 'waitlist' && 'Join our waitlist'}
           </h2>
           <p className="mt-2 text-gray-600 dark:text-gray-400">
             {step === 'email' && 'Enter your email to get started'}
             {step === 'otp' && `We sent a 6-digit code to ${email}`}
             {step === 'passkey-setup' && 'Set up a passkey for faster, more secure sign-ins'}
             {step === 'passkey-auto' && 'We detected a passkey on this device. Use it for secure, password-free sign-in.'}
+            {step === 'waitlist' && "We're in early access. Join our waitlist to get notified when your account is ready!"}
           </p>
         </div>
 
@@ -373,6 +423,77 @@ export default function SignIn() {
                 Skip for now
               </button>
             </div>
+          )}
+
+          {step === 'waitlist' && (
+            <form onSubmit={handleWaitlistSubmit} className="space-y-6">
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-brand/10 rounded-full flex items-center justify-center">
+                  <span className="text-2xl">📋</span>
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="waitlist-email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Email address
+                </label>
+                <input
+                  id="waitlist-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  placeholder="Enter your email"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                  What do you want to do on VibeFunder?
+                </label>
+                <div className="space-y-3">
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="reason"
+                      value="back_campaign"
+                      checked={waitlistReason === 'back_campaign'}
+                      onChange={(e) => setWaitlistReason(e.target.value)}
+                      className="w-4 h-4 text-brand border-gray-300 focus:ring-brand focus:ring-2"
+                    />
+                    <span className="ml-3 text-gray-700 dark:text-gray-300">I want to back campaigns</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="reason"
+                      value="create_campaign"
+                      checked={waitlistReason === 'create_campaign'}
+                      onChange={(e) => setWaitlistReason(e.target.value)}
+                      className="w-4 h-4 text-brand border-gray-300 focus:ring-brand focus:ring-2"
+                    />
+                    <span className="ml-3 text-gray-700 dark:text-gray-300">I want to create campaigns</span>
+                  </label>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full btn py-3 text-base font-semibold"
+              >
+                {loading ? 'Joining waitlist...' : 'Join Waitlist'}
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => setStep('email')}
+                className="w-full btn-secondary py-3 text-base font-semibold"
+              >
+                Back
+              </button>
+            </form>
           )}
         </div>
 

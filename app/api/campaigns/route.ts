@@ -1,18 +1,83 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { auth } from "@/lib/auth";
+import { z } from "zod";
+
+const campaignSchema = z.object({
+  title: z.string().min(1).max(200),
+  summary: z.string().min(1).max(500),
+  description: z.string().optional(),
+  fundingGoalDollars: z.number().min(1).max(10000000),
+  budgetDollars: z.number().min(1).max(10000000),
+  organizationId: z.string().optional()
+});
+
 export async function GET() {
-  const items = await prisma.campaign.findMany({
-    orderBy: { createdAt: "desc" },
-  });
-  return NextResponse.json(items);
+  try {
+    const items = await prisma.campaign.findMany({
+      where: { status: 'published' }, // Only show published campaigns
+      orderBy: { createdAt: "desc" },
+      include: {
+        maker: {
+          select: { id: true, name: true, email: true }
+        },
+        organization: {
+          select: { id: true, name: true }
+        }
+      }
+    });
+    return NextResponse.json(items);
+  } catch (error) {
+    console.error('Error fetching campaigns:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }
-export async function POST(req: Request) {
-  const body = await req.json();
-  const maker = await prisma.user.findFirst({
-    where: { email: "founder@demo.dev" },
-  });
-  const item = await prisma.campaign.create({
-    data: { ...body, makerId: maker!.id },
-  });
-  return NextResponse.json(item, { status: 201 });
+
+export async function POST(req: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await req.json();
+    const validatedData = campaignSchema.parse(body);
+
+    // Verify organization ownership if provided
+    if (validatedData.organizationId) {
+      const org = await prisma.organization.findFirst({
+        where: {
+          id: validatedData.organizationId,
+          ownerId: session.user.id
+        }
+      });
+      if (!org) {
+        return NextResponse.json({ error: 'Organization not found or not owned by user' }, { status: 403 });
+      }
+    }
+
+    const item = await prisma.campaign.create({
+      data: {
+        ...validatedData,
+        makerId: session.user.id,
+        status: 'draft'
+      },
+      include: {
+        maker: {
+          select: { id: true, name: true, email: true }
+        },
+        organization: {
+          select: { id: true, name: true }
+        }
+      }
+    });
+
+    return NextResponse.json(item, { status: 201 });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: 'Invalid input data', details: error.errors }, { status: 400 });
+    }
+    console.error('Error creating campaign:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }

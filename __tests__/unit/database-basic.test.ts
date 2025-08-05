@@ -126,7 +126,6 @@ describe('Database Basic Tests', () => {
         title: 'FK Test Campaign',
         summary: 'Testing foreign key relationships',
         fundingGoalDollars: 10000,
-        budgetDollars: 9000
       }
     });
 

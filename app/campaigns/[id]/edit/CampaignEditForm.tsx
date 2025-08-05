@@ -1,15 +1,30 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import dynamic from 'next/dynamic';
 import Link from 'next/link';
+import ImageGenerator from '@/app/components/campaign/ImageGenerator';
+import AIContentEnhancer from '@/app/components/campaign/AIContentEnhancer';
+import AIMilestoneSuggestions from '@/app/components/campaign/AIMilestoneSuggestions';
+import AIStretchGoalSuggestions from '@/app/components/campaign/AIStretchGoalSuggestions';
+import TiptapEditor from '@/app/components/editor/TiptapEditor';
 
-// Dynamically import markdown editor to avoid SSR issues
-const MDEditor = dynamic(
-  () => import('@uiw/react-md-editor').then((mod) => mod.default),
-  { ssr: false }
-);
+interface Milestone {
+  id?: string;
+  name: string;
+  pct: number;
+  acceptance: {
+    checklist: string[];
+  };
+}
+
+interface StretchGoal {
+  id?: string;
+  title: string;
+  description: string;
+  targetDollars: number;
+  order?: number;
+}
 
 interface Campaign {
   id: string;
@@ -24,6 +39,8 @@ interface Campaign {
   requireBackerAccount: boolean;
   onlyBackersComment: boolean;
   status: string;
+  milestones?: Milestone[];
+  stretchGoals?: StretchGoal[];
 }
 
 interface CampaignEditFormProps {
@@ -68,10 +85,14 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
     sectors: campaign.sectors,
     requireBackerAccount: campaign.requireBackerAccount,
     onlyBackersComment: campaign.onlyBackersComment,
+    milestones: campaign.milestones || [],
+    stretchGoals: campaign.stretchGoals || [],
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [success, setSuccess] = useState('');
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [autoSaving, setAutoSaving] = useState(false);
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -80,12 +101,102 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
     }
   };
 
+  // Autosave functionality
+  const autoSave = async () => {
+    if (autoSaving) return;
+    
+    setAutoSaving(true);
+    try {
+      const response = await fetch(`/api/campaigns/${campaign.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: formData.title,
+          summary: formData.summary,
+          description: formData.description,
+          fundingGoalDollars: Math.round(formData.fundingGoal),
+          image: formData.imageUrl || null,
+          leadVideoUrl: formData.leadVideoUrl || null,
+          deployModes: formData.deployModes,
+          sectors: formData.sectors,
+          requireBackerAccount: formData.requireBackerAccount,
+          onlyBackersComment: formData.onlyBackersComment,
+        }),
+      });
+
+      if (response.ok) {
+        setLastSaved(new Date());
+      }
+    } catch (error) {
+      console.error('Autosave failed:', error);
+    } finally {
+      setAutoSaving(false);
+    }
+  };
+
+  // Autosave every 10 seconds when there are changes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (formData.title || formData.summary || formData.description) {
+        autoSave();
+      }
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [formData.title, formData.summary, formData.description]);
+
   const handleArrayChange = (field: 'deployModes' | 'sectors', value: string, checked: boolean) => {
     setFormData(prev => ({
       ...prev,
       [field]: checked 
         ? [...prev[field], value]
         : prev[field].filter(item => item !== value)
+    }));
+  };
+
+  const addMilestone = (milestone: Omit<Milestone, 'id'>) => {
+    setFormData(prev => ({
+      ...prev,
+      milestones: [...prev.milestones, { ...milestone, id: `temp-${Date.now()}` }]
+    }));
+  };
+
+  const updateMilestone = (index: number, milestone: Milestone) => {
+    setFormData(prev => ({
+      ...prev,
+      milestones: prev.milestones.map((m, i) => i === index ? milestone : m)
+    }));
+  };
+
+  const deleteMilestone = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      milestones: prev.milestones.filter((_, i) => i !== index)
+    }));
+  };
+
+  const addStretchGoal = (goal: Omit<StretchGoal, 'id' | 'order'>) => {
+    setFormData(prev => ({
+      ...prev,
+      stretchGoals: [...prev.stretchGoals, { 
+        ...goal, 
+        id: `temp-${Date.now()}`,
+        order: prev.stretchGoals.length + 1
+      }]
+    }));
+  };
+
+  const updateStretchGoal = (index: number, goal: StretchGoal) => {
+    setFormData(prev => ({
+      ...prev,
+      stretchGoals: prev.stretchGoals.map((g, i) => i === index ? goal : g)
+    }));
+  };
+
+  const deleteStretchGoal = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      stretchGoals: prev.stretchGoals.filter((_, i) => i !== index)
     }));
   };
 
@@ -144,6 +255,8 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
     { id: 'basic', label: 'Basic Info', icon: '📝' },
     { id: 'media', label: 'Media', icon: '🎬' },
     { id: 'targeting', label: 'Targeting', icon: '🎯' },
+    { id: 'milestones', label: 'Milestones', icon: '🎯' },
+    { id: 'stretch-goals', label: 'Stretch Goals', icon: '🚀' },
     { id: 'settings', label: 'Settings', icon: '⚙️' },
   ];
 
@@ -151,6 +264,21 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
     <form onSubmit={handleSubmit} className="p-6">
       {/* Tab Navigation */}
       <div className="border-b border-gray-200 dark:border-gray-700 mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-4">
+            {autoSaving && (
+              <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                <div className="w-4 h-4 border-2 border-brand border-t-transparent rounded-full animate-spin mr-2"></div>
+                Saving...
+              </div>
+            )}
+            {lastSaved && !autoSaving && (
+              <div className="text-sm text-green-600 dark:text-green-400">
+                ✓ Last saved {lastSaved.toLocaleTimeString()}
+              </div>
+            )}
+          </div>
+        </div>
         <nav className="flex space-x-8">
           {tabs.map((tab) => (
             <button
@@ -223,23 +351,26 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Detailed Description
             </label>
-            <div className="prose max-w-none">
-              <MDEditor
-                value={formData.description}
-                onChange={(value) => handleInputChange('description', value || '')}
-                preview="edit"
-                hideToolbar={false}
-                visibleDragbar={false}
-                textareaProps={{
-                  placeholder: 'Write a detailed description of your campaign using Markdown...',
-                  style: { fontSize: 14, lineHeight: 1.6 }
-                }}
-                height={300}
-              />
-            </div>
+            <TiptapEditor
+              content={formData.description}
+              onChange={(content) => handleInputChange('description', content)}
+              placeholder="Write a detailed description of your campaign. Use the toolbar to format text, add links, images, and more..."
+              maxLength={10000}
+              className="min-h-[300px]"
+            />
             <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-              Use Markdown for formatting. You can add images, links, lists, and more.
+              Use the toolbar to format your text with headings, lists, links, images, and more.
             </p>
+          </div>
+
+          {/* AI Content Enhancer */}
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+            <AIContentEnhancer
+              content={formData.description}
+              title={formData.title}
+              summary={formData.summary}
+              onContentUpdate={(newContent) => handleInputChange('description', newContent)}
+            />
           </div>
 
           <div>
@@ -308,6 +439,19 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
             </p>
           </div>
 
+          {/* AI Image Generator */}
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+            <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-4">🤖 AI Image Generator</h4>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              Generate a custom lead image for your campaign using AI based on your campaign content.
+            </p>
+            <ImageGenerator 
+              campaignId={campaign.id}
+              currentImage={formData.imageUrl}
+              onImageGenerated={(imageUrl) => handleInputChange('imageUrl', imageUrl)}
+            />
+          </div>
+
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
             <h4 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">💡 Media Tips</h4>
             <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
@@ -362,6 +506,136 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
             <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
               Select the industries or sectors your campaign targets
             </p>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'milestones' && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-lg font-medium text-gray-900 dark:text-white">Campaign Milestones</h4>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Define key checkpoints for your campaign development
+              </p>
+            </div>
+          </div>
+
+          {/* AI Milestone Suggestions */}
+          <AIMilestoneSuggestions
+            title={formData.title}
+            summary={formData.summary}
+            description={formData.description}
+            fundingGoal={formData.fundingGoal}
+            onMilestonesGenerated={(milestones) => {
+              milestones.forEach(addMilestone);
+            }}
+          />
+
+          {/* Current Milestones */}
+          <div className="space-y-4">
+            <h5 className="font-medium text-gray-900 dark:text-white">
+              Current Milestones ({formData.milestones.length})
+            </h5>
+            
+            {formData.milestones.length === 0 ? (
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                <p>No milestones created yet. Use AI suggestions or add manually.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {formData.milestones.map((milestone, index) => (
+                  <div key={milestone.id || index} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <h6 className="font-medium text-gray-900 dark:text-white">{milestone.name}</h6>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">{milestone.pct}% completion</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => deleteMilestone(index)}
+                        className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                    <div className="bg-white dark:bg-gray-700 rounded p-3">
+                      <h6 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Acceptance Criteria:</h6>
+                      <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                        {milestone.acceptance.checklist.map((item, i) => (
+                          <li key={i} className="flex items-start">
+                            <span className="text-green-500 mr-2">•</span>
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'stretch-goals' && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-lg font-medium text-gray-900 dark:text-white">Stretch Goals</h4>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Additional features or rewards for exceeding your funding goal
+              </p>
+            </div>
+          </div>
+
+          {/* AI Stretch Goal Suggestions */}
+          <AIStretchGoalSuggestions
+            title={formData.title}
+            summary={formData.summary}
+            description={formData.description}
+            fundingGoal={formData.fundingGoal}
+            onStretchGoalsGenerated={(goals) => {
+              goals.forEach(addStretchGoal);
+            }}
+          />
+
+          {/* Current Stretch Goals */}
+          <div className="space-y-4">
+            <h5 className="font-medium text-gray-900 dark:text-white">
+              Current Stretch Goals ({formData.stretchGoals.length})
+            </h5>
+            
+            {formData.stretchGoals.length === 0 ? (
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                <p>No stretch goals created yet. Use AI suggestions or add manually.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {formData.stretchGoals.map((goal, index) => (
+                  <div key={goal.id || index} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <h6 className="font-medium text-gray-900 dark:text-white">{goal.title}</h6>
+                        <p className="text-sm text-brand font-medium">${goal.targetDollars.toLocaleString()}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => deleteStretchGoal(index)}
+                        className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                    <p className="text-sm text-gray-700 dark:text-gray-300">{goal.description}</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

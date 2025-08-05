@@ -114,7 +114,6 @@ describe('Database Model Tests', () => {
         title: 'Test Campaign',
         summary: 'A test campaign',
         fundingGoalDollars: 50000,
-        budgetDollars: 45000
       };
 
       const campaign = await createTestCampaign(campaignData);
@@ -195,11 +194,9 @@ describe('Database Model Tests', () => {
         title: 'Valid Money Campaign',
         summary: 'Valid amounts',
         fundingGoalDollars: 1000,
-        budgetDollars: 900
       });
 
       expect(validCampaign.fundingGoalDollars).toBe(1000);
-      expect(validCampaign.budgetDollars).toBe(900);
       expect(validCampaign.raisedDollars).toBe(0); // Default value
       
       // Test updating raised amount

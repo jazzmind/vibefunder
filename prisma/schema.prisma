@@ -37,7 +37,6 @@ model Campaign {
   title           String
   summary         String
   description     String?
-  budgetDollars     Int @default(0) // in dollars 
   fundingGoalDollars Int  @default(0) 
   raisedDollars     Int           @default(0)
   currency        String        @default("USD")

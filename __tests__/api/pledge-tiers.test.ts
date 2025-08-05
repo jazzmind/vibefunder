@@ -26,7 +26,6 @@ describe('Pledge Tiers API', () => {
           title: 'Campaign for Pledge Tier Test',
           summary: 'A campaign to test pledge tier creation',
           fundingGoalDollars: 50000,
-          budgetDollars: 45000
         })
       });
       
@@ -70,7 +69,6 @@ describe('Pledge Tiers API', () => {
           title: 'Validation Test Campaign',
           summary: 'A campaign to test validation',
           fundingGoalDollars: 50000,
-          budgetDollars: 45000
         })
       });
       
@@ -98,7 +96,6 @@ describe('Pledge Tiers API', () => {
           title: 'Campaign for Amount Validation',
           summary: 'A campaign to test amount validation',
           fundingGoalDollars: 50000,
-          budgetDollars: 45000
         })
       });
       
@@ -149,7 +146,6 @@ describe('Pledge Tiers API', () => {
           title: 'Campaign for Update Test',
           summary: 'A campaign to test pledge tier updates',
           fundingGoalDollars: 50000,
-          budgetDollars: 45000
         })
       });
       
@@ -200,7 +196,6 @@ describe('Pledge Tiers API', () => {
           title: 'Update Validation Campaign',
           summary: 'A campaign to test update validation',
           fundingGoalDollars: 50000,
-          budgetDollars: 45000
         })
       });
       
@@ -231,7 +226,6 @@ describe('Pledge Tiers API', () => {
           title: 'Campaign for Delete Test',
           summary: 'A campaign to test pledge tier deletion',
           fundingGoalDollars: 50000,
-          budgetDollars: 45000
         })
       });
       
@@ -270,7 +264,6 @@ describe('Pledge Tiers API', () => {
           title: 'Campaign for Delete Test',
           summary: 'A campaign to test deletion',
           fundingGoalDollars: 50000,
-          budgetDollars: 45000
         })
       });
       
@@ -295,7 +288,6 @@ describe('Pledge Tiers API', () => {
           title: 'Security Test Campaign',
           summary: 'A campaign to test security',
           fundingGoalDollars: 50000,
-          budgetDollars: 45000
         })
       });
       
@@ -326,7 +318,6 @@ describe('Pledge Tiers API', () => {
           title: 'Campaign for Security Test',
           summary: 'A campaign to test security',
           fundingGoalDollars: 50000,
-          budgetDollars: 45000
         })
       });
       

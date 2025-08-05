@@ -24,7 +24,6 @@ describe('Campaign API - Clean Tests', () => {
           title: 'Published Test Campaign',
           summary: 'A published campaign for testing',
           fundingGoalDollars: 50000,
-          budgetDollars: 45000
         })
       });
       
@@ -131,7 +130,6 @@ describe('Campaign API - Clean Tests', () => {
           title: 'Specific Campaign Test',
           summary: 'Campaign for testing GET by ID',
           fundingGoalDollars: 50000,
-          budgetDollars: 45000
         })
       });
       
@@ -167,7 +165,6 @@ describe('Campaign API - Clean Tests', () => {
           title: 'Campaign to Update',
           summary: 'This will be updated',
           fundingGoalDollars: 50000,
-          budgetDollars: 45000
         })
       });
       
@@ -204,7 +201,6 @@ describe('Campaign API - Clean Tests', () => {
           title: 'Campaign to Validate',
           summary: 'This will be validated',
           fundingGoalDollars: 50000,
-          budgetDollars: 45000
         })
       });
       

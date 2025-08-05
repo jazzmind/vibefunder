@@ -26,7 +26,7 @@ describe('Milestones API', () => {
           title: 'Campaign for Milestone Test',
           summary: 'A campaign to test milestone creation',
           fundingGoalDollars: 50000,
-          budgetDollars: 45000
+
         })
       });
       
@@ -70,7 +70,7 @@ describe('Milestones API', () => {
           title: 'Validation Test Campaign',
           summary: 'A campaign to test validation',
           fundingGoalDollars: 50000,
-          budgetDollars: 45000
+
         })
       });
       
@@ -98,7 +98,7 @@ describe('Milestones API', () => {
           title: 'Campaign for Validation Test',
           summary: 'A campaign to test validation',
           fundingGoalDollars: 50000,
-          budgetDollars: 45000
+
         })
       });
       
@@ -149,7 +149,7 @@ describe('Milestones API', () => {
           title: 'Campaign for Order Test',
           summary: 'A campaign to test milestone ordering',
           fundingGoalDollars: 50000,
-          budgetDollars: 45000
+
         })
       });
       
@@ -204,7 +204,7 @@ describe('Milestones API', () => {
           title: 'Security Test Campaign',
           summary: 'A campaign to test security',
           fundingGoalDollars: 50000,
-          budgetDollars: 45000
+
         })
       });
       
@@ -237,7 +237,7 @@ describe('Milestones API', () => {
           title: 'Campaign for Security Test',
           summary: 'A campaign to test security',
           fundingGoalDollars: 50000,
-          budgetDollars: 45000
+
         })
       });
       

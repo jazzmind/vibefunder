@@ -26,7 +26,6 @@ describe('Stretch Goals API', () => {
           title: 'Campaign for Stretch Goal Test',
           summary: 'A campaign to test stretch goal creation',
           fundingGoalDollars: 50000,
-          budgetDollars: 45000
         })
       });
       
@@ -82,7 +81,6 @@ describe('Stretch Goals API', () => {
           title: 'Campaign for Target Validation',
           summary: 'A campaign to test target validation',
           fundingGoalDollars: 50000,
-          budgetDollars: 45000
         })
       });
       
@@ -132,7 +130,6 @@ describe('Stretch Goals API', () => {
           title: 'Campaign for Goal Validation',
           summary: 'A campaign to test goal validation',
           fundingGoalDollars: 50000,
-          budgetDollars: 45000
         })
       });
       
@@ -168,7 +165,6 @@ describe('Stretch Goals API', () => {
           title: 'Campaign for Update Test',
           summary: 'A campaign to test stretch goal updates',
           fundingGoalDollars: 50000,
-          budgetDollars: 45000
         })
       });
       
@@ -236,7 +232,6 @@ describe('Stretch Goals API', () => {
           title: 'Campaign for Delete Test',
           summary: 'A campaign to test stretch goal deletion',
           fundingGoalDollars: 50000,
-          budgetDollars: 45000
         })
       });
       
@@ -306,7 +301,6 @@ describe('Stretch Goals API', () => {
           title: 'Campaign for Security Test',
           summary: 'A campaign to test security',
           fundingGoalDollars: 50000,
-          budgetDollars: 45000
         })
       });
       

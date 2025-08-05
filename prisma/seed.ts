@@ -36,7 +36,6 @@ async function main() {
       title: "ApplicationAI",
       summary: "URL→Application with enrichment and go/no-go summary",
       description: "Transform any URL into a structured application with AI-powered enrichment. Get instant go/no-go summaries, risk assessments, and compliance checks. Perfect for grant applications, RFP responses, and business development workflows.",
-      budgetDollars: 100000,
       fundingGoalDollars: 50000,
       raisedDollars: 12500,
       deployModes: ["saas","vpc","onprem"],

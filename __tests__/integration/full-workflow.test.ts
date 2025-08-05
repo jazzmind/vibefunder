@@ -79,7 +79,6 @@ describe('Full Workflow Integration Tests', () => {
           summary: 'An innovative AI platform for data analysis and machine learning',
           description: 'This campaign is for building a comprehensive AI platform that will revolutionize how businesses analyze data using artificial intelligence and machine learning algorithms.',
           fundingGoalDollars: 100000,
-          budgetDollars: 90000,
           organizationId: organization.id
         })
       });

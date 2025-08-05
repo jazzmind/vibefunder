@@ -39,7 +39,6 @@ export interface TestCampaignData {
   summary: string;
   description?: string;
   fundingGoalDollars?: number;
-  budgetDollars?: number;
   status?: string;
   image?: string | null;
   organizationId?: string;
@@ -83,7 +82,6 @@ export async function createTestCampaign(campaignData: TestCampaignData) {
       summary: campaignData.summary,
       description: campaignData.description,
       fundingGoalDollars: campaignData.fundingGoalDollars || 50000,
-      budgetDollars: campaignData.budgetDollars || 45000,
       status: campaignData.status || 'draft',
       image: campaignData.image,
       organizationId: campaignData.organizationId,

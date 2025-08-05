@@ -7,8 +7,7 @@ import { auth } from "@/lib/auth";
 import Link from "next/link";
 import ImageGenerator from "@/app/components/campaign/ImageGenerator";
 import AutoImageGenerationWrapper from "./AutoImageGenerationWrapper";
-import ReactMarkdown from 'react-markdown';
-import rehypeRaw from 'rehype-raw';
+
 import VideoEmbed from '@/app/components/campaign/VideoEmbed';
 
 // Demo campaigns data (should match the ones in campaigns/page.tsx)
@@ -317,11 +316,10 @@ export default async function CampaignPage({params}:{params:Promise<{id:string}>
               {campaign.description && (
                 <div className="mt-8">
                   <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">About This Campaign</h3>
-                  <div className="prose prose-gray dark:prose-invert max-w-none">
-                    <ReactMarkdown rehypePlugins={[rehypeRaw]}>
-                      {campaign.description}
-                    </ReactMarkdown>
-                  </div>
+                  <div 
+                    className="prose prose-gray dark:prose-invert max-w-none"
+                    dangerouslySetInnerHTML={{ __html: campaign.description }}
+                  />
                 </div>
               )}
             </div>
@@ -541,12 +539,7 @@ export default async function CampaignPage({params}:{params:Promise<{id:string}>
             <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
               <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Campaign Details</h4>
               <div className="space-y-4">
-                <div>
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Total Budget</span>
-                  <div className="text-xl font-bold text-gray-900 dark:text-white">
-                    ${(campaign.budgetDollars).toLocaleString()}
-                  </div>
-                </div>
+
                 <div>
                   <span className="text-sm text-gray-600 dark:text-gray-400">Launch Date</span>
                   <div className="text-sm text-gray-900 dark:text-white">

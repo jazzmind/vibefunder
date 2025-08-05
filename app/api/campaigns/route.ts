@@ -8,7 +8,6 @@ const campaignSchema = z.object({
   summary: z.string().min(1).max(500),
   description: z.string().optional(),
   fundingGoalDollars: z.number().min(1).max(10000000),
-  budgetDollars: z.number().min(1).max(10000000),
   organizationId: z.string().optional()
 });
 

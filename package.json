@@ -6,6 +6,7 @@
     "dev": "lsof -ti:3900 | xargs -r kill -9 2>/dev/null || true && next dev --port 3900",
     "build": "lsof -ti:3900 | xargs -r kill -9 2>/dev/null || true && next build",
     "postinstall": "prisma generate",
+    "test": "npx tsx scripts/universal-test-runner.ts",
     "start": "next start",
     "lint": "next lint",
     "prisma:gen": "prisma generate",

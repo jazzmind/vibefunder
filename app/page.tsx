@@ -69,8 +69,8 @@ export default function Home() {
                 <li className="flex gap-4">
                   <span className="flex-shrink-0 w-8 h-8 bg-brand text-white rounded-full flex items-center justify-center font-semibold">3</span>
                   <div>
-                    <strong className="text-gray-900 dark:text-white">Early customers back the work</strong>
-                    <p className="text-gray-600 dark:text-gray-300 mt-1">Funds & code held in escrow. Backers pay when milestones are accepted.</p>
+                    <strong className="text-gray-900 dark:text-white">Rally customers who pre-pay to fund development</strong>
+                    <p className="text-gray-600 dark:text-gray-300 mt-1">Your eager early customers cover costs plus margin. Funds held in escrow, released only when milestones are proven complete.</p>
                   </div>
                 </li>
                 <li className="flex gap-4">
@@ -83,8 +83,8 @@ export default function Home() {
                 <li className="flex gap-4">
                   <span className="flex-shrink-0 w-8 h-8 bg-brand text-white rounded-full flex items-center justify-center font-semibold">5</span>
                   <div>
-                    <strong className="text-gray-900 dark:text-white">Ready to ship, no equity taken</strong>
-                    <p className="text-gray-600 dark:text-gray-300 mt-1">We certify that the product is production-ready.</p>
+                    <strong className="text-gray-900 dark:text-white">Launch profitably with zero dilution</strong>
+                    <p className="text-gray-600 dark:text-gray-300 mt-1">Your software is now production-ready, certified, and profitable from day one. You keep 100% of your equity.</p>
                   </div>
                 </li>
               </ol>
@@ -133,9 +133,9 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-6">For Makers</h2>
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-6">For AI Software Makers</h2>
               <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">
-                Get the resources needed to deliver early sales without giving up equity. We help you evaluate the work needed to get production-ready, get guaranteed-price partner quotes to set a budget that won't blow up. You keep your IP and your equity. Your early customers get a de-risked product and a great deal for backing you.
+                <strong className="text-gray-900 dark:text-white">Imagine:</strong> Your incredible AI demo becomes enterprise-ready software, funded entirely by eager customers who can't wait to use it. No VCs. No dilution. No endless pitching. Just immediate profitability and 100% ownership of your breakthrough innovation.
               </p>
               <ul className="space-y-4">
                 <li className="flex items-center gap-3">
@@ -175,9 +175,9 @@ export default function Home() {
               <div className="text-2xl font-bold">Own your risk profile</div>
             </div>
             <div className="lg:order-2">
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-6">For Backers</h2>
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-6">For Smart Early Adopters</h2>
               <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">
-                Lock in lifetime value, shape the roadmap, and de‑risk with code continuity and compliance artifacts.
+                You've seen the demo. You know this AI tool will transform your business. <strong className="text-gray-900 dark:text-white">Why wait for everyone else to discover it?</strong> Lock in lifetime value, shape the roadmap, and secure your competitive advantage while getting enterprise-grade security and compliance.
               </p>
               <ul className="space-y-4">
                 <li className="flex items-center gap-3">
@@ -207,7 +207,7 @@ export default function Home() {
       {/* Trust & Safety */}
       <section id="trust" className="py-20 bg-white dark:bg-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white text-center mb-16">Trust & Safety</h2>
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white text-center mb-16">Enterprise-Grade Trust & Safety</h2>
           <div className="grid md:grid-cols-3 gap-8">
             <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-sm border border-gray-200 dark:border-gray-700">
               <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Verification</h3>
@@ -253,8 +253,8 @@ export default function Home() {
       {/* CTA Section */}
       <section className="py-20 bg-brand">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">Ready to ship the vibe?</h2>
-          <p className="text-xl text-white/90 mb-8">Join the future of software funding and development.</p>
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">Ready to vibe with your future?</h2>
+          <p className="text-xl text-white/90 mb-8">Skip the seed round. Turn your AI breakthrough into profitable, production-ready software with customer funding.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/campaigns" className="bg-white dark:bg-gray-800 text-brand dark:text-brand px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
               Browse campaigns

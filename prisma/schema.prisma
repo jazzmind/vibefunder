@@ -25,6 +25,7 @@ model User {
   waitlistApprovals Waitlist[]
   organizations Organization[]
   organizationApprovals Organization[] @relation("OrganizationApprover")
+  organizationTeamMemberships OrganizationTeamMember[]
 }
 
 model Campaign {
@@ -209,7 +210,7 @@ model AdminSettings {
 model Waitlist {
   id            String   @id @default(cuid())
   email         String   @unique
-  reason        String   // "back_campaign" or "create_campaign"
+  reason        String   // "back_campaign", "create_campaign", or "provide_services"
   status        String   @default("pending") // "pending", "approved", "rejected"
   notes         String?  // Admin notes
   approvedAt    DateTime?
@@ -226,6 +227,7 @@ model Organization {
   email             String
   ownerId           String
   owner             User      @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  type              String    @default("creator") // "creator", "service_provider"
   status            String    @default("pending") // "pending", "approved", "rejected"
   stripeAccountId   String?   @unique
   stripeAccountStatus String? // "pending", "active", "restricted"
@@ -236,7 +238,83 @@ model Organization {
   approvedAt        DateTime?
   approvedBy        String?
   approver          User?     @relation("OrganizationApprover", fields: [approvedBy], references: [id], onDelete: SetNull)
+  
+  // Service Provider specific fields
+  listingVisibility String    @default("public") // "public", "creators_only", "limited"
+  shortDescription  String?   // Brief tagline for marketplace listings
+  logo              String?   // Organization logo URL
+  portfolioItems    Json?     // Array of portfolio/case study items
+  
+  // Relationships
   campaigns         Campaign[] @relation("OrganizationCampaigns")
+  services          OrganizationService[]
+  teamMembers       OrganizationTeamMember[]
+  
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+}
+
+model ServiceCategory {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  icon        String?  // Icon name or emoji
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  services    OrganizationService[]
+  createdAt   DateTime @default(now())
+}
+
+model OrganizationService {
+  id             String          @id @default(cuid())
+  organizationId String
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  categoryId     String
+  category       ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  
+  // Service details
+  title          String
+  description    String?
+  deliverables   Json?    // Array of what's delivered
+  pricing        Json?    // Pricing structure (hourly, project, retainer)
+  estimatedTime  String?  // "1-2 weeks", "2-4 months", etc.
+  prerequisites  Json?    // Array of requirements from client
+  
+  // Display options
+  isActive       Boolean  @default(true)
+  isFeatured     Boolean  @default(false)
+  order          Int      @default(0)
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  @@unique([organizationId, categoryId])
+}
+
+model OrganizationTeamMember {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Team member details
+  role           String       // "owner", "admin", "member", "lead", etc.
+  title          String?      // Job title/position
+  bio            String?      // Professional bio
+  headshot       String?      // Profile photo URL
+  linkedinUrl    String?
+  githubUrl      String?
+  portfolioUrl   String?
+  specialties    Json?        // Array of skill areas
+  
+  // Display options
+  isPubliclyVisible Boolean   @default(true)
+  order          Int          @default(0)
+  
+  joinedAt       DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  
+  @@unique([organizationId, userId])
 }

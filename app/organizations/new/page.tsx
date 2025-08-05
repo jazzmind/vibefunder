@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function NewOrganizationPage() {
@@ -11,6 +11,10 @@ export default function NewOrganizationPage() {
     email: '',
     businessType: 'company',
     taxId: '',
+    type: 'creator',
+    shortDescription: '',
+    listingVisibility: 'public',
+    services: [] as string[],
     address: {
       street: '',
       city: '',
@@ -19,9 +23,29 @@ export default function NewOrganizationPage() {
       postalCode: '',
     },
   });
+  const [serviceCategories, setServiceCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
+
+  // Load service categories
+  useEffect(() => {
+    const loadServiceCategories = async () => {
+      try {
+        const response = await fetch('/api/services/categories');
+        if (response.ok) {
+          const data = await response.json();
+          setServiceCategories(data);
+        }
+      } catch (error) {
+        console.error('Failed to load service categories:', error);
+      }
+    };
+
+    if (formData.type === 'service_provider') {
+      loadServiceCategories();
+    }
+  }, [formData.type]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,6 +91,13 @@ export default function NewOrganizationPage() {
     }
   };
 
+  const handleArrayInputChange = (field: string, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -91,6 +122,42 @@ export default function NewOrganizationPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Organization Type *
+                  </label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <label className="flex items-center p-4 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <input
+                        type="radio"
+                        name="type"
+                        value="creator"
+                        checked={formData.type === 'creator'}
+                        onChange={(e) => handleInputChange('type', e.target.value)}
+                        className="w-4 h-4 text-brand border-gray-300 focus:ring-brand focus:ring-2"
+                      />
+                      <div className="ml-3">
+                        <div className="font-medium text-gray-900 dark:text-white">Creator Organization</div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">Create and manage campaigns</div>
+                      </div>
+                    </label>
+                    <label className="flex items-center p-4 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <input
+                        type="radio"
+                        name="type"
+                        value="service_provider"
+                        checked={formData.type === 'service_provider'}
+                        onChange={(e) => handleInputChange('type', e.target.value)}
+                        className="w-4 h-4 text-brand border-gray-300 focus:ring-brand focus:ring-2"
+                      />
+                      <div className="ml-3">
+                        <div className="font-medium text-gray-900 dark:text-white">Service Provider</div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">Offer services to creators</div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Organization Name *
                   </label>
                   <input
@@ -101,6 +168,22 @@ export default function NewOrganizationPage() {
                     required
                   />
                 </div>
+
+                {formData.type === 'service_provider' && (
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Short Description *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.shortDescription}
+                      onChange={(e) => handleInputChange('shortDescription', e.target.value)}
+                      placeholder="Brief tagline for marketplace listings"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-brand focus:border-brand bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      required={formData.type === 'service_provider'}
+                    />
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -236,6 +319,100 @@ export default function NewOrganizationPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Service Provider specific fields */}
+              {formData.type === 'service_provider' && (
+                <div className="border-t border-gray-200 dark:border-gray-600 pt-6">
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                    Service Provider Details
+                  </h3>
+                  
+                  {/* Service Categories */}
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                      Service Categories *
+                    </label>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                      Select the services you offer. You can modify these later.
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {serviceCategories.map((category) => (
+                        <label key={category.id} className="flex items-center p-3 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+                          <input
+                            type="checkbox"
+                            checked={formData.services.includes(category.id)}
+                            onChange={(e) => {
+                              const services = e.target.checked
+                                ? [...formData.services, category.id]
+                                : formData.services.filter(id => id !== category.id);
+                              handleArrayInputChange('services', services);
+                            }}
+                            className="w-4 h-4 text-brand border-gray-300 rounded focus:ring-brand focus:ring-2"
+                          />
+                          <div className="ml-3">
+                            <div className="flex items-center space-x-2">
+                              <span>{category.icon}</span>
+                              <span className="font-medium text-gray-900 dark:text-white">{category.name}</span>
+                            </div>
+                            <p className="text-xs text-gray-600 dark:text-gray-400">{category.description}</p>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Listing Visibility */}
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                      Listing Visibility
+                    </label>
+                    <div className="space-y-3">
+                      <label className="flex items-start p-3 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <input
+                          type="radio"
+                          name="listingVisibility"
+                          value="public"
+                          checked={formData.listingVisibility === 'public'}
+                          onChange={(e) => handleInputChange('listingVisibility', e.target.value)}
+                          className="w-4 h-4 text-brand border-gray-300 focus:ring-brand focus:ring-2 mt-0.5"
+                        />
+                        <div className="ml-3">
+                          <div className="font-medium text-gray-900 dark:text-white">Public</div>
+                          <div className="text-sm text-gray-600 dark:text-gray-400">Visible to everyone, including non-registered users</div>
+                        </div>
+                      </label>
+                      <label className="flex items-start p-3 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <input
+                          type="radio"
+                          name="listingVisibility"
+                          value="creators_only"
+                          checked={formData.listingVisibility === 'creators_only'}
+                          onChange={(e) => handleInputChange('listingVisibility', e.target.value)}
+                          className="w-4 h-4 text-brand border-gray-300 focus:ring-brand focus:ring-2 mt-0.5"
+                        />
+                        <div className="ml-3">
+                          <div className="font-medium text-gray-900 dark:text-white">Creators Only</div>
+                          <div className="text-sm text-gray-600 dark:text-gray-400">Only visible to registered creator organizations</div>
+                        </div>
+                      </label>
+                      <label className="flex items-start p-3 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <input
+                          type="radio"
+                          name="listingVisibility"
+                          value="limited"
+                          checked={formData.listingVisibility === 'limited'}
+                          onChange={(e) => handleInputChange('listingVisibility', e.target.value)}
+                          className="w-4 h-4 text-brand border-gray-300 focus:ring-brand focus:ring-2 mt-0.5"
+                        />
+                        <div className="ml-3">
+                          <div className="font-medium text-gray-900 dark:text-white">Limited Public</div>
+                          <div className="text-sm text-gray-600 dark:text-gray-400">Basic info public, detailed info requires registration</div>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="border-t border-gray-200 dark:border-gray-600 pt-6">
                 <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">

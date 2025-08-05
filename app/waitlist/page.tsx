@@ -126,6 +126,17 @@ export default function WaitlistPage() {
                 />
                 <span className="ml-3 text-gray-700 dark:text-gray-300">I want to create campaigns</span>
               </label>
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="reason"
+                  value="provide_services"
+                  checked={reason === 'provide_services'}
+                  onChange={(e) => setReason(e.target.value)}
+                  className="w-4 h-4 text-brand border-gray-300 focus:ring-brand focus:ring-2"
+                />
+                <span className="ml-3 text-gray-700 dark:text-gray-300">I want to provide services to creators</span>
+              </label>
             </div>
           </div>
 

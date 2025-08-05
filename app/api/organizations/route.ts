@@ -19,11 +19,25 @@ export async function POST(request: NextRequest) {
       email, 
       businessType, 
       taxId, 
-      address 
+      address,
+      type = 'creator',
+      shortDescription,
+      listingVisibility = 'public',
+      services = []
     } = body;
 
     if (!name || !email) {
       return NextResponse.json({ error: 'Name and email are required' }, { status: 400 });
+    }
+
+    // Validate service provider requirements
+    if (type === 'service_provider') {
+      if (!shortDescription) {
+        return NextResponse.json({ error: 'Short description is required for service providers' }, { status: 400 });
+      }
+      if (!services || services.length === 0) {
+        return NextResponse.json({ error: 'At least one service category is required for service providers' }, { status: 400 });
+      }
     }
 
     // Check if user already has a pending or approved organization
@@ -50,9 +64,26 @@ export async function POST(request: NextRequest) {
         businessType,
         taxId,
         address,
+        type,
+        shortDescription,
+        listingVisibility,
         ownerId: session.user.id,
       }
     });
+
+    // Create service relationships for service providers
+    if (type === 'service_provider' && services.length > 0) {
+      const serviceData = services.map((categoryId: string) => ({
+        organizationId: organization.id,
+        categoryId,
+        title: '', // Will be filled in later by the organization
+        isActive: true
+      }));
+
+      await prisma.organizationService.createMany({
+        data: serviceData
+      });
+    }
 
     return NextResponse.json({ 
       message: 'Organization created successfully',

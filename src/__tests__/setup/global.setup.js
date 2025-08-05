@@ -27,12 +27,20 @@ async function setupTestDatabase() {
   console.log('🗄️  Setting up test database...');
   
   try {
+    // Ensure we're using the test database
+    const testDatabaseUrl = process.env.TEST_DATABASE_URL;
+    if (!testDatabaseUrl) {
+      throw new Error('TEST_DATABASE_URL is not configured. Please set it in .env.local');
+    }
+
+    console.log('📋 Using test database:', testDatabaseUrl.split('@')[1]?.split('/')[0] || 'configured');
+
     // Push database schema without running migrations
     execSync('npx prisma db push --force-reset', {
       stdio: 'pipe',
       env: {
         ...process.env,
-        DATABASE_URL: process.env.TEST_DATABASE_URL || process.env.DATABASE_URL
+        DATABASE_URL: testDatabaseUrl
       }
     });
     

@@ -19,7 +19,7 @@ const customJestConfig = {
   ],
   
   // Module resolution
-  moduleNameMapping: {
+  moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@lib/(.*)$': '<rootDir>/lib/$1',
     '^@app/(.*)$': '<rootDir>/app/$1',

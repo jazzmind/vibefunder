@@ -10,10 +10,15 @@ import { PrismaClient } from '@prisma/client';
 let prisma: PrismaClient;
 
 if (!global.testPrisma) {
+  const testDatabaseUrl = process.env.TEST_DATABASE_URL;
+  if (!testDatabaseUrl) {
+    console.warn('⚠️  TEST_DATABASE_URL not configured, falling back to DATABASE_URL');
+  }
+  
   global.testPrisma = new PrismaClient({
     datasources: {
       db: {
-        url: process.env.TEST_DATABASE_URL || process.env.DATABASE_URL
+        url: testDatabaseUrl || process.env.DATABASE_URL
       }
     }
   });
@@ -243,112 +248,11 @@ export function wait(ms: number): Promise<void> {
  */
 export async function cleanupTestData(): Promise<void> {
   try {
-    // Delete in order to respect foreign key constraints
-    await prisma.comment.deleteMany({
-      where: {
-        user: {
-          email: {
-            contains: 'test'
-          }
-        }
-      }
-    });
+    // Clean up in order to respect foreign key constraints
+    console.log('🧹 Cleaning up test data...');
 
-    await prisma.pledge.deleteMany({
-      where: {
-        backer: {
-          email: {
-            contains: 'test'
-          }
-        }
-      }
-    });
-
-    await prisma.milestone.deleteMany({
-      where: {
-        campaign: {
-          maker: {
-            email: {
-              contains: 'test'
-            }
-          }
-        }
-      }
-    });
-
-    await prisma.pledgeTier.deleteMany({
-      where: {
-        campaign: {
-          maker: {
-            email: {
-              contains: 'test'
-            }
-          }
-        }
-      }
-    });
-
-    await prisma.teamMember.deleteMany({
-      where: {
-        user: {
-          email: {
-            contains: 'test'
-          }
-        }
-      }
-    });
-
-    await prisma.campaign.deleteMany({
-      where: {
-        maker: {
-          email: {
-            contains: 'test'
-          }
-        }
-      }
-    });
-
-    await prisma.passkey.deleteMany({
-      where: {
-        user: {
-          email: {
-            contains: 'test'
-          }
-        }
-      }
-    });
-
-    await prisma.otpCode.deleteMany({
-      where: {
-        user: {
-          email: {
-            contains: 'test'
-          }
-        }
-      }
-    });
-
-    await prisma.organizationTeamMember.deleteMany({
-      where: {
-        user: {
-          email: {
-            contains: 'test'
-          }
-        }
-      }
-    });
-
-    await prisma.organizationService.deleteMany({
-      where: {
-        organization: {
-          email: {
-            contains: 'test'
-          }
-        }
-      }
-    });
-
-    await prisma.organization.deleteMany({
+    // Get all test users first
+    const testUsers = await prisma.user.findMany({
       where: {
         email: {
           contains: 'test'
@@ -356,6 +260,132 @@ export async function cleanupTestData(): Promise<void> {
       }
     });
 
+    if (testUsers.length === 0) {
+      console.log('✅ No test data to clean up');
+      return;
+    }
+
+    const testUserIds = testUsers.map(u => u.id);
+
+    // Delete comments first
+    await prisma.comment.deleteMany({
+      where: {
+        userId: {
+          in: testUserIds
+        }
+      }
+    });
+
+    // Delete campaign-related data
+    const testCampaigns = await prisma.campaign.findMany({
+      where: {
+        makerId: {
+          in: testUserIds
+        }
+      }
+    });
+
+    const testCampaignIds = testCampaigns.map(c => c.id);
+
+    // Delete pledges, milestones, tiers, team members
+    await prisma.pledge.deleteMany({
+      where: {
+        OR: [
+          { backerId: { in: testUserIds } },
+          { campaignId: { in: testCampaignIds } }
+        ]
+      }
+    });
+
+    await prisma.milestone.deleteMany({
+      where: {
+        campaignId: {
+          in: testCampaignIds
+        }
+      }
+    });
+
+    await prisma.pledgeTier.deleteMany({
+      where: {
+        campaignId: {
+          in: testCampaignIds
+        }
+      }
+    });
+
+    await prisma.teamMember.deleteMany({
+      where: {
+        OR: [
+          { userId: { in: testUserIds } },
+          { campaignId: { in: testCampaignIds } }
+        ]
+      }
+    });
+
+    // Delete campaigns
+    await prisma.campaign.deleteMany({
+      where: {
+        id: {
+          in: testCampaignIds
+        }
+      }
+    });
+
+    // Delete auth-related data
+    await prisma.passkey.deleteMany({
+      where: {
+        userId: {
+          in: testUserIds
+        }
+      }
+    });
+
+    await prisma.otpCode.deleteMany({
+      where: {
+        userId: {
+          in: testUserIds
+        }
+      }
+    });
+
+    // Delete organization data
+    const testOrganizations = await prisma.organization.findMany({
+      where: {
+        OR: [
+          { ownerId: { in: testUserIds } },
+          { email: { contains: 'test' } }
+        ]
+      }
+    });
+
+    const testOrgIds = testOrganizations.map(o => o.id);
+
+    await prisma.organizationTeamMember.deleteMany({
+      where: {
+        OR: [
+          { userId: { in: testUserIds } },
+          { organizationId: { in: testOrgIds } }
+        ]
+      }
+    });
+
+    await prisma.organizationService.deleteMany({
+      where: {
+        organizationId: {
+          in: testOrgIds
+        }
+      }
+    });
+
+    await prisma.organization.deleteMany({
+      where: {
+        id: {
+          in: testOrgIds
+        }
+      }
+    });
+
+    // Delete waitlist entries
     await prisma.waitlist.deleteMany({
       where: {
         email: {
@@ -364,10 +394,11 @@ export async function cleanupTestData(): Promise<void> {
       }
     });
 
+    // Finally, delete users
     await prisma.user.deleteMany({
       where: {
-        email: {
-          contains: 'test'
+        id: {
+          in: testUserIds
         }
       }
     });
@@ -375,6 +406,7 @@ export async function cleanupTestData(): Promise<void> {
     console.log('✅ Test data cleanup completed');
   } catch (error) {
     console.error('⚠️  Error during test cleanup:', error);
+    // Don't throw - cleanup failures shouldn't fail tests
   }
 }
 

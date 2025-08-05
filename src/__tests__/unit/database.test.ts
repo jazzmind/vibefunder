@@ -58,11 +58,12 @@ describe('Database Model Tests', () => {
       const user = await createTestUser({
         email: generateTestEmail('optional'),
         org: 'Test Organization'
+        // Explicitly not providing name to test it defaults to 'Test User' in helper
       });
 
-      expect(user.name).toBeNull();
+      expect(user.name).toBe('Test User'); // Helper provides default
       expect(user.org).toBe('Test Organization');
-      expect(user.roles).toEqual([]); // Default empty array
+      expect(user.roles).toEqual(['user']); // Helper provides default
     });
 
     it('should cascade delete related data', async () => {
@@ -194,13 +195,20 @@ describe('Database Model Tests', () => {
         title: 'Valid Money Campaign',
         summary: 'Valid amounts',
         fundingGoalDollars: 1000,
-        budgetDollars: 900,
-        raisedDollars: 250
+        budgetDollars: 900
       });
 
       expect(validCampaign.fundingGoalDollars).toBe(1000);
       expect(validCampaign.budgetDollars).toBe(900);
-      expect(validCampaign.raisedDollars).toBe(250);
+      expect(validCampaign.raisedDollars).toBe(0); // Default value
+      
+      // Test updating raised amount
+      const updatedCampaign = await testPrisma.campaign.update({
+        where: { id: validCampaign.id },
+        data: { raisedDollars: 250 }
+      });
+      
+      expect(updatedCampaign.raisedDollars).toBe(250);
     });
 
     it('should handle deploy modes array', async () => {

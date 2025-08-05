@@ -227,7 +227,7 @@ describe('AI Image Generation', () => {
                          process.env.OPENAI_API_KEY.startsWith('sk-') &&
                          process.env.OPENAI_API_KEY !== 'sk-test-key';
 
-    it.skipIf(!hasRealApiKey)('should generate real image with OpenAI API', async () => {
+    (hasRealApiKey ? it : it.skip)('should generate real image with OpenAI API', async () => {
       // Remove OpenAI mock for real API test
       jest.unmock('openai');
       

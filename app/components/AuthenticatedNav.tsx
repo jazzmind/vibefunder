@@ -37,6 +37,9 @@ export function AuthenticatedNav() {
         <Link href="/campaigns" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">
           Campaigns
         </Link>
+        <Link href="/services" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">
+          Services
+        </Link>
         <Link href="/signin" className="btn">
           Sign in
         </Link>
@@ -48,6 +51,9 @@ export function AuthenticatedNav() {
     <nav className="hidden md:flex items-center space-x-8">
       <Link href="/campaigns" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">
         Campaigns
+      </Link>
+      <Link href="/services" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">
+        Services
       </Link>
       <Link href="/dashboard" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">
         Dashboard

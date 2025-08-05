@@ -7,6 +7,13 @@
     "build": "lsof -ti:3900 | xargs -r kill -9 2>/dev/null || true && next build",
     "postinstall": "prisma generate",
     "test": "npx tsx scripts/universal-test-runner.ts",
+    "test:unit": "npx tsx scripts/universal-test-runner.ts src/__tests__/unit/",
+    "test:integration": "npx tsx scripts/universal-test-runner.ts src/__tests__/integration/",
+    "test:ai": "npx tsx scripts/universal-test-runner.ts src/__tests__/ai/",
+    "test:api": "npx tsx scripts/universal-test-runner.ts src/__tests__/api/",
+    "test:security": "npx tsx scripts/universal-test-runner.ts src/__tests__/security/",
+    "test:watch": "npx tsx scripts/universal-test-runner.ts --watch",
+    "test:coverage": "npx tsx scripts/universal-test-runner.ts --coverage",
     "start": "next start",
     "lint": "next lint",
     "prisma:gen": "prisma generate",
@@ -35,6 +42,9 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.1.4",
+    "@testing-library/react": "^15.0.0",
+    "@types/jest": "^29.5.8",
     "@types/node": "^20.11.30",
     "@types/nodemailer": "^6.4.14",
     "@types/react": "^19.0.0",
@@ -42,9 +52,13 @@
     "autoprefixer": "^10.4.20",
     "eslint": "^9.5.0",
     "eslint-config-next": "^15.0.3",
+    "jest": "^29.7.0",
+    "jest-environment-node": "^29.7.0",
+    "jest-fetch-mock": "^3.0.3",
     "postcss": "^8.4.47",
     "prisma": "^6.13.0",
     "tailwindcss": "^4.0.0",
+    "ts-jest": "^29.1.1",
     "tsx": "^4.7.0",
     "typescript": "^5.4.5"
   }

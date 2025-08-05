@@ -2,6 +2,9 @@ import { prisma } from '@/lib/db';
 import { auth } from '@/lib/auth';
 import Link from 'next/link';
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
 export default async function ServiceMarketplacePage() {
   const session = await auth();
   const isAuthenticated = !!session?.user;

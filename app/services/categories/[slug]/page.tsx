@@ -3,6 +3,9 @@ import { auth } from '@/lib/auth';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
 interface ServiceCategoryPageProps {
   params: Promise<{ slug: string }>;
 }

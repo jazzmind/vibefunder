@@ -19,11 +19,11 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-gray-900 dark:text-white mb-6">
-              Your AI Demo Dazzles.<br />
+              Your Vibe Dazzles.<br />
               <span className="text-brand">Skip VCs. Go Straight to Profit.</span>
             </h1>
             <p className="text-xl md:text-2xl text-gray-600 dark:text-gray-300 mb-8 max-w-4xl mx-auto leading-relaxed">
-              You've built incredible AI software that solves real problems. But it's not production-ready yet. <strong className="text-gray-900 dark:text-white">What if eager customers could fund the work to get there?</strong> No dilution. No endless pitching. Just immediate profitability from day one.
+              You've used AI to build software that solves real problems. But it's not production-ready yet. <strong className="text-gray-900 dark:text-white">What if early customers could fund the work to get there?</strong> No dilution. No endless pitching. Just immediate profitability from day one.
             </p>
             <form onSubmit={handleEmailSubmit} className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-6 max-w-md mx-auto">
               <input 
@@ -39,7 +39,7 @@ export default function Home() {
               </button>
             </form>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              💡 <strong>The power of VibeFunder:</strong> Pinpoint what needs fixing → Partner with experts → Rally pre-paying customers → Launch profitably
+              💡 <strong>The power of VibeFunder:</strong> Pinpoint what needs improving → Partner with experts → Rally pre-paying customers → Launch profitably
             </p>
           </div>
         </div>
@@ -50,13 +50,13 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-8">From Demo to Production-Ready in 5 Steps</h2>
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-8">From MVP to Production-Ready in 5 Steps</h2>
               <ol className="space-y-6">
                 <li className="flex gap-4">
                   <span className="flex-shrink-0 w-8 h-8 bg-brand text-white rounded-full flex items-center justify-center font-semibold">1</span>
                   <div>
-                    <strong className="text-gray-900 dark:text-white">Pinpoint exactly what needs fixing</strong>
-                    <p className="text-gray-600 dark:text-gray-300 mt-1">Our AI evaluates your code and creates a precise roadmap for security, reliability, scalability, and maintainability.</p>
+                    <strong className="text-gray-900 dark:text-white">Pinpoint exactly what needs improving</strong>
+                    <p className="text-gray-600 dark:text-gray-300 mt-1">We evaluate your code and create a precise roadmap for security, reliability, scalability, and maintainability.</p>
                   </div>
                 </li>
                 <li className="flex gap-4">
@@ -70,7 +70,7 @@ export default function Home() {
                   <span className="flex-shrink-0 w-8 h-8 bg-brand text-white rounded-full flex items-center justify-center font-semibold">3</span>
                   <div>
                     <strong className="text-gray-900 dark:text-white">Rally customers who pre-pay to fund development</strong>
-                    <p className="text-gray-600 dark:text-gray-300 mt-1">Your eager early customers cover costs plus margin. Funds held in escrow, released only when milestones are proven complete.</p>
+                    <p className="text-gray-600 dark:text-gray-300 mt-1">Make it easy for early customers to buy with confidence. Funds held in escrow, released only when milestones are proven complete.</p>
                   </div>
                 </li>
                 <li className="flex gap-4">
@@ -84,7 +84,7 @@ export default function Home() {
                   <span className="flex-shrink-0 w-8 h-8 bg-brand text-white rounded-full flex items-center justify-center font-semibold">5</span>
                   <div>
                     <strong className="text-gray-900 dark:text-white">Launch profitably with zero dilution</strong>
-                    <p className="text-gray-600 dark:text-gray-300 mt-1">Your software is now production-ready, certified, and profitable from day one. You keep 100% of your equity.</p>
+                    <p className="text-gray-600 dark:text-gray-300 mt-1">Your software is now production-ready, certified, and profitable from day one. You keep 100% of your business.</p>
                   </div>
                 </li>
               </ol>
@@ -133,16 +133,20 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-6">For AI Software Makers</h2>
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-6">For Innovators</h2>
               <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">
-                <strong className="text-gray-900 dark:text-white">Imagine:</strong> Your incredible AI demo becomes enterprise-ready software, funded entirely by eager customers who can't wait to use it. No VCs. No dilution. No endless pitching. Just immediate profitability and 100% ownership of your breakthrough innovation.
+                <strong className="text-gray-900 dark:text-white">You:</strong> used AI tools to build a solution and potential customers love the idea... but not the risk. You don't have the funding to meet their requirements.
+              </p>
+              <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">
+                You could raise... or you could use VibeFunder to get the work done and launch profitably.
+                
               </p>
               <ul className="space-y-4">
                 <li className="flex items-center gap-3">
                   <svg className="w-5 h-5 text-brand" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
-                  <span className="text-gray-700 dark:text-gray-300">Charter lifetime or 5‑year licenses</span>
+                  <span className="text-gray-700 dark:text-gray-300">No VCs. No dilution. No endless pitching.</span>
                 </li>
                 <li className="flex items-center gap-3">
                   <svg className="w-5 h-5 text-brand" fill="currentColor" viewBox="0 0 20 20">

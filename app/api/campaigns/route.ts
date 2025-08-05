@@ -13,6 +13,7 @@ const campaignSchema = z.object({
 });
 
 export async function GET() {
+  console.log('[API] /api/campaigns GET request received');
   try {
     const items = await prisma.campaign.findMany({
       where: { status: 'published' }, // Only show published campaigns
@@ -34,9 +35,12 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  console.log('[API] /api/campaigns POST request received');
   try {
     const session = await auth();
+    console.log('[API] Session:', session);
     if (!session?.user?.id) {
+      console.log('[API] No session or user ID, returning 401');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

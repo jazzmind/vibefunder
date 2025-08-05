@@ -7,6 +7,9 @@ import { auth } from "@/lib/auth";
 import Link from "next/link";
 import ImageGenerator from "@/app/components/campaign/ImageGenerator";
 import AutoImageGenerationWrapper from "./AutoImageGenerationWrapper";
+import ReactMarkdown from 'react-markdown';
+import rehypeRaw from 'rehype-raw';
+import VideoEmbed from '@/app/components/campaign/VideoEmbed';
 
 // Demo campaigns data (should match the ones in campaigns/page.tsx)
 const DEMO_CAMPAIGNS = [
@@ -15,12 +18,31 @@ const DEMO_CAMPAIGNS = [
     title: 'TaskBuddy - AI-Powered Project Manager',
     summary: 'Revolutionary AI tool that helps teams organize and prioritize tasks automatically',
     image: '/images/demo/demo-1.jpg',
-    description: 'TaskBuddy is a cutting-edge AI-powered project management tool designed to revolutionize how teams organize, prioritize, and execute their work. Built with advanced machine learning algorithms, TaskBuddy automatically analyzes project requirements, team capacity, and deadlines to suggest optimal task allocation and scheduling.\n\nKey Features:\n• AI-driven task prioritization based on impact and urgency\n• Automated resource allocation and workload balancing\n• Smart deadline prediction with risk assessment\n• Intelligent notification system that adapts to team preferences\n• Real-time collaboration tools with AI-assisted communication\n• Advanced analytics and project insights\n\nOur mission is to eliminate the overhead of project management, allowing teams to focus on what they do best - creating amazing products.',
+    leadVideoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', // Demo video
+    description: `# TaskBuddy - AI-Powered Project Manager
+
+TaskBuddy is a **cutting-edge AI-powered project management tool** designed to revolutionize how teams organize, prioritize, and execute their work. Built with advanced machine learning algorithms, TaskBuddy automatically analyzes project requirements, team capacity, and deadlines to suggest optimal task allocation and scheduling.
+
+## 🚀 Key Features
+
+- **AI-driven task prioritization** based on impact and urgency
+- **Automated resource allocation** and workload balancing  
+- **Smart deadline prediction** with risk assessment
+- **Intelligent notification system** that adapts to team preferences
+- **Real-time collaboration tools** with AI-assisted communication
+- **Advanced analytics** and project insights
+
+## 💡 Our Mission
+
+Our mission is to eliminate the overhead of project management, allowing teams to focus on what they do best - creating amazing products.
+
+> "TaskBuddy has transformed how our team works. We're 40% more efficient and stress levels are way down!" - Sarah K., Product Manager`,
     raisedDollars: 4500,
     fundingGoalDollars: 10000,
-    budgetDollars: 8000,
+
     status: 'live',
     deployModes: ['cloud', 'saas'],
+    sectors: ['technology', 'productivity'],
     maker: { name: 'Sarah Chen', email: 'sarah@example.com', id: 'demo-maker-1' },
     pledges: [],
     milestones: [
@@ -54,9 +76,10 @@ const DEMO_CAMPAIGNS = [
     description: 'CodeFlow is an intelligent developer workflow optimizer that transforms how development teams write, review, and deploy code. Using advanced AI and machine learning, CodeFlow provides real-time code analysis, automated review suggestions, and intelligent deployment orchestration.\n\nKey Features:\n• AI-powered code review with security and performance insights\n• Automated testing pipeline generation\n• Intelligent merge conflict resolution\n• Smart deployment strategies based on risk assessment\n• Team productivity analytics and optimization suggestions\n• Integration with all major version control and CI/CD platforms\n\nCodeFlow reduces development cycle time by up to 40% while improving code quality and reducing bugs in production.',
     raisedDollars: 7800,
     fundingGoalDollars: 12000,
-    budgetDollars: 9500,
+
     status: 'live',
     deployModes: ['on-premise', 'cloud'],
+    sectors: ['technology', 'software development'],
     maker: { name: 'Alex Rivera', email: 'alex@example.com', id: 'demo-maker-2' },
     pledges: [],
     milestones: [
@@ -91,9 +114,10 @@ const DEMO_CAMPAIGNS = [
     description: 'DataViz Pro is a revolutionary no-code data visualization platform that empowers anyone to create stunning, interactive dashboards and reports. Using advanced AI and intuitive drag-and-drop interfaces, DataViz Pro automatically detects data patterns and suggests optimal visualization strategies.\n\nKey Features:\n• AI-powered visualization recommendations\n• Drag-and-drop dashboard builder\n• Real-time data connectivity to 100+ sources\n• Interactive charts and dynamic filtering\n• Collaborative sharing and commenting\n• White-label embedding for client reports\n• Advanced analytics with predictive insights\n\nDataViz Pro has already helped over 500 businesses transform their data into actionable insights, leading to an average 25% improvement in decision-making speed.',
     raisedDollars: 8200,
     fundingGoalDollars: 8000,
-    budgetDollars: 7500,
+
     status: 'funded',
     deployModes: ['saas', 'self-hosted'],
+    sectors: ['technology', 'analytics', 'business intelligence'],
     maker: { name: 'Jamie Park', email: 'jamie@example.com', id: 'demo-maker-3' },
     pledges: [],
     milestones: [
@@ -277,6 +301,29 @@ export default async function CampaignPage({params}:{params:Promise<{id:string}>
                   </div>
                 )}
               </div>
+              
+              {/* Lead Video */}
+              {campaign.leadVideoUrl && (
+                <div className="mt-8">
+                  <VideoEmbed 
+                    url={campaign.leadVideoUrl} 
+                    title={`${campaign.title} - Campaign Video`}
+                    className="w-full"
+                  />
+                </div>
+              )}
+              
+              {/* Campaign Description */}
+              {campaign.description && (
+                <div className="mt-8">
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">About This Campaign</h3>
+                  <div className="prose prose-gray dark:prose-invert max-w-none">
+                    <ReactMarkdown rehypePlugins={[rehypeRaw]}>
+                      {campaign.description}
+                    </ReactMarkdown>
+                  </div>
+                </div>
+              )}
             </div>
             
             <div className="lg:col-span-1">
@@ -518,12 +565,26 @@ export default async function CampaignPage({params}:{params:Promise<{id:string}>
                   <span className="text-sm text-gray-600 dark:text-gray-400">Deployment Options</span>
                   <div className="flex flex-wrap gap-1 mt-1">
                     {campaign.deployModes.map((mode: any) => (
-                      <span key={mode} className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded">
+                      <span key={mode} className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 rounded">
                         {mode.toUpperCase()}
                       </span>
                     ))}
                   </div>
                 </div>
+                
+                {/* Sectors */}
+                {campaign.sectors && campaign.sectors.length > 0 && (
+                  <div>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Sectors</span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {campaign.sectors.map((sector: any) => (
+                        <span key={sector} className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-300 rounded">
+                          {sector.charAt(0).toUpperCase() + sector.slice(1)}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -18,12 +18,11 @@ export default async function NewCampaign(){
     const title = formData.get("title") as string;
     const summary = formData.get("summary") as string;
     const description = formData.get("description") as string;
-    const budget = Number(formData.get("budget") || 0);
     const fundingGoal = Number(formData.get("fundingGoal") || 0);
     const deployModes = formData.getAll("deployModes") as string[];
+    const sectors = formData.getAll("sectors") as string[];
     
-    // Convert dollars to cents for storage
-    const budgetDollars = Math.round(budget);
+    // Convert dollars for storage
     const fundingGoalDollars = Math.round(fundingGoal);
     
     // Get current user from session
@@ -40,11 +39,12 @@ export default async function NewCampaign(){
         title,
         summary,
         description: "No description provided",
-        budgetDollars,
+  
         fundingGoalDollars,
         makerId: session.userId,
         status: "draft",
         deployModes: deployModes.length > 0 ? deployModes : ["saas"],
+        sectors: sectors.length > 0 ? sectors : [],
         endsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days from now
       }
     });
@@ -116,21 +116,7 @@ export default async function NewCampaign(){
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Minimum funding needed to proceed</p>
           </div>
 
-          <div>
-            <label htmlFor="budget" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Total Budget ($)
-            </label>
-            <input 
-              id="budget"
-              name="budget" 
-              type="number" 
-              step="1"
-              placeholder="e.g., 100000" 
-              required 
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            />
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Total project budget</p>
-          </div>
+
         </div>
 
         <div>
@@ -149,6 +135,46 @@ export default async function NewCampaign(){
             <label className="flex items-center">
               <input type="checkbox" name="deployModes" value="onprem" className="h-4 w-4 text-brand focus:ring-brand border-gray-300 rounded" />
               <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">On-premises</span>
+            </label>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+            Target Sectors
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="flex items-center">
+              <input type="checkbox" name="sectors" value="technology" className="h-4 w-4 text-brand focus:ring-brand border-gray-300 rounded" />
+              <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Technology</span>
+            </label>
+            <label className="flex items-center">
+              <input type="checkbox" name="sectors" value="healthcare" className="h-4 w-4 text-brand focus:ring-brand border-gray-300 rounded" />
+              <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Healthcare</span>
+            </label>
+            <label className="flex items-center">
+              <input type="checkbox" name="sectors" value="education" className="h-4 w-4 text-brand focus:ring-brand border-gray-300 rounded" />
+              <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Education</span>
+            </label>
+            <label className="flex items-center">
+              <input type="checkbox" name="sectors" value="finance" className="h-4 w-4 text-brand focus:ring-brand border-gray-300 rounded" />
+              <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Finance</span>
+            </label>
+            <label className="flex items-center">
+              <input type="checkbox" name="sectors" value="retail" className="h-4 w-4 text-brand focus:ring-brand border-gray-300 rounded" />
+              <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Retail</span>
+            </label>
+            <label className="flex items-center">
+              <input type="checkbox" name="sectors" value="insurance" className="h-4 w-4 text-brand focus:ring-brand border-gray-300 rounded" />
+              <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Insurance</span>
+            </label>
+            <label className="flex items-center">
+              <input type="checkbox" name="sectors" value="manufacturing" className="h-4 w-4 text-brand focus:ring-brand border-gray-300 rounded" />
+              <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Manufacturing</span>
+            </label>
+            <label className="flex items-center">
+              <input type="checkbox" name="sectors" value="government" className="h-4 w-4 text-brand focus:ring-brand border-gray-300 rounded" />
+              <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Government</span>
             </label>
           </div>
         </div>

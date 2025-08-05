@@ -45,7 +45,9 @@ model Campaign {
   repoUrl         String?
   videoUrl        String?
   image           String?
+  leadVideoUrl    String?
   deployModes     String[]      @default([])
+  sectors         String[]      @default([])
   requireBackerAccount Boolean   @default(true)
   onlyBackersComment Boolean     @default(false)
   createdAt       DateTime      @default(now())

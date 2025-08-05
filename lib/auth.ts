@@ -139,6 +139,49 @@ export async function updatePasskeyCounter(credentialId: string, counter: number
 
 export async function auth(): Promise<{ user: SessionPayload } | null> {
   try {
+    // LOCAL_API bypass for testing (similar to ProposalHub approach)
+    if (process.env.LOCAL_API === 'true') {
+      console.log('[LOCAL_API] Bypassing authentication for localhost testing');
+      
+      // Find a real test user from the database to use
+      try {
+        const testUser = await prisma.user.findFirst({
+          where: { 
+            OR: [
+              { email: { contains: 'test' } },
+              { email: { contains: 'simple-campaign-test' } }
+            ]
+          },
+          select: { id: true, email: true },
+          orderBy: { createdAt: 'desc' } // Get the most recent test user
+        });
+        
+        if (testUser) {
+          console.log('[LOCAL_API] Using real test user:', testUser.id);
+          return {
+            user: {
+              id: testUser.id,
+              userId: testUser.id,
+              email: testUser.email,
+              roles: ['user', 'admin']
+            }
+          };
+        }
+      } catch (dbError) {
+        console.log('[LOCAL_API] Database query failed, using fallback user');
+      }
+      
+      // Fallback to mock session for testing
+      return {
+        user: {
+          id: 'test-session',
+          userId: 'localhost-user',
+          email: 'localhost@test.com',
+          roles: ['user', 'admin']
+        }
+      };
+    }
+
     const cookieStore = await cookies();
     const sessionToken = cookieStore.get('session')?.value;
     

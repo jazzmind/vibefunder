@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Email and reason are required' }, { status: 400 });
     }
 
-    if (!['back_campaign', 'create_campaign'].includes(reason)) {
+    if (!['back_campaign', 'create_campaign', 'provide_services'].includes(reason)) {
       return NextResponse.json({ error: 'Invalid reason' }, { status: 400 });
     }
 

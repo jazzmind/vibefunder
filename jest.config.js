@@ -11,16 +11,18 @@ const customJestConfig = {
   testEnvironment: 'node',
   preset: 'ts-jest',
   
+  // Enable parallel testing
+  maxWorkers: 4, // Use 3-4 workers as requested
+  
   // Test patterns
   testMatch: [
-    '<rootDir>/src/__tests__/**/*.{js,jsx,ts,tsx}',
     '<rootDir>/__tests__/**/*.{js,jsx,ts,tsx}',
     '<rootDir>/**/*.test.{js,jsx,ts,tsx}'
   ],
   
   // Module resolution
   moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/src/$1',
+    '^@/(.*)$': '<rootDir>/$1',
     '^@lib/(.*)$': '<rootDir>/lib/$1',
     '^@app/(.*)$': '<rootDir>/app/$1',
   },
@@ -58,11 +60,11 @@ const customJestConfig = {
   },
   
   // Global setup for database and environment
-  globalSetup: '<rootDir>/src/__tests__/setup/global.setup.js',
-  globalTeardown: '<rootDir>/src/__tests__/setup/global.teardown.js',
+  globalSetup: '<rootDir>/__tests__/setup/global.setup.js',
+  globalTeardown: '<rootDir>/__tests__/setup/global.teardown.js',
   
   // Setup files
-  setupFiles: ['<rootDir>/src/__tests__/setup/env.setup.js'],
+  setupFiles: ['<rootDir>/__tests__/setup/env.setup.js'],
 }
 
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async

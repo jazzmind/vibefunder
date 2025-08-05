@@ -12,8 +12,8 @@
  * 
  * Usage:
  *   npm run test [jest-args...]
- *   npm run test src/__tests__/integration/full-workflow.test.ts
- *   npm run test src/__tests__/ai/ --verbose
+ *   npm run test __tests__/integration/full-workflow.test.ts
+ *   npm run test __tests__/ai/ --verbose
  *   npm run test --testNamePattern="AI Image Generation"
  */
 
@@ -217,6 +217,7 @@ class UniversalTestRunner {
         env: {
           ...process.env,
           NODE_ENV: 'test',
+          LOCAL_API: 'true',
           API_TEST_URL: `http://localhost:${this.config.testPort}`,
           TEST_PORT: this.config.testPort.toString()
         }
@@ -329,10 +330,10 @@ Usage: npm run test [jest-args...]
 
 Examples:
   npm run test                                          # Run all tests
-  npm run test src/__tests__/ai/                        # Run AI tests
-  npm run test src/__tests__/integration/               # Run integration tests  
+  npm run test __tests__/ai/                        # Run AI tests
+  npm run test __tests__/integration/               # Run integration tests  
   npm run test --testNamePattern="AI Image"             # Run tests matching pattern
-  npm run test src/specific.test.ts --verbose           # Run specific test with verbose output
+  npm run test __tests__/specific.test.ts --verbose           # Run specific test with verbose output
   npm run test --coverage                               # Run with coverage
   npm run test --watch                                  # Run in watch mode
 

@@ -20,7 +20,8 @@ jest.mock('next/navigation', () => ({
 }));
 
 // Mock fetch globally for API tests
-global.fetch = require('jest-fetch-mock');
+// Note: Disabled for now to allow real API testing
+// global.fetch = require('jest-fetch-mock');
 
 // Console configuration for cleaner test output
 const originalError = console.error;

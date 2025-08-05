@@ -12,9 +12,10 @@ const DEMO_CAMPAIGNS = [
     image: '/images/demo/demo-1.jpg',
     raisedDollars: 4500,
     fundingGoalDollars: 10000,
-    budgetDollars: 8000,
+    
     status: 'live',
     deployModes: ['cloud', 'saas'],
+    sectors: ['technology', 'productivity'],
     maker: { name: 'Sarah Chen', email: 'sarah@example.com' },
     pledges: [],
     _count: { pledges: 12, comments: 7 },
@@ -28,9 +29,10 @@ const DEMO_CAMPAIGNS = [
     image: '/images/demo/demo-2.jpg',
     raisedDollars: 7800,
     fundingGoalDollars: 12000,
-    budgetDollars: 9500,
+    
     status: 'live',
     deployModes: ['on-premise', 'cloud'],
+    sectors: ['technology', 'software development'],
     maker: { name: 'Alex Rivera', email: 'alex@example.com' },
     pledges: [],
     _count: { pledges: 18, comments: 12 },
@@ -44,9 +46,10 @@ const DEMO_CAMPAIGNS = [
     image: '/images/demo/demo-3.jpg',
     raisedDollars: 8200,
     fundingGoalDollars: 8000,
-    budgetDollars: 7500,
+    
     status: 'funded',
     deployModes: ['saas', 'self-hosted'],
+    sectors: ['technology', 'analytics', 'business intelligence'],
     maker: { name: 'Jamie Park', email: 'jamie@example.com' },
     pledges: [],
     _count: { pledges: 15, comments: 9 },
@@ -266,27 +269,43 @@ export default async function Campaigns({
                       </div>
                       <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
                         <span>{Math.round(fundingProgress * 100)}% funded</span>
-                        <span>Budget: ${(campaign.budgetDollars).toLocaleString()}</span>
+                        
                       </div>
                     </div>
                     
-                    <div className="flex items-center justify-between text-sm mb-3">
+                    <div className="flex items-center justify-between text-sm mb-2">
                       <span className="text-gray-600 dark:text-gray-400">
                         by {campaign.maker.name || campaign.maker.email.split('@')[0]}
                       </span>
                       <div className="flex gap-1">
                         {campaign.deployModes.slice(0, 2).map((mode: any) => (
-                          <span key={mode} className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded">
+                          <span key={mode} className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 rounded">
                             {mode.toUpperCase()}
                           </span>
                         ))}
                         {campaign.deployModes.length > 2 && (
-                          <span className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded">
+                          <span className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 rounded">
                             +{campaign.deployModes.length - 2}
                           </span>
                         )}
                       </div>
                     </div>
+                    
+                    {/* Sectors */}
+                    {campaign.sectors && campaign.sectors.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-3">
+                        {campaign.sectors.slice(0, 3).map((sector: any) => (
+                          <span key={sector} className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-300 rounded">
+                            {sector.charAt(0).toUpperCase() + sector.slice(1)}
+                          </span>
+                        ))}
+                        {campaign.sectors.length > 3 && (
+                          <span className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-300 rounded">
+                            +{campaign.sectors.length - 3}
+                          </span>
+                        )}
+                      </div>
+                    )}
                     
                     {/* Campaign Stats */}
                     <div className="grid grid-cols-2 gap-4 text-xs text-gray-500 dark:text-gray-400 pt-2 border-t border-gray-100 dark:border-gray-700">

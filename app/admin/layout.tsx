@@ -42,6 +42,18 @@ export default async function AdminLayout({
                   Organizations
                 </Link>
                 <Link 
+                  href="/admin/campaigns"
+                  className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 text-sm font-medium"
+                >
+                  Campaigns
+                </Link>
+                <Link 
+                  href="/admin/services"
+                  className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 text-sm font-medium"
+                >
+                  Services
+                </Link>
+                <Link 
                   href="/admin/settings"
                   className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 text-sm font-medium"
                 >

@@ -31,7 +31,7 @@ export async function sendOtpEmail(email: string, code: string) {
       <div style="text-align: center; color: #64748b; font-size: 14px;">
         <p>If you didn't request this code, you can safely ignore this email.</p>
         <p style="margin-top: 20px;">
-          <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}" style="color: #6757f5; text-decoration: none;">Visit VibeFunder</a>
+          <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}" style="color: #6757f5; text-decoration: none;">Visit VibeFunder</a>
         </p>
       </div>
     </div>
@@ -96,7 +96,7 @@ export async function sendCampaignUpdateEmail(email: string, data: CampaignUpdat
       </div>
       
       <div style="text-align: center;">
-        <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/campaigns/${data.campaignId}/updates" 
+        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/campaigns/${data.campaignId}/updates" 
            style="display: inline-block; background: #6757f5; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600;">
           View Campaign Updates
         </a>
@@ -105,7 +105,7 @@ export async function sendCampaignUpdateEmail(email: string, data: CampaignUpdat
       <div style="text-align: center; color: #64748b; font-size: 14px; margin-top: 30px;">
         <p>You're receiving this because you backed this campaign.</p>
         <p style="margin-top: 20px;">
-          <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/campaigns/${data.campaignId}" style="color: #6757f5; text-decoration: none;">Visit Campaign</a>
+          <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/campaigns/${data.campaignId}" style="color: #6757f5; text-decoration: none;">Visit Campaign</a>
         </p>
       </div>
     </div>
@@ -120,7 +120,7 @@ ${data.updateContent}
 
 ${!data.isPublic ? '🔒 This is a backer-only update' : ''}
 
-View more updates: ${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/campaigns/${data.campaignId}/updates
+View more updates: ${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/campaigns/${data.campaignId}/updates
   `;
 
   try {
@@ -167,7 +167,7 @@ export async function sendWaitlistConfirmationEmail(email: string, reason: strin
       <div style="text-align: center; color: #64748b; font-size: 14px;">
         <p>We'll send you an email when your account is ready.</p>
         <p style="margin-top: 20px;">
-          <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}" style="color: #6757f5; text-decoration: none;">Visit VibeFunder</a>
+          <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}" style="color: #6757f5; text-decoration: none;">Visit VibeFunder</a>
         </p>
       </div>
     </div>
@@ -180,7 +180,7 @@ Thank you for your interest in joining VibeFunder to ${reasonText}.
 
 We're currently in early access and carefully onboarding new users. You'll be notified as soon as your account is approved!
 
-Visit VibeFunder: ${process.env.NEXTAUTH_URL || 'http://localhost:3000'}
+Visit VibeFunder: ${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}
   `;
 
   try {
@@ -223,11 +223,11 @@ export async function sendWaitlistApprovalEmail(email: string, reason: string) {
       </div>
       
       <div style="text-align: center;">
-        <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/signin" 
+        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/signin" 
            style="display: inline-block; background: #6757f5; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; margin-right: 12px;">
           Sign In Now
         </a>
-        <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/campaigns" 
+        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/campaigns" 
            style="display: inline-block; background: #374151; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600;">
           Browse Campaigns
         </a>
@@ -236,7 +236,7 @@ export async function sendWaitlistApprovalEmail(email: string, reason: string) {
       <div style="text-align: center; color: #64748b; font-size: 14px; margin-top: 30px;">
         <p>Welcome to the future of crowdfunding!</p>
         <p style="margin-top: 20px;">
-          <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}" style="color: #6757f5; text-decoration: none;">Visit VibeFunder</a>
+          <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}" style="color: #6757f5; text-decoration: none;">Visit VibeFunder</a>
         </p>
       </div>
     </div>
@@ -251,8 +251,8 @@ Welcome to VibeFunder! Your account has been approved and you can now start to $
 
 You can now sign in and explore the platform!
 
-Sign in: ${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/signin
-Browse campaigns: ${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/campaigns
+Sign in: ${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/signin
+Browse campaigns: ${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/campaigns
   `;
 
   try {
@@ -288,7 +288,7 @@ export async function sendCustomWaitlistEmail(email: string, subject: string, co
       
       <div style="text-align: center; color: #64748b; font-size: 14px;">
         <p style="margin-top: 20px;">
-          <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}" style="color: #6757f5; text-decoration: none;">Visit VibeFunder</a>
+          <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}" style="color: #6757f5; text-decoration: none;">Visit VibeFunder</a>
         </p>
       </div>
     </div>
@@ -334,11 +334,11 @@ export async function sendOrganizationApprovalEmail(email: string, organizationN
       </div>
       
       <div style="text-align: center;">
-        <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/dashboard/new-campaign" 
+        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard/new-campaign" 
            style="display: inline-block; background: #6757f5; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; margin-right: 12px;">
           Create Campaign
         </a>
-        <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/dashboard" 
+        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard" 
            style="display: inline-block; background: #374151; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600;">
           Go to Dashboard
         </a>
@@ -359,8 +359,8 @@ ${organizationName} has been approved to create campaigns on VibeFunder!
 
 You can now create and manage campaigns!
 
-Create campaign: ${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/dashboard/new-campaign
-Go to dashboard: ${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/dashboard
+Create campaign: ${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard/new-campaign
+Go to dashboard: ${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard
   `;
 
   try {
@@ -410,11 +410,11 @@ export async function sendPledgeConfirmationEmail(email: string, data: {
       </div>
       
       <div style="text-align: center;">
-        <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/campaigns/${data.campaignId}" 
+        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/campaigns/${data.campaignId}" 
            style="display: inline-block; background: #6757f5; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; margin-right: 12px;">
           View Campaign
         </a>
-        <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/profile" 
+        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/profile" 
            style="display: inline-block; background: #374151; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600;">
           Manage Pledges
         </a>
@@ -436,8 +436,8 @@ Pledge Amount: $${data.pledgeAmount.toLocaleString()}
 
 Your funds are held in escrow until milestones are met. You'll receive updates as the campaign progresses.
 
-View campaign: ${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/campaigns/${data.campaignId}
-Manage pledges: ${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/profile
+View campaign: ${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/campaigns/${data.campaignId}
+Manage pledges: ${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/profile
   `;
 
   try {

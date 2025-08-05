@@ -13,7 +13,27 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { email } = sendOtpSchema.parse(body);
 
-    // Check admin settings first
+    // First, check if user already exists in the system
+    const existingUser = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() }
+    });
+
+    if (existingUser) {
+      // User exists - send OTP regardless of waitlist status
+      const code = await createOtpCode(existingUser.id);
+      const emailSent = await sendOtpEmail(email, code);
+      
+      if (!emailSent) {
+        console.log(`Development mode - OTP code for ${email}: ${code}`);
+      }
+
+      return NextResponse.json({ 
+        success: true, 
+        message: 'OTP code sent to your email',
+      });
+    }
+
+    // User doesn't exist - check admin settings for new signups
     const settings = await prisma.adminSettings.findFirst();
     const waitlistEnabled = settings?.waitlistEnabled ?? false;
     
@@ -23,31 +43,50 @@ export async function POST(request: NextRequest) {
         where: { email: email.toLowerCase() }
       });
       
-      if (!waitlistEntry || waitlistEntry.status !== 'approved') {
+      if (waitlistEntry) {
+        if (waitlistEntry.status === 'approved') {
+          // User is approved - create account and send OTP
+          const user = await findOrCreateUser(email.toLowerCase());
+          const code = await createOtpCode(user.id);
+          const emailSent = await sendOtpEmail(email, code);
+          
+          if (!emailSent) {
+            console.log(`Development mode - OTP code for ${email}: ${code}`);
+          }
+
+          return NextResponse.json({ 
+            success: true, 
+            message: 'OTP code sent to your email',
+          });
+        } else {
+          // User is on waitlist but not approved
+          return NextResponse.json({ 
+            error: 'You\'re already on our waitlist. We\'ll notify you when your account is ready.',
+            onWaitlist: true
+          }, { status: 403 });
+        }
+      } else {
+        // User not on waitlist - direct to waitlist signup
         return NextResponse.json({ 
-          error: 'Signups are currently disabled. Join our waitlist to get notified when your account is ready.',
+          error: 'Signups are currently disabled. Join our waitlist to get notified when accounts become available.',
           needsWaitlist: true
         }, { status: 403 });
       }
-    }
+    } else {
+      // Waitlist disabled - create account normally
+      const user = await findOrCreateUser(email.toLowerCase());
+      const code = await createOtpCode(user.id);
+      const emailSent = await sendOtpEmail(email, code);
+      
+      if (!emailSent) {
+        console.log(`Development mode - OTP code for ${email}: ${code}`);
+      }
 
-    // Find or create user
-    const user = await findOrCreateUser(email.toLowerCase());
-    
-    // Generate OTP code
-    const code = await createOtpCode(user.id);
-    
-    // Send email
-    const emailSent = await sendOtpEmail(email, code);
-    
-    if (!emailSent) {
-      console.log(`Development mode - OTP code for ${email}: ${code}`);
+      return NextResponse.json({ 
+        success: true, 
+        message: 'OTP code sent to your email',
+      });
     }
-
-    return NextResponse.json({ 
-      success: true, 
-      message: 'OTP code sent to your email',
-    });
 
   } catch (error) {
     console.error('Send OTP error:', error);

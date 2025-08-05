@@ -19,10 +19,11 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-gray-900 dark:text-white mb-6">
-              Vibe to profit. Skip the seed.
+              Your AI Demo Dazzles.<br />
+              <span className="text-brand">Skip VCs. Go Straight to Profit.</span>
             </h1>
             <p className="text-xl md:text-2xl text-gray-600 dark:text-gray-300 mb-8 max-w-4xl mx-auto leading-relaxed">
-              VibeFunder is the alternative to venture capital for AI-native micro‑SaaS. Turn MVPs into dependable software with charter customers who fund the security, reliability, and compliance work.
+              You've built incredible AI software that solves real problems. But it's not production-ready yet. <strong className="text-gray-900 dark:text-white">What if eager customers could fund the work to get there?</strong> No dilution. No endless pitching. Just immediate profitability from day one.
             </p>
             <form onSubmit={handleEmailSubmit} className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-6 max-w-md mx-auto">
               <input 
@@ -38,7 +39,7 @@ export default function Home() {
               </button>
             </form>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              5% platform fee. Milestone escrow. Makers keep IP. Backers get lifetime licenses.
+              💡 <strong>The power of VibeFunder:</strong> Pinpoint what needs fixing → Partner with experts → Rally pre-paying customers → Launch profitably
             </p>
           </div>
         </div>
@@ -49,20 +50,20 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-8">How it works</h2>
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-8">From Demo to Production-Ready in 5 Steps</h2>
               <ol className="space-y-6">
                 <li className="flex gap-4">
                   <span className="flex-shrink-0 w-8 h-8 bg-brand text-white rounded-full flex items-center justify-center font-semibold">1</span>
                   <div>
-                    <strong className="text-gray-900 dark:text-white">We evaluate the code</strong>
-                    <p className="text-gray-600 dark:text-gray-300 mt-1">Our AI evaluates what needs to be done to make it production-ready & estimates the cost.</p>
+                    <strong className="text-gray-900 dark:text-white">Pinpoint exactly what needs fixing</strong>
+                    <p className="text-gray-600 dark:text-gray-300 mt-1">Our AI evaluates your code and creates a precise roadmap for security, reliability, scalability, and maintainability.</p>
                   </div>
                 </li>
                 <li className="flex gap-4">
                   <span className="flex-shrink-0 w-8 h-8 bg-brand text-white rounded-full flex items-center justify-center font-semibold">2</span>
                   <div>
-                    <strong className="text-gray-900 dark:text-white">We help create a campaign</strong>
-                    <p className="text-gray-600 dark:text-gray-300 mt-1">Makers bring the story, we bring the roadmap & partners to make it grow.</p>
+                    <strong className="text-gray-900 dark:text-white">Partner with experts at fixed prices</strong>
+                    <p className="text-gray-600 dark:text-gray-300 mt-1">We connect you with vetted partners who deliver the work at predictable, guaranteed prices. No budget blowups.</p>
                   </div>
                 </li>
                 <li className="flex gap-4">

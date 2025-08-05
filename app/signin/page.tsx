@@ -72,13 +72,6 @@ export default function SignIn() {
     setLoading(true);
     setError('');
 
-    // If waitlist is enabled (signups disabled), redirect to waitlist
-    if (!signupsEnabled) {
-      setStep('waitlist');
-      setLoading(false);
-      return;
-    }
-
     try {
       const response = await fetch('/api/auth/send-otp', {
         method: 'POST',
@@ -92,7 +85,15 @@ export default function SignIn() {
         setMessage(data.message);
         setStep('otp');
       } else {
-        setError(data.error || 'Failed to send code');
+        if (data.needsWaitlist) {
+          // User needs to join waitlist
+          setStep('waitlist');
+        } else if (data.onWaitlist) {
+          // User is already on waitlist
+          setError(data.error);
+        } else {
+          setError(data.error || 'Failed to send code');
+        }
       }
     } catch (err) {
       setError('Network error');
@@ -500,6 +501,12 @@ export default function SignIn() {
         <div className="mt-8 text-center">
           <p className="text-sm text-gray-600 dark:text-gray-400">
             Don't have an account? You'll create one automatically when you sign in.
+          </p>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+            New to VibeFunder?{' '}
+            <Link href="/waitlist" className="text-brand hover:text-brand-dark font-medium">
+              Join the waitlist
+            </Link>
           </p>
         </div>
       </div>

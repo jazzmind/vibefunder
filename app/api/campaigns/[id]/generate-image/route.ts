@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { ImageGenerationService } from '@/lib/services/ImageGenerationService';
+import { ImageLibraryService } from '@/lib/services/ImageLibraryService';
 import { AIClient } from '@/lib/aiClient';
 import { AIError } from '@/lib/aiService';
 
@@ -45,24 +45,28 @@ export async function POST(
       }, { status: 500 });
     }
 
-    // Generate image using the new service
-    const service = new ImageGenerationService();
-    const result = await service.generateCampaignImage({
-      id: campaign.id,
-      title: campaign.title,
-      summary: campaign.summary || undefined,
-      description: campaign.description || undefined
+    // Generate and store image using the library service
+    const service = new ImageLibraryService();
+    const result = await service.generateAndStoreImage({
+      prompt: `Professional hero image for "${campaign.title}". ${campaign.summary || ''}`,
+      userId: session.user.id,
+      organizationId: campaign.organizationId || undefined,
+      campaignTitle: campaign.title,
+      theme: 'technology',
+      tags: ['campaign', 'hero', 'professional'],
+      isPublic: false
     });
 
-    // Update campaign with new image path
+    // Update campaign with new image URL
     await prisma.campaign.update({
       where: { id: campaign.id },
-      data: { image: result.data.imagePath }
+      data: { image: result.data.blobUrl }
     });
 
     return NextResponse.json({ 
       success: true, 
-      imagePath: result.data.imagePath,
+      imagePath: result.data.blobUrl,
+      imageUrl: result.data.blobUrl,
       prompt: result.data.prompt,
       message: 'Image generated successfully!' 
     }, {

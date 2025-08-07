@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import AIService, { AIResult } from '../aiService';
+import { MODELS } from '../models';
 
 // Input validation schema
 const ContentEnhancementInputSchema = z.object({
@@ -78,20 +79,20 @@ REQUIREMENTS:
 - Focus on high-impact improvements
 - Ensure suggestions are realistic and achievable`;
 
-    const userMessage = `Campaign Title: ${validatedInput.title}
+    const userMessage = `Campaign Title: "${validatedInput.title}"
 
-Campaign Summary: ${validatedInput.summary}
+Campaign Summary: "${validatedInput.summary}"
 
-Campaign Content:
+Campaign Narrative (Detailed Description):
 ${validatedInput.content}
 
-Please analyze this content and provide specific enhancement suggestions that will improve engagement, clarity, and persuasiveness.`;
+Please analyze ALL THREE sections (title, summary, and narrative) and provide specific enhancement suggestions. For each suggestion, ensure the originalText exactly matches text that exists in one of these sections. Be specific about which section you're targeting in your suggestions.`;
 
     const operationName = 'Content Enhancement Analysis';
 
     try {
       const result = await this.callAI(
-        'gpt-4o',
+        MODELS.best,
         [
           { role: 'system', content: systemMessage },
           { role: 'user', content: userMessage }
@@ -108,7 +109,7 @@ Please analyze this content and provide specific enhancement suggestions that wi
         metadata: {
           executionTimeMs: Date.now(),
           retries: 0,
-          model: 'gpt-4o'
+          model: MODELS.best
         }
       };
     } catch (error) {

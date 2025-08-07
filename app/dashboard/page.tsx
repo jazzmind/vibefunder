@@ -48,7 +48,7 @@ export default async function Dashboard({
             Ready to launch your first campaign? Connect with charter customers and validate your ideas.
           </p>
           <Link 
-            href="/dashboard/new-campaign" 
+            href="/campaigns/create" 
             className="btn inline-flex items-center gap-2"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -77,7 +77,7 @@ export default async function Dashboard({
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Campaign Dashboard</h1>
             <p className="text-gray-600 dark:text-gray-300">Manage your campaigns, track progress, and engage with your community.</p>
           </div>
-          <Link href="/dashboard/new-campaign" className="btn">
+          <Link href="/campaigns/create" className="btn">
             Create New Campaign
           </Link>
         </div>

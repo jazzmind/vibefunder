@@ -2,61 +2,8 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { CampaignSearch } from "./search";
+import { DEMO_CAMPAIGNS } from "@/app/demo/campaigns";
 
-// Demo campaigns for non-authenticated users
-const DEMO_CAMPAIGNS = [
-  {
-    id: 'demo-1',
-    title: 'TaskBuddy - AI-Powered Project Manager',
-    summary: 'Revolutionary AI tool that helps teams organize and prioritize tasks automatically',
-    image: '/images/demo/demo-1.jpg',
-    raisedDollars: 4500,
-    fundingGoalDollars: 10000,
-    
-    status: 'live',
-    deployModes: ['cloud', 'saas'],
-    sectors: ['technology', 'productivity'],
-    maker: { name: 'Sarah Chen', email: 'sarah@example.com' },
-    pledges: [],
-    _count: { pledges: 12, comments: 7 },
-    createdAt: new Date('2024-12-01'),
-    endsAt: new Date('2025-01-15') // Future date
-  },
-  {
-    id: 'demo-2', 
-    title: 'CodeFlow - Developer Workflow Optimizer',
-    summary: 'Streamline your development process with intelligent code review and deployment automation',
-    image: '/images/demo/demo-2.jpg',
-    raisedDollars: 7800,
-    fundingGoalDollars: 12000,
-    
-    status: 'live',
-    deployModes: ['on-premise', 'cloud'],
-    sectors: ['technology', 'software development'],
-    maker: { name: 'Alex Rivera', email: 'alex@example.com' },
-    pledges: [],
-    _count: { pledges: 18, comments: 12 },
-    createdAt: new Date('2024-11-20'),
-    endsAt: new Date('2025-01-20') // Future date
-  },
-  {
-    id: 'demo-3',
-    title: 'DataViz Pro - Interactive Analytics Dashboard',
-    summary: 'Transform complex data into beautiful, interactive visualizations with no coding required',
-    image: '/images/demo/demo-3.jpg',
-    raisedDollars: 8200,
-    fundingGoalDollars: 8000,
-    
-    status: 'funded',
-    deployModes: ['saas', 'self-hosted'],
-    sectors: ['technology', 'analytics', 'business intelligence'],
-    maker: { name: 'Jamie Park', email: 'jamie@example.com' },
-    pledges: [],
-    _count: { pledges: 15, comments: 9 },
-    createdAt: new Date('2024-11-01'),
-    endsAt: new Date('2024-12-15') // Past date for funded campaign
-  }
-];
 
 export default async function Campaigns({
   searchParams
@@ -129,7 +76,7 @@ export default async function Campaigns({
     });
   } else {
     // Use demo campaigns for non-authenticated users
-    campaigns = DEMO_CAMPAIGNS.filter(campaign => {
+    campaigns = DEMO_CAMPAIGNS.filter((campaign: any) => {
       // Apply search filter
       if (search) {
         const searchTerm = search.toLowerCase();
@@ -369,7 +316,7 @@ export default async function Campaigns({
           <div className="flex flex-col sm:flex-row gap-4">
             {isAuthenticated ? (
               <>
-                <Link className="btn" href="/dashboard/new-campaign">Create Campaign</Link>
+                <Link className="btn" href="/campaigns/create">Create Campaign</Link>
                 <Link className="btn-secondary" href="/#how">Learn How It Works</Link>
               </>
             ) : (

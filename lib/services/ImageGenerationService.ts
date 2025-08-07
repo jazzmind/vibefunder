@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import AIService, { AIResult } from '../aiService';
-import fs from 'fs/promises';
-import path from 'path';
+import { MODELS } from '../models';
 
 // Input validation schema
 const ImageGenerationInputSchema = z.object({
@@ -13,8 +12,8 @@ const ImageGenerationInputSchema = z.object({
 
 // Output schema for generated image
 const ImageGenerationResponseSchema = z.object({
-  imagePath: z.string().min(1, 'Image path is required').describe(
-    'Public URL path to the generated image'
+  image: z.instanceof(Buffer).describe(
+    'The generated image buffer'
   ),
   prompt: z.string().min(1, 'Prompt is required').describe(
     'The AI prompt used to generate the image'
@@ -36,7 +35,7 @@ export class ImageGenerationService extends AIService {
   }
 
   /**
-   * Generate a campaign image using DALL-E
+   * Generate a campaign image using GPT-Image-1
    */
   async generateCampaignImage(input: ImageGenerationInput): Promise<AIResult<ImageGenerationResponse>> {
     // Validate input
@@ -49,43 +48,23 @@ export class ImageGenerationService extends AIService {
       const prompt = this.generateImagePrompt(validatedInput);
       this.log(`📝 Using prompt: ${prompt}`);
 
-      const operationName = 'DALL-E Image Generation';
-      
-      const result = await this.executeWithRetry(async () => {
-        // Generate image with OpenAI
-        const response = await this.client.images.generate({
-          model: "dall-e-3",
-          prompt: prompt,
-          size: "1024x1024",
-          quality: "standard",
-          n: 1,
-        });
-
-        const imageUrl = response.data?.[0]?.url;
-        
-        if (!imageUrl) {
-          throw new Error('No image URL returned from OpenAI');
+      const imageBuffer = await this.generateImage(MODELS.image, prompt, "1024x1024", 1, "medium");
+        if (!imageBuffer) {
+            throw new Error('No image returned from AI service');
         }
-
-        // Download and save the image
-        const imagePath = await this.downloadAndSaveImage(imageUrl, validatedInput.id);
         
         return {
-          imagePath,
-          prompt,
+          data: {
+            image: imageBuffer,
+            prompt: prompt,
+          },
+          metadata: {
+            executionTimeMs: Date.now(), // You may want to track this properly
+            retries: 0,
+            model: MODELS.image
+          }
         };
-      }, operationName);
-
-      this.log(`✅ Generated and saved image for campaign: ${validatedInput.title}`);
-      
-      return {
-        data: result.data,
-        metadata: {
-          executionTimeMs: result.metadata.executionTimeMs,
-          retries: result.metadata.retries,
-          model: 'dall-e-3'
-        }
-      };
+    
 
     } catch (error) {
       this.log(`❌ Image generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
@@ -151,45 +130,6 @@ export class ImageGenerationService extends AIService {
     return basePrompt + contextPrompt + stylePrompt;
   }
 
-  /**
-   * Download image from URL and save to local filesystem
-   */
-  private async downloadAndSaveImage(imageUrl: string, campaignId: string): Promise<string> {
-    try {
-      this.log(`📥 Downloading image from OpenAI for campaign ${campaignId}`);
-      
-      // Download the image
-      const response = await fetch(imageUrl);
-      if (!response.ok) {
-        throw new Error(`Failed to download image: ${response.status} ${response.statusText}`);
-      }
-      
-      const arrayBuffer = await response.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-      
-      // Create campaigns directory if it doesn't exist
-      const campaignsDir = path.join(process.cwd(), 'public', 'images', 'campaigns');
-      await fs.mkdir(campaignsDir, { recursive: true });
-      
-      // Generate filename with timestamp to avoid conflicts
-      const timestamp = Date.now();
-      const filename = `${campaignId}-${timestamp}.png`;
-      const imagePath = path.join(campaignsDir, filename);
-      
-      // Save the image
-      await fs.writeFile(imagePath, buffer);
-      
-      // Return public URL path
-      const publicPath = `/images/campaigns/${filename}`;
-      this.log(`💾 Saved image to: ${publicPath}`);
-      
-      return publicPath;
-      
-    } catch (error) {
-      this.log(`❌ Error downloading/saving image: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
-      throw new Error(`Failed to save image: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  }
 
   /**
    * Check if image generation is available
@@ -210,7 +150,7 @@ export class ImageGenerationService extends AIService {
     return {
       isAvailable: ImageGenerationService.isAvailable(),
       hasApiKey: !!process.env.OPENAI_API_KEY,
-      model: 'dall-e-3',
+      model: MODELS.image,
       timeout: this.config.timeoutMs,
     };
   }

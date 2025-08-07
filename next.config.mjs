@@ -5,6 +5,16 @@ const nextConfig = {
       allowedOrigins: ['*'] 
     }
   },
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '*.public.blob.vercel-storage.com',
+        port: '',
+        pathname: '/**',
+      },
+    ],
+  },
   eslint: {
     ignoreDuringBuilds: false,
   },

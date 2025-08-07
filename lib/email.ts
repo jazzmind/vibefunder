@@ -334,7 +334,7 @@ export async function sendOrganizationApprovalEmail(email: string, organizationN
       </div>
       
       <div style="text-align: center;">
-        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard/new-campaign" 
+        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/campaigns/create" 
            style="display: inline-block; background: #6757f5; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; margin-right: 12px;">
           Create Campaign
         </a>
@@ -359,7 +359,7 @@ ${organizationName} has been approved to create campaigns on VibeFunder!
 
 You can now create and manage campaigns!
 
-Create campaign: ${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard/new-campaign
+Create campaign: ${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/campaigns/create
 Go to dashboard: ${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard
   `;
 

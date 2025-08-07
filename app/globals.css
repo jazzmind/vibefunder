@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+@import 'highlight.js/styles/github-dark.css';
 
 :root {
   --brand: #6757f5;
@@ -98,5 +99,105 @@ body {
   
   .hover\:text-brand-dark:hover {
     color: var(--brand-dark);
+  }
+}
+
+/* Prose customizations for rich text content */
+@layer components {
+  .prose {
+    @apply text-gray-700 dark:text-gray-300 leading-relaxed;
+  }
+  
+  .prose h1 {
+    @apply text-3xl font-bold text-gray-900 dark:text-white mt-8 mb-4 first:mt-0;
+  }
+  
+  .prose h2 {
+    @apply text-2xl font-semibold text-gray-900 dark:text-white mt-6 mb-3;
+  }
+  
+  .prose h3 {
+    @apply text-xl font-semibold text-gray-900 dark:text-white mt-5 mb-2;
+  }
+  
+  .prose h4,
+  .prose h5,
+  .prose h6 {
+    @apply text-lg font-medium text-gray-900 dark:text-white mt-4 mb-2;
+  }
+  
+  .prose p {
+    @apply mb-4 leading-relaxed;
+  }
+  
+  .prose ul {
+    @apply list-disc pl-6 mb-4 space-y-2;
+  }
+  
+  .prose ol {
+    @apply list-decimal pl-6 mb-4 space-y-2;
+  }
+  
+  .prose li {
+    @apply text-gray-700 dark:text-gray-300;
+  }
+  
+  .prose strong {
+    @apply font-semibold text-gray-900 dark:text-white;
+  }
+  
+  .prose em {
+    @apply italic text-gray-700 dark:text-gray-300;
+  }
+  
+  .prose blockquote {
+    @apply border-l-4 pl-4 py-2 my-4 bg-gray-50 dark:bg-gray-800 italic text-gray-600 dark:text-gray-400;
+    border-left-color: var(--brand);
+  }
+  
+  .prose blockquote p {
+    @apply mb-0;
+  }
+  
+  .prose a {
+    @apply underline decoration-1 underline-offset-2;
+    color: var(--brand);
+  }
+  
+  .prose a:hover {
+    color: var(--brand-dark);
+  }
+  
+  .prose code {
+    @apply px-1 py-0.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded font-mono;
+  }
+  
+  .prose pre {
+    @apply p-4 bg-gray-900 text-gray-100 rounded-lg overflow-x-auto my-4;
+  }
+  
+  .prose pre code {
+    @apply p-0 bg-transparent text-current;
+  }
+  
+  .prose img {
+    @apply rounded-lg shadow-md my-4;
+  }
+  
+  .prose table {
+    @apply w-full border-collapse border border-gray-300 dark:border-gray-600 my-4;
+  }
+  
+  .prose th,
+  .prose td {
+    @apply border border-gray-300 dark:border-gray-600 px-4 py-2 text-left;
+  }
+  
+  .prose th {
+    @apply bg-gray-50 dark:bg-gray-700 font-semibold text-gray-900 dark:text-white;
+  }
+  
+  .prose td {
+    @apply text-gray-700 dark:text-gray-300;
   }
 }

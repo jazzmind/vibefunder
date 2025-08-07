@@ -2,6 +2,7 @@ import { aiClient } from './aiClient';
 import { z } from 'zod';
 import { zodTextFormat } from 'openai/helpers/zod';
 import { ResponseInput } from 'openai/resources/responses/responses.mjs';
+import { ImageGenerateParamsNonStreaming } from 'openai/resources/images.mjs';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -349,6 +350,22 @@ export abstract class AIService {
 
     return this.callAI(model, input, responseSchema, operationName, schemaName, options);
   }
+
+  protected async generateImage(model: string, prompt: string, size: string, n: number, quality: string) {
+    const params: ImageGenerateParamsNonStreaming = {
+      model,
+      prompt,
+      n,
+      size: size as ImageGenerateParamsNonStreaming['size'],
+      quality: quality as ImageGenerateParamsNonStreaming['quality'],
+    };
+    const response = await this.client.images.generate(params);
+    const imageBuffer = Buffer.from(response?.data?.[0]?.b64_json || '', "base64");
+
+    return imageBuffer;
+  }
+
+
 
   /**
    * Helper method to create file input content

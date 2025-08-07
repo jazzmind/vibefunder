@@ -26,6 +26,8 @@ model User {
   organizations Organization[]
   organizationApprovals Organization[] @relation("OrganizationApprover")
   organizationTeamMemberships OrganizationTeamMember[]
+  generatedImages GeneratedImage[]
+  githubConnections GitHubConnection[]
 }
 
 model Campaign {
@@ -250,6 +252,7 @@ model Organization {
   campaigns         Campaign[] @relation("OrganizationCampaigns")
   services          OrganizationService[]
   teamMembers       OrganizationTeamMember[]
+  generatedImages   GeneratedImage[]
   
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
@@ -318,4 +321,54 @@ model OrganizationTeamMember {
   updatedAt      DateTime     @updatedAt
   
   @@unique([organizationId, userId])
+}
+
+model GeneratedImage {
+  id             String       @id @default(cuid())
+  organizationId String?      // Associate with organization for reuse
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  userId         String       // Creator of the image
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Image metadata
+  filename       String       // Original filename
+  blobUrl        String       // Vercel Blob URL
+  blobKey        String       // Vercel Blob key for management
+  width          Int?         // Image dimensions
+  height         Int?
+  fileSize       Int?         // File size in bytes
+  mimeType       String       @default("image/png")
+  
+  // Generation metadata
+  prompt         String       // AI prompt used to generate
+  model          String       @default("dall-e-3") // AI model used
+  theme          String?      // Detected theme (tech, healthcare, etc.)
+  tags           String[]     @default([]) // Searchable tags
+  
+  // Usage tracking
+  campaignTitle  String?      // Original campaign title (if generated for campaign)
+  usageCount     Int          @default(1) // How many times used
+  isPublic       Boolean      @default(false) // Can other orgs see this
+  
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([theme])
+  @@index([tags])
+}
+
+model GitHubConnection {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  githubToken String   // Encrypted GitHub personal access token
+  username    String?  // GitHub username
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId]) // One GitHub connection per user
+  @@index([userId])
 }

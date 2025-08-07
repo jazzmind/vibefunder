@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import AIService, { AIResult } from '../aiService';
+import { MODELS } from '../models';
 
 // Input validation schema
 const MilestoneSuggestionInputSchema = z.object({
@@ -103,7 +104,7 @@ Please suggest appropriate milestones that break down this project into logical,
 
     try {
       const result = await this.callAI(
-        'gpt-4o',
+        MODELS.best,
         [
           { role: 'system', content: systemMessage },
           { role: 'user', content: userMessage }
@@ -126,7 +127,7 @@ Please suggest appropriate milestones that break down this project into logical,
         metadata: {
           executionTimeMs: Date.now(),
           retries: 0,
-          model: 'gpt-4o'
+          model: MODELS.best
         }
       };
     } catch (error) {

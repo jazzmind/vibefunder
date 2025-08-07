@@ -27,5 +27,13 @@ export type {
   ImageGenerationResponse 
 } from './ImageGenerationService';
 
+export { ImageLibraryService } from './ImageLibraryService';
+export type { 
+  ImageGenerationInput as LibraryImageGenerationInput,
+  ImageSearchInput,
+  GeneratedImageResponse,
+  ImageSearchResponse 
+} from './ImageLibraryService';
+
 // Re-export common AI service types
 export type { AIResult, AIError, AIErrorType } from '../aiService';

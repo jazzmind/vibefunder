@@ -258,7 +258,7 @@ export default function Home() {
             <Link href="/campaigns" className="bg-white dark:bg-gray-800 text-brand dark:text-brand px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
               Browse campaigns
             </Link>
-            <Link href="/dashboard/new-campaign" className="border border-white dark:border-gray-300 text-white dark:text-gray-300 px-8 py-3 rounded-lg font-semibold hover:bg-white dark:hover:bg-gray-300 hover:text-brand dark:hover:text-brand transition-colors">
+            <Link href="/campaigns/create" className="border border-white dark:border-gray-300 text-white dark:text-gray-300 px-8 py-3 rounded-lg font-semibold hover:bg-white dark:hover:bg-gray-300 hover:text-brand dark:hover:text-brand transition-colors">
               Start a campaign
             </Link>
           </div>

@@ -11,19 +11,24 @@ interface Enhancement {
   enhancedText: string;
   reason: string;
   approved: boolean | null; // null = pending, true = approved, false = rejected
+  targetField: 'title' | 'summary' | 'description'; // Which form field this applies to
 }
 
 interface AIContentEnhancerProps {
-  content: string;
   title: string;
   summary: string;
+  content: string;
+  onTitleUpdate: (newTitle: string) => void;
+  onSummaryUpdate: (newSummary: string) => void;
   onContentUpdate: (newContent: string) => void;
 }
 
 export default function AIContentEnhancer({ 
-  content, 
   title, 
   summary,
+  content, 
+  onTitleUpdate,
+  onSummaryUpdate,
   onContentUpdate 
 }: AIContentEnhancerProps) {
   const [enhancements, setEnhancements] = useState<Enhancement[]>([]);
@@ -46,11 +51,26 @@ export default function AIContentEnhancer({
       if (response.ok) {
         const data = await response.json();
         const suggestions = data.suggestions || [];
-        setEnhancements(suggestions.map((s: any, index: number) => ({
-          ...s,
-          id: `enhancement-${index}`,
-          approved: null,
-        })));
+        setEnhancements(suggestions.map((s: any, index: number) => {
+          // Determine which field this suggestion applies to based on the original text
+          let targetField: 'title' | 'summary' | 'description' = 'description';
+          
+          if (title.includes(s.originalText)) {
+            targetField = 'title';
+          } else if (summary.includes(s.originalText)) {
+            targetField = 'summary';
+          } else if (content.includes(s.originalText)) {
+            targetField = 'description';
+          }
+          // If text isn't found in any field, default to description for new content
+          
+          return {
+            ...s,
+            id: `enhancement-${index}`,
+            approved: null,
+            targetField,
+          };
+        }));
       }
     } catch (error) {
       console.error('Failed to analyze content:', error);
@@ -67,27 +87,49 @@ export default function AIContentEnhancer({
 
   const applyApprovedChanges = () => {
     const approvedEnhancements = enhancements.filter(e => e.approved === true);
-    let updatedContent = content;
+    
+    // Group enhancements by target field
+    const enhancementsByField = {
+      title: approvedEnhancements.filter(e => e.targetField === 'title'),
+      summary: approvedEnhancements.filter(e => e.targetField === 'summary'),
+      description: approvedEnhancements.filter(e => e.targetField === 'description'),
+    };
 
-    // Sort by position in text to apply changes correctly (from end to beginning)
-    const sortedEnhancements = approvedEnhancements.sort((a, b) => {
-      const posA = content.indexOf(a.originalText);
-      const posB = content.indexOf(b.originalText);
-      return posB - posA; // Reverse order
-    });
+    // Apply changes to each field
+    Object.entries(enhancementsByField).forEach(([fieldName, fieldEnhancements]) => {
+      if (fieldEnhancements.length === 0) return;
+      
+      let currentContent = fieldName === 'title' ? title : 
+                          fieldName === 'summary' ? summary : content;
+      
+      // Sort by position in text to apply changes correctly (from end to beginning)
+      const sortedEnhancements = fieldEnhancements.sort((a, b) => {
+        const posA = currentContent.indexOf(a.originalText);
+        const posB = currentContent.indexOf(b.originalText);
+        return posB - posA; // Reverse order
+      });
 
-    // Apply each enhancement
-    sortedEnhancements.forEach(enhancement => {
-      const index = updatedContent.indexOf(enhancement.originalText);
-      if (index !== -1) {
-        updatedContent = 
-          updatedContent.substring(0, index) + 
-          enhancement.enhancedText + 
-          updatedContent.substring(index + enhancement.originalText.length);
+      // Apply each enhancement to this field
+      sortedEnhancements.forEach(enhancement => {
+        const index = currentContent.indexOf(enhancement.originalText);
+        if (index !== -1) {
+          currentContent = 
+            currentContent.substring(0, index) + 
+            enhancement.enhancedText + 
+            currentContent.substring(index + enhancement.originalText.length);
+        }
+      });
+
+      // Update the appropriate field
+      if (fieldName === 'title') {
+        onTitleUpdate(currentContent);
+      } else if (fieldName === 'summary') {
+        onSummaryUpdate(currentContent);
+      } else if (fieldName === 'description') {
+        onContentUpdate(currentContent);
       }
     });
 
-    onContentUpdate(updatedContent);
     setEnhancements([]);
     setShowPreview(false);
   };
@@ -207,16 +249,28 @@ export default function AIContentEnhancer({
               >
                 <div className="flex items-start justify-between mb-3">
                   <div>
-                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded ${
-                      enhancement.type === 'addition'
-                        ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
-                        : enhancement.type === 'modification'
-                        ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'
-                        : 'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200'
-                    }`}>
-                      {enhancement.type.charAt(0).toUpperCase() + enhancement.type.slice(1)}
-                    </span>
-                    <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">
+                    <div className="flex items-center space-x-2 mb-1">
+                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded ${
+                        enhancement.type === 'addition'
+                          ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
+                          : enhancement.type === 'modification'
+                          ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'
+                          : 'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200'
+                      }`}>
+                        {enhancement.type.charAt(0).toUpperCase() + enhancement.type.slice(1)}
+                      </span>
+                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded ${
+                        enhancement.targetField === 'title'
+                          ? 'bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200'
+                          : enhancement.targetField === 'summary'
+                          ? 'bg-teal-100 dark:bg-teal-900 text-teal-800 dark:text-teal-200'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
+                      }`}>
+                        {enhancement.targetField === 'title' ? 'Title' : 
+                         enhancement.targetField === 'summary' ? 'Summary' : 'Campaign Narrative'}
+                      </span>
+                    </div>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
                       {enhancement.section}
                     </span>
                   </div>

@@ -17,8 +17,9 @@ export default function AutoImageGenerationWrapper({
   // 1. User is the owner
   // 2. Campaign doesn't have an image
   // 3. URL has 'new=true' parameter (indicating newly created campaign)
-  const urlParams = new URLSearchParams(window.location.search);
-  const isNewCampaign = urlParams.get('new') === 'true';
+  const isNewCampaign = typeof window !== 'undefined' 
+    ? new URLSearchParams(window.location.search).get('new') === 'true'
+    : false;
   
   useAutoImageGeneration(
     campaignId, 

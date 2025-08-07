@@ -216,11 +216,10 @@ export default async function AdminCampaignDetail({
             {campaign.description && (
               <div className="mt-6">
                 <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Description</h3>
-                <div className="prose dark:prose-invert max-w-none">
-                  <p className="text-gray-700 dark:text-gray-300 whitespace-pre-line">
-                    {campaign.description}
-                  </p>
-                </div>
+                <div 
+                  className="prose max-w-none"
+                  dangerouslySetInnerHTML={{ __html: campaign.description }}
+                />
               </div>
             )}
           </div>

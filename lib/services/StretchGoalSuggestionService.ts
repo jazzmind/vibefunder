@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import AIService, { AIResult } from '../aiService';
+import { MODELS } from '../models';
 
 // Input validation schema
 const StretchGoalSuggestionInputSchema = z.object({
@@ -96,7 +97,7 @@ Please suggest compelling stretch goals that will motivate backers to contribute
 
     try {
       const result = await this.callAI(
-        'gpt-4o',
+        MODELS.best,
         [
           { role: 'system', content: systemMessage },
           { role: 'user', content: userMessage }
@@ -128,7 +129,7 @@ Please suggest compelling stretch goals that will motivate backers to contribute
         metadata: {
           executionTimeMs: Date.now(),
           retries: 0,
-          model: 'gpt-4o'
+          model: MODELS.best
         }
       };
     } catch (error) {

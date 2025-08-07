@@ -59,6 +59,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       sectors,
       requireBackerAccount,
       onlyBackersComment,
+      milestones,
+      stretchGoals,
+      priceTiers,
     } = body;
 
     // Get existing campaign
@@ -103,6 +106,65 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       if (onlyBackersComment !== undefined) updateData.onlyBackersComment = onlyBackersComment;
     }
 
+    // Handle milestones and stretch goals updates
+    if (milestones !== undefined && (existingCampaign.status === 'draft' || isAdmin)) {
+      // Delete existing milestones and create new ones
+      await prisma.milestone.deleteMany({
+        where: { campaignId: resolvedParams.id }
+      });
+
+      if (milestones.length > 0) {
+        await prisma.milestone.createMany({
+          data: milestones.map((milestone: any) => ({
+            campaignId: resolvedParams.id,
+            name: milestone.name,
+            pct: milestone.pct,
+            acceptance: milestone.acceptance,
+            status: 'pending'
+          }))
+        });
+      }
+    }
+
+    if (stretchGoals !== undefined && (existingCampaign.status === 'draft' || isAdmin)) {
+      // Delete existing stretch goals and create new ones
+      await prisma.stretchGoal.deleteMany({
+        where: { campaignId: resolvedParams.id }
+      });
+
+      if (stretchGoals.length > 0) {
+        await prisma.stretchGoal.createMany({
+          data: stretchGoals.map((goal: any, index: number) => ({
+            campaignId: resolvedParams.id,
+            title: goal.title,
+            description: goal.description,
+            targetDollars: goal.targetDollars,
+            order: goal.order || index + 1
+          }))
+        });
+      }
+    }
+
+    if (priceTiers !== undefined && (existingCampaign.status === 'draft' || isAdmin)) {
+      // Delete existing price tiers and create new ones
+      await prisma.pledgeTier.deleteMany({
+        where: { campaignId: resolvedParams.id }
+      });
+
+      if (priceTiers.length > 0) {
+        await prisma.pledgeTier.createMany({
+          data: priceTiers.map((tier: any, index: number) => ({
+            campaignId: resolvedParams.id,
+            title: tier.title,
+            description: tier.description,
+            amountDollars: tier.amountDollars,
+            benefits: JSON.stringify(tier.benefits || []),
+            order: tier.order || index + 1
+          }))
+        });
+      }
+    }
+
     // Update the campaign
     const updatedCampaign = await prisma.campaign.update({
       where: { id: resolvedParams.id },
@@ -113,7 +175,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         },
         organization: {
           select: { id: true, name: true }
-        }
+        },
+        milestones: true,
+        stretchGoals: { orderBy: { order: 'asc' } },
+        pledgeTiers: { orderBy: { order: 'asc' } }
       }
     });
 

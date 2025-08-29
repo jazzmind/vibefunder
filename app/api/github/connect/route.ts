@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
 import GitHubService from "@/lib/services/GitHubService";
+import { encryptToBase64 } from "@/lib/crypto";
 
 const GitHubConnectSchema = z.object({
   githubToken: z.string().min(1, "GitHub token is required"),
@@ -43,17 +44,19 @@ export async function POST(req: NextRequest) {
     }
 
     // Store or update GitHub connection
+    const encrypted = encryptToBase64(githubToken);
+
     const connection = await prisma.gitHubConnection.upsert({
       where: { userId: session.user.id },
       update: {
-        githubToken: githubToken, // In production, this should be encrypted
+        githubToken: encrypted,
         username,
         isActive: true,
         updatedAt: new Date()
       },
       create: {
         userId: session.user.id,
-        githubToken: githubToken, // In production, this should be encrypted
+        githubToken: encrypted,
         username,
         isActive: true
       }

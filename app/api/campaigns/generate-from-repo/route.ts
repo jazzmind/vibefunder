@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { z } from "zod";
 import GitHubService from "@/lib/services/GitHubService";
 import CampaignGenerationService from "@/lib/services/CampaignGenerationService";
+import { decryptFromBase64 } from "@/lib/crypto";
 
 const GenerateFromRepoSchema = z.object({
   repoUrl: z.string().url("Valid repository URL is required"),
@@ -27,7 +28,8 @@ export async function POST(req: NextRequest) {
     });
 
     // Initialize GitHub service with token if available
-    const githubService = new GitHubService(githubConnection?.githubToken);
+    const token = githubConnection?.githubToken ? decryptFromBase64(githubConnection.githubToken) : undefined;
+    const githubService = new GitHubService(token);
     
     // Extract repository content
     console.log(`🔍 Extracting content from repository: ${repoUrl}`);

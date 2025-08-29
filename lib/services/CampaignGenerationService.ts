@@ -116,7 +116,7 @@ Create a comprehensive campaign that will attract both technical and non-technic
 
     try {
       const result = await this.callAI(
-        MODELS.best,
+        MODELS.fast,
         [
           { role: 'system', content: systemMessage },
           { role: 'user', content: userMessage }

@@ -1,6 +1,6 @@
 # 🔒 VibeFunder Security Audit Report
 
-**Date:** December 29, 2024  
+**Date:** August 29, 2025  
 **Auditor:** Security Audit Swarm  
 **Scope:** Full codebase security analysis  
 **Status:** ⚠️ **REQUIRES IMMEDIATE ATTENTION**
@@ -322,6 +322,12 @@ githubToken String   // Encrypted with AES-256-GCM
 
 ---
 
-**Report Generated:** December 29, 2024  
-**Next Review:** January 15, 2025  
+**Report Generated:** August 29, 2025  
+**Next Review:** December 15, 2025  
 **Contact:** security@vibefunder.com
+
+This report was generated using the following command:
+
+```
+$ npx claude-flow@alpha swarm "perform security audit and code review" --agents security-analyst,reviewer,code-quality-checker
+```

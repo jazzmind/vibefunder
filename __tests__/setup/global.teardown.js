@@ -4,6 +4,11 @@ const { cleanupAllTestData } = require('../utils/test-helpers');
 module.exports = async () => {
   console.log('🧹 Cleaning up VibeFunder test environment...');
 
+  // Ensure TEST_DATABASE_URL is used for cleanup
+  if (process.env.TEST_DATABASE_URL) {
+    process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
+  }
+
   try {
     // Cleanup all test data from database
     console.log('🗑️  Cleaning up test data...');

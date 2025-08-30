@@ -2,6 +2,7 @@
 const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const dotenv = require('dotenv');
 
 module.exports = async () => {
   console.log('🚀 Setting up VibeFunder test environment...');
@@ -68,34 +69,21 @@ async function generatePrismaClient() {
 async function loadTestEnvironment() {
   console.log('⚙️  Loading test environment...');
   
-  // Set test-specific environment variables
-  process.env.NODE_ENV = 'test';
-  process.env.NEXTAUTH_SECRET = 'test-secret-for-vibefunder-testing';
-  
   // Load .env.local if it exists
   const envLocalPath = path.join(process.cwd(), '.env.local');
   if (fs.existsSync(envLocalPath)) {
-    const envContent = fs.readFileSync(envLocalPath, 'utf-8');
-    
-    // Extract key environment variables for testing
-    const envVars = [
-      'TEST_PORT',
-      'OPENAI_API_KEY',
-      'DATABASE_URL',
-      'TEST_DATABASE_URL',
-      'STRIPE_SECRET_KEY',
-      'AWS_ACCESS_KEY_ID',
-      'AWS_SECRET_ACCESS_KEY',
-      'AWS_REGION',
-      'S3_BUCKET_NAME'
-    ];
-    
-    envVars.forEach(key => {
-      const match = envContent.match(new RegExp(`${key}=(.+)`));
-      if (match && !process.env[key]) {
-        process.env[key] = match[1];
-      }
-    });
+    dotenv.config({ path: envLocalPath });
+  }
+  
+  // Set test-specific environment variables (after loading .env.local)
+  process.env.NODE_ENV = 'test';
+  if (!process.env.NEXTAUTH_SECRET) {
+    process.env.NEXTAUTH_SECRET = 'test-secret-for-vibefunder-testing';
+  }
+  
+  // Use TEST_DATABASE_URL for all database operations in tests
+  if (process.env.TEST_DATABASE_URL) {
+    process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
   }
   
   // Log configuration (without sensitive values)

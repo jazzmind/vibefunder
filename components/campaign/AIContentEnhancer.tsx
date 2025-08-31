@@ -18,6 +18,8 @@ interface AIContentEnhancerProps {
   title: string;
   summary: string;
   content: string;
+  repoUrl?: string;
+  websiteUrl?: string;
   onTitleUpdate: (newTitle: string) => void;
   onSummaryUpdate: (newSummary: string) => void;
   onContentUpdate: (newContent: string) => void;
@@ -26,7 +28,9 @@ interface AIContentEnhancerProps {
 export default function AIContentEnhancer({ 
   title, 
   summary,
-  content, 
+  content,
+  repoUrl,
+  websiteUrl,
   onTitleUpdate,
   onSummaryUpdate,
   onContentUpdate 
@@ -45,6 +49,8 @@ export default function AIContentEnhancer({
           title,
           summary,
           content,
+          repoUrl,
+          websiteUrl,
         }),
       });
 

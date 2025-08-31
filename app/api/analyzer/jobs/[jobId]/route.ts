@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getJob } from '@/lib/analyzerClient';
 
-export async function GET(_: Request, { params }: { params: { jobId: string } }) {
-  const { jobId } = params;
+export async function GET(_: Request, context: { params: Promise<{ jobId: string }> }) {
+  const { jobId } = await context.params;
   try {
     const data = await getJob(jobId);
     return NextResponse.json(data);

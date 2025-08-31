@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import Modal from '@/app/components/shared/Modal';
+import Modal from '@/components/shared/Modal';
 
 export interface PriceTierFormData {
   title: string;

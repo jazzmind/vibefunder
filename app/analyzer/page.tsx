@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 
 export default function AnalyzerPage() {
   const [repoUrl, setRepoUrl] = useState('');
@@ -9,6 +10,20 @@ export default function AnalyzerPage() {
   const [sow, setSow] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const timerRef = useRef<any>(null);
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const initialRepo = searchParams.get('repo') || searchParams.get('repoUrl') || '';
+    if (initialRepo) setRepoUrl(initialRepo);
+  }, [searchParams]);
+
+  useEffect(() => {
+    const auto = searchParams.get('auto');
+    if (!repoUrl) return;
+    if (auto && (auto === '1' || auto === 'true')) {
+      start();
+    }
+  }, [searchParams, repoUrl]);
 
   useEffect(() => {
     if (!jobId) return;

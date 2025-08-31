@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ConfirmButton } from "@/app/components/ConfirmButton";
+import { ConfirmButton } from "@/components/ConfirmButton";
 
 interface AdminServiceCategoryDetailProps {
   params: Promise<{ id: string }>;

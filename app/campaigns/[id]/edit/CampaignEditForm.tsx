@@ -4,16 +4,17 @@ import { useState, useTransition, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { X, ImageIcon, Video } from 'lucide-react';
-import ImageGenerator from '@/app/components/campaign/ImageGenerator';
-import AIContentEnhancer from '@/app/components/campaign/AIContentEnhancer';
-import AIMilestoneSuggestions from '@/app/components/campaign/AIMilestoneSuggestions';
-import AIStretchGoalSuggestions from '@/app/components/campaign/AIStretchGoalSuggestions';
-import TiptapEditor from '@/app/components/editor/TiptapEditor';
-import ImageLibrary from '@/app/components/images/ImageLibrary';
-import MediaSelectorModal from '@/app/components/shared/MediaSelectorModal';
-import MilestoneStretchGoalModal, { MilestoneFormData, StretchGoalFormData } from '@/app/components/campaigns/MilestoneStretchGoalModal';
-import PriceTierModal, { PriceTierFormData } from '@/app/components/campaigns/PriceTierModal';
-import GitHubModal from '@/app/components/campaigns/GitHubModal';
+import ImageGenerator from '@/components/campaign/ImageGenerator';
+import AIContentEnhancer from '@/components/campaign/AIContentEnhancer';
+import AIMilestoneSuggestions from '@/components/campaign/AIMilestoneSuggestions';
+import AIStretchGoalSuggestions from '@/components/campaign/AIStretchGoalSuggestions';
+import TiptapEditor from '@/components/editor/TiptapEditor';
+import ImageLibrary from '@/components/images/ImageLibrary';
+import MediaSelectorModal from '@/components/shared/MediaSelectorModal';
+import MilestoneStretchGoalModal, { MilestoneFormData, StretchGoalFormData } from '@/components/campaigns/MilestoneStretchGoalModal';
+import PriceTierModal, { PriceTierFormData } from '@/components/campaigns/PriceTierModal';
+import GitHubModal from '@/components/campaigns/GitHubModal';
+import Modal from '@/components/shared/Modal';
 
 interface Milestone {
   id?: string;
@@ -46,6 +47,7 @@ interface Campaign {
   onlyBackersComment: boolean;
   status: string;
   repoUrl?: string | null;
+  websiteUrl?: string | null;
   milestones?: any[];
   stretchGoals?: any[];
   pledgeTiers?: any[];
@@ -94,6 +96,7 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
     requireBackerAccount: campaign.requireBackerAccount,
     onlyBackersComment: campaign.onlyBackersComment,
     repoUrl: campaign.repoUrl || '',
+    websiteUrl: (campaign as any).websiteUrl || '',
     milestones: (campaign.milestones || []).map((m: any) => ({
       id: m.id,
       name: m.name,
@@ -130,6 +133,9 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
   const [stretchGoalModalOpen, setStretchGoalModalOpen] = useState(false);
   const [priceTierModalOpen, setPriceTierModalOpen] = useState(false);
   const [gitHubModalOpen, setGitHubModalOpen] = useState(false);
+  const [gitHubAppModalOpen, setGitHubAppModalOpen] = useState(false);
+  const [githubConnection, setGithubConnection] = useState<{ connected: boolean; connection?: { username?: string | null } } | null>(null);
+  const [githubAppConnected, setGithubAppConnected] = useState<boolean | null>(null);
   
   // Editing state
   const [editingMilestone, setEditingMilestone] = useState<{index: number, data: any} | null>(null);
@@ -170,6 +176,34 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
     setMediaModalOpen(true);
   };
 
+  // Fetch GitHub integration status (PAT connection) and GitHub App installation status
+  useEffect(() => {
+    const fetchStatuses = async () => {
+      try {
+        const [connRes, appRes] = await Promise.all([
+          fetch('/api/github/connect', { cache: 'no-store' }).catch(() => null),
+          fetch('/api/github/app/status', { cache: 'no-store' }).catch(() => null),
+        ]);
+        if (connRes?.ok) {
+          const data = await connRes.json();
+          setGithubConnection({ connected: !!data.connected, connection: data.connection });
+        } else {
+          setGithubConnection({ connected: false });
+        }
+        if (appRes?.ok) {
+          const data = await appRes.json();
+          setGithubAppConnected(!!data.connected);
+        } else {
+          setGithubAppConnected(false);
+        }
+      } catch (_e) {
+        setGithubConnection({ connected: false });
+        setGithubAppConnected(false);
+      }
+    };
+    fetchStatuses();
+  }, []);
+
   // Smart autosave - only saves when data actually changes
   const autoSave = useCallback(async () => {
     if (autoSaving) return;
@@ -191,6 +225,7 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
           requireBackerAccount: formData.requireBackerAccount,
           onlyBackersComment: formData.onlyBackersComment,
           repoUrl: formData.repoUrl || null,
+          websiteUrl: formData.websiteUrl || null,
           milestones: formData.milestones,
           stretchGoals: formData.stretchGoals,
           priceTiers: formData.priceTiers,
@@ -430,6 +465,33 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
     }
   };
 
+  const handleGenerateFromWebsite = async (websiteUrl: string, userPrompt?: string) => {
+    try {
+      const response = await fetch('/api/services/generate-from-domain', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domain: websiteUrl, userPrompt, autoCreate: false })
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to generate from website');
+      }
+      const result = await response.json();
+      const generated = result.generated;
+      setFormData(prev => ({
+        ...prev,
+        title: generated.name || prev.title,
+        summary: prev.summary || (generated.valueProposition || generated.description || '').slice(0, 200),
+        description: generated.description || prev.description,
+        websiteUrl: websiteUrl
+      }));
+      setSuccess('Campaign content updated from website');
+    } catch (error) {
+      console.error('Generate from website error:', error);
+      throw error;
+    }
+  };
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
     
@@ -463,6 +525,8 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
             sectors: formData.sectors,
             requireBackerAccount: formData.requireBackerAccount,
             onlyBackersComment: formData.onlyBackersComment,
+            repoUrl: formData.repoUrl || null,
+            websiteUrl: formData.websiteUrl || null,
             milestones: formData.milestones,
             stretchGoals: formData.stretchGoals,
           }),
@@ -510,6 +574,40 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
                 ✓ Last saved {lastSaved.toLocaleTimeString()}
               </div>
             )}
+          </div>
+        </div>
+        {/* GitHub Integration Status & Actions */}
+        <div className="mb-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/40 p-3">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+            <div className="text-sm flex flex-wrap items-center gap-2">
+              <span className="text-gray-700 dark:text-gray-300 font-medium">GitHub</span>
+              <span className={`px-2 py-1 rounded-full text-xs ${githubConnection?.connected ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'}`}>
+                {githubConnection?.connected
+                  ? `Connected${githubConnection?.connection?.username ? ` as ${githubConnection.connection.username}` : ''}`
+                  : 'Not connected'}
+              </span>
+              <span className="text-gray-500">•</span>
+              <span className="text-gray-700 dark:text-gray-300 font-medium">App</span>
+              <span className={`px-2 py-1 rounded-full text-xs ${githubAppConnected ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'}`}>
+                {githubAppConnected ? 'Installed' : 'Needs auth'}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setGitHubAppModalOpen(true)}
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                {githubAppConnected ? 'Re-auth GitHub App' : 'Connect GitHub App'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setGitHubModalOpen(true)}
+                className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                Set Repository
+              </button>
+            </div>
           </div>
         </div>
         <nav className="flex space-x-8">
@@ -562,6 +660,39 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
               placeholder="Enter a compelling campaign title"
             />
             {errors.title && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.title}</p>}
+          </div>
+
+          {/* Project Website */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Project Website
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="url"
+                value={formData.websiteUrl || ''}
+                onChange={(e) => handleInputChange('websiteUrl', e.target.value)}
+                className="flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                placeholder="https://example.com"
+              />
+              <button
+                type="button"
+                onClick={() => formData.websiteUrl && handleGenerateFromWebsite(formData.websiteUrl)}
+                className={`px-4 py-2 bg-gray-900 text-white rounded-lg transition-colors ${formData.websiteUrl ? 'hover:bg-gray-800' : 'opacity-50 pointer-events-none'}`}
+              >
+                Generate
+              </button>
+              {formData.websiteUrl && (
+                <button
+                  type="button"
+                  onClick={() => window.open(formData.websiteUrl!, '_blank')}
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  View
+                </button>
+              )}
+            </div>
+            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">We can analyze your website to enrich campaign content.</p>
           </div>
           {/* Lead Media Section */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -718,6 +849,8 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
               title={formData.title}
               summary={formData.summary}
               content={formData.description}
+              repoUrl={formData.repoUrl}
+              websiteUrl={formData.websiteUrl}
               onTitleUpdate={(newTitle) => handleInputChange('title', newTitle)}
               onSummaryUpdate={(newSummary) => handleInputChange('summary', newSummary)}
               onContentUpdate={(newContent) => handleInputChange('description', newContent)}
@@ -768,50 +901,7 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
             </p>
           </div>
 
-          {/* GitHub Repository Integration */}
-          <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                GitHub Repository
-              </label>
-              <input
-                type="url"
-                value={formData.repoUrl || ''}
-                onChange={(e) => handleInputChange('repoUrl', e.target.value)}
-                className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                placeholder="https://github.com/username/repository"
-              />
-              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                Link to your GitHub repository to enable automatic content generation and updates
-              </p>
-            </div>
-            
-            <div className="mt-4 flex items-center space-x-3">
-              <button
-                type="button"
-                onClick={() => setGitHubModalOpen(true)}
-                className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors flex items-center space-x-2"
-              >
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-                </svg>
-                <span>Generate from Repository</span>
-              </button>
-              
-              {formData.repoUrl && (
-                <button
-                  type="button"
-                  onClick={() => window.open(formData.repoUrl, '_blank')}
-                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center space-x-2"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                  </svg>
-                  <span>View Repository</span>
-                </button>
-              )}
-            </div>
-          </div>
+          {/* Removed GitHub repo field (handled via GitHub connection). Website field moved above. */}
 
         </div>
       )}
@@ -974,6 +1064,12 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
                 Define key checkpoints for your campaign development
               </p>
             </div>
+            <a
+              href={formData.repoUrl ? `/analyzer?repo=${encodeURIComponent(formData.repoUrl)}&auto=1` : '#'}
+              className={`px-3 py-2 bg-gray-900 text-white rounded-lg transition-colors ${formData.repoUrl ? 'hover:bg-gray-800' : 'opacity-50 pointer-events-none'}`}
+            >
+              Run Gap Analysis
+            </a>
           </div>
 
           {/* AI Milestone Suggestions */}
@@ -1042,12 +1138,16 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
                     <div className="bg-white dark:bg-gray-700 rounded p-3">
                       <h6 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Acceptance Criteria:</h6>
                       <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                        {milestone.acceptance.checklist.map((item: string, i: number) => (
-                          <li key={i} className="flex items-start">
-                            <span className="text-green-500 mr-2">•</span>
-                            {item}
-                          </li>
-                        ))}
+                        {Array.isArray(milestone.acceptance?.checklist) && milestone.acceptance.checklist.length > 0 ? (
+                          milestone.acceptance.checklist.map((item: string, i: number) => (
+                            <li key={i} className="flex items-start">
+                              <span className="text-green-500 mr-2">•</span>
+                              {item}
+                            </li>
+                          ))
+                        ) : (
+                          <li className="text-gray-500 dark:text-gray-300">No criteria listed</li>
+                        )}
                       </ul>
                     </div>
                   </div>
@@ -1359,6 +1459,55 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
         onRepoUrlUpdate={handleRepoUrlUpdate}
         onGenerateContent={handleGenerateContent}
       />
+
+      {/* GitHub App Connect Modal */}
+      <Modal
+        isOpen={gitHubAppModalOpen}
+        onClose={() => setGitHubAppModalOpen(false)}
+        title={githubAppConnected ? 'Re-authenticate GitHub App' : 'Connect GitHub App'}
+        maxWidth="md"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-700 dark:text-gray-300">
+            This opens the GitHub App install page in a new tab. After installing and selecting repositories, click Done to refresh status.
+          </p>
+          <div className="flex items-center gap-2">
+            <a
+              href={`/api/github/app/start?state=${encodeURIComponent(`/campaigns/${campaign.id}/edit`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            >
+              Open Install Flow
+            </a>
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  // Try to sync installation from GitHub App in case callback didn't run
+                  await fetch('/api/github/app/sync', { method: 'POST' }).catch(() => null);
+                  const [connRes, appRes] = await Promise.all([
+                    fetch('/api/github/connect', { cache: 'no-store' }).catch(() => null),
+                    fetch('/api/github/app/status', { cache: 'no-store' }).catch(() => null),
+                  ]);
+                  if (connRes?.ok) {
+                    const data = await connRes.json();
+                    setGithubConnection({ connected: !!data.connected, connection: data.connection });
+                  }
+                  if (appRes?.ok) {
+                    const data = await appRes.json();
+                    setGithubAppConnected(!!data.connected || !!data.installed);
+                  }
+                } catch {}
+                setGitHubAppModalOpen(false);
+              }}
+              className="px-3 py-2 bg-brand text-white rounded-lg hover:bg-brand/90 transition-colors"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      </Modal>
     </form>
   );
 }

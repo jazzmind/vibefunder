@@ -93,7 +93,7 @@ const validated = schema.parse(await req.json());
 **Locations:** 
 - `/app/campaigns/[id]/page.tsx:185`
 - `/app/admin/campaigns/[id]/page.tsx:221`
-- `/app/components/images/ImageLibrary.tsx:261`
+- `/components/images/ImageLibrary.tsx:261`
 
 ```typescript
 // Vulnerable code

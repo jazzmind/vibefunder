@@ -3,7 +3,7 @@ import { verifySession } from "@/lib/auth";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/db";
 import Link from "next/link";
-import { ConfirmButton } from "@/app/components/ConfirmButton";
+import { ConfirmButton } from "@/components/ConfirmButton";
 
 export default async function AdminUsers({ 
   searchParams 

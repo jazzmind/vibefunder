@@ -152,7 +152,7 @@ describe('Database Model Tests', () => {
 
       expect(campaign.organizationId).toBe(organization.id);
       expect(campaign.organization).toBeDefined();
-      expect(campaign.organization.name).toBe('Test Org for Campaign');
+      expect(campaign.organization?.name).toBe('Test Org for Campaign');
     });
 
     it('should cascade delete related milestones and pledges', async () => {

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { MilestoneSuggestionService } from '@/lib/services/MilestoneSuggestionService';
-import { AIClient } from '@/lib/aiClient';
-import { AIError } from '@/lib/aiService';
+import { AIClient } from '@/lib/ai/aiClient';
+import { AIError } from '@/lib/ai/aiService';
 
 export async function POST(request: NextRequest) {
   try {

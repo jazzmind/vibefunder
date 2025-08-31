@@ -1,0 +1,62 @@
+---
+description: Use when working with UI components, layouts, or styling
+globs: components/**/*
+alwaysApply: false
+---
+# UI Component Implementation Rules
+
+## UI Framework
+- Next.js 15+ with App Router
+- Tailwind CSS for styling
+- Server/Client Components
+
+## Component Structure (rel to `/website/src/`)
+- `components/` - Shared components
+- `app/[feature]/components/` - Feature-specific
+- App Router for page organization
+- Layouts for shared UI elements
+
+## Best Practices
+- Default to Server Components
+- "use client" only when needed (interactivity, hooks, browser APIs)
+- Single responsibility per component
+- Composition over inheritance
+- Extract reusable UI elements
+
+## Styling Guidelines
+- Tailwind CSS classes
+- Mobile-first responsive design
+- CSS variables for theming
+- Consistent spacing via Tailwind
+- Semantic HTML + ARIA
+
+## Form Handling
+- React Hook Form for complex forms
+- Proper validation with errors
+- Handle loading/error/success states
+- Accessible forms (labels, errors, focus)
+
+## Data Fetching
+- Server Components for initial fetch
+- SWR/React Query for client-side
+- UI feedback for loading/errors
+- Optimistic UI when appropriate
+
+## Multi-Tenant UI
+- Respect org context in UI
+- Permission-based content display
+- Clear org context indicators
+
+## Admin Interfaces
+- Consistent admin patterns
+- Data tables with actions
+- Filtering, sorting, pagination
+- Clear action feedback
+- Confirm destructive actions
+
+## Accessibility
+- Sufficient color contrast
+- Alt text for images
+- Keyboard accessibility
+- Semantic HTML + ARIA
+- Screen reader testing 

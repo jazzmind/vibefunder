@@ -1,9 +1,9 @@
 import { z } from 'zod';
-import AIService, { AIResult } from '../aiService';
+import AIService, { AIResult } from '@/lib/ai/aiService';
 import { put, del } from '@vercel/blob';
 import { prisma } from '../db';
 import { ImageGenerationService } from './ImageGenerationService';
-import { MODELS } from '../models';
+import { MODELS } from '@/lib/ai/models';
 
 // Input validation schema for image generation
 const ImageGenerationInputSchema = z.object({

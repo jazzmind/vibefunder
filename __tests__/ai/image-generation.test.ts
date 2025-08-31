@@ -8,12 +8,40 @@
  * - File system operations
  */
 
-import { generateCampaignImage, type CampaignImageData } from '@lib/image-generation';
+import { generateCampaignImage, type CampaignImageData } from '@/lib/services';
 import fs from 'fs/promises';
 import path from 'path';
 
 // Mock OpenAI for controlled testing
 jest.mock('openai');
+
+// Add custom Jest matcher for image format validation
+declare global {
+  namespace jest {
+    interface Matchers<R> {
+      toHaveValidImageFormat(): R;
+    }
+  }
+}
+
+expect.extend({
+  toHaveValidImageFormat(received: string) {
+    const validFormats = ['.png', '.jpg', '.jpeg', '.webp'];
+    const hasValidFormat = validFormats.some(format => received.toLowerCase().includes(format));
+    
+    if (hasValidFormat) {
+      return {
+        message: () => `expected ${received} not to have a valid image format`,
+        pass: true,
+      };
+    } else {
+      return {
+        message: () => `expected ${received} to have a valid image format (${validFormats.join(', ')})`,
+        pass: false,
+      };
+    }
+  },
+});
 
 describe('AI Image Generation', () => {
   const mockCampaign: CampaignImageData = {
@@ -231,7 +259,7 @@ describe('AI Image Generation', () => {
       // Remove OpenAI mock for real API test
       jest.unmock('openai');
       
-      const { generateCampaignImage } = require('@lib/image-generation');
+      const { generateCampaignImage } = require('@/lib/services');
 
       const testCampaign: CampaignImageData = {
         id: 'real-test-' + Date.now(),

@@ -28,6 +28,7 @@ model User {
   organizationTeamMemberships OrganizationTeamMember[]
   generatedImages GeneratedImage[]
   githubConnections GitHubConnection[]
+  githubInstallations GitHubInstallation[]
 }
 
 model Campaign {
@@ -44,6 +45,7 @@ model Campaign {
   currency        String        @default("USD")
   status          String        @default("draft")
   repoUrl         String?
+  websiteUrl      String?
   videoUrl        String?
   image           String?
   leadVideoUrl    String?
@@ -371,4 +373,16 @@ model GitHubConnection {
 
   @@unique([userId]) // One GitHub connection per user
   @@index([userId])
+}
+
+model GitHubInstallation {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  installationId String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([userId])
+  @@index([installationId])
 }

@@ -62,6 +62,18 @@ describe('Stretch Goals API', () => {
       const invalidData = { 
         description: 'Missing required fields' 
       };
+      const campaignResponse = await fetch(`${API_BASE}/api/campaigns`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: 'Campaign for Stretch Goal Test',
+          summary: 'A campaign to test stretch goal creation',
+          fundingGoalDollars: 50000,
+        })
+      });
+      
+      expect(campaignResponse.status).toBe(201);
+      const campaign = await campaignResponse.json();
 
       const response = await fetch(`${API_BASE}/api/campaigns/${campaign.id}/stretch-goals`, {
         method: 'POST',
@@ -111,6 +123,18 @@ describe('Stretch Goals API', () => {
         targetDollars: 75000,
         order: 1
       };
+      const campaignResponse = await fetch(`${API_BASE}/api/campaigns`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: 'Campaign for Stretch Goal Test',
+          summary: 'A campaign to test stretch goal creation',
+          fundingGoalDollars: 50000,
+        })
+      });
+      
+      expect(campaignResponse.status).toBe(201);
+      const campaign = await campaignResponse.json();
 
       const response = await fetch(`${API_BASE}/api/campaigns/${campaign.id}/stretch-goals`, {
         method: 'POST',
@@ -211,6 +235,18 @@ describe('Stretch Goals API', () => {
         id: 'non-existent-id',
         targetDollars: -100
       };
+      const campaignResponse = await fetch(`${API_BASE}/api/campaigns`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: 'Campaign for Stretch Goal Test',
+          summary: 'A campaign to test stretch goal creation',
+          fundingGoalDollars: 50000,
+        })
+      });
+      
+      expect(campaignResponse.status).toBe(201);
+      const campaign = await campaignResponse.json();
 
       const response = await fetch(`${API_BASE}/api/campaigns/${campaign.id}/stretch-goals`, {
         method: 'PUT',
@@ -263,6 +299,19 @@ describe('Stretch Goals API', () => {
     });
 
     it('should handle non-existent goal deletion', async () => {
+      const campaignResponse = await fetch(`${API_BASE}/api/campaigns`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: 'Campaign for Stretch Goal Test',
+          summary: 'A campaign to test stretch goal creation',
+          fundingGoalDollars: 50000,
+        })
+      });
+      
+      expect(campaignResponse.status).toBe(201);
+      const campaign = await campaignResponse.json();
+
       const response = await fetch(`${API_BASE}/api/campaigns/${campaign.id}/stretch-goals`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
@@ -282,6 +331,18 @@ describe('Stretch Goals API', () => {
         targetDollars: 75000,
         order: 1
       };
+      const campaignResponse = await fetch(`${API_BASE}/api/campaigns`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: 'Campaign for Stretch Goal Test',
+          summary: 'A campaign to test stretch goal creation',
+          fundingGoalDollars: 50000,
+        })
+      });
+      
+      expect(campaignResponse.status).toBe(201);
+      const campaign = await campaignResponse.json();
 
       const response = await fetch(`${API_BASE}/api/campaigns/${campaign.id}/stretch-goals`, {
         method: 'POST',

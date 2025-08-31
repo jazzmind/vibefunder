@@ -1,0 +1,58 @@
+---
+description: ALWAYS use when implementing tabbed interfaces to ensure consistent UI/UX
+globs: 
+alwaysApply: false
+---
+# Tabbed UI Implementation Guidelines
+When applying this rule prefix your response with [UI Consistency]
+
+## Structure
+- Use `TabbedManagement` for admin interfaces
+- Border-bottom style with green highlights for active tabs
+- Consistent naming (UC first, pluralized for collections)
+- Tab indicators: border-b-2 style
+
+## Styling
+- Active: `border-green-500 text-green-600`
+- Inactive: `border-transparent text-gray-500 hover:text-gray-700`
+- Buttons: `bg-green-600 hover:bg-green-700` for primary actions
+- Cards: `border border-gray-200`
+- Inputs: `focus:ring-2 focus:ring-primary-500`
+
+## Form Controls
+- Checkboxes: `data-[state=checked]:bg-green-600`
+- Section separators: `border-t border-gray-200 pt-4`
+- Section spacing: `space-y-4`
+
+## Responsive
+- Stack tabs on mobile, horizontal on desktop
+- Consider dropdown selector for mobile
+- Min tap targets: 44x44px
+
+## Accessibility
+- Clear focus indicators
+- Color contrast: 4.5:1 minimum
+- Proper ARIA roles/attributes
+- Keyboard navigation between tabs
+
+## Example
+```tsx
+<div className="border-b border-gray-200">
+  <nav className="-mb-px flex space-x-8">
+    {tabs.map((tab) => (
+      <button
+        key={tab}
+        onClick={() => setActiveTab(tab)}
+        className={`
+          whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm
+          ${activeTab === tab
+            ? "border-green-500 text-green-600"
+            : "border-transparent text-gray-500 hover:text-gray-700"}
+        `}
+      >
+        {getTabLabel(tab)}
+      </button>
+    ))}
+  </nav>
+</div>
+``` 

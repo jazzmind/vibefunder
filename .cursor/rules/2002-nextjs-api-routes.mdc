@@ -1,0 +1,60 @@
+---
+description: ALWAYS use asynchronous params when writing Next.js 15 API route handlers to ensure compatibility
+globs: app/api/**/*
+alwaysApply: false
+---
+
+# Next.js 15 API Route Handlers
+
+<version>1.0.0</version>
+
+## Context
+- When implementing API route handlers in Next.js 15+
+- When using dynamic segments in routes (e.g., [id], [...slug])
+
+## Requirements
+- Define route handler params as: `context: { params: Promise<YourParamsType> }`
+- Await params when accessing: `const { id } = await context.params`
+- Type transaction parameters: `(tx: typeof prisma) => {}`
+- Use async functions for all handlers
+
+## Examples
+
+<example>
+```typescript
+// Correct implementation
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const { id } = await context.params;
+  
+  // Handler logic...
+}
+```
+</example>
+
+<example type="invalid">
+```typescript
+// Incorrect (Next.js 14 style)
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  // Error: not awaiting params
+  const { id } = params;
+  
+  // Handler logic...
+}
+```
+</example>
+
+<example>
+```typescript
+// With Prisma transaction
+const result = await prisma.$transaction(async (tx: typeof prisma) => {
+  // Use tx inside transaction
+  return await tx.user.findUnique({ where: { id } });
+});
+```
+</example> 

@@ -1,0 +1,57 @@
+---
+description: Use when working with database functionality
+globs: route.ts,lib/**/*
+alwaysApply: false
+---
+# Database Implementation Rules
+
+## Core Principles
+- Prisma ORM exclusively
+- Understand current implementation before changes
+- Enhance existing functionality; don't replace unless requested
+- Support multi-tenant architecture
+- Use edge-compatible Prisma features
+
+## Prisma Usage
+- Import client from `@/lib/db`
+- Use models defined in `prisma/schema.prisma`
+- Follow query optimization best practices
+- Use transactions for multi-record operations
+- Handle DB errors with try/catch
+- Avoid non-edge compatible features
+
+## Multi-Tenant Access
+- **ALWAYS** filter by organization:
+  ```ts
+  prisma.model.findMany({ 
+    where: { organizationId: session.user.organizationId } 
+  })
+  ```
+- Include `organizationId` in all new records
+- Use middleware to enforce org isolation
+
+## Schema Design
+- Add models to `prisma/schema.prisma`
+- Include `organizationId` for tenant-specific models
+- Set up proper relations
+- Index frequently queried fields
+- Use enums for fixed value sets
+- Consider soft deletes via `deleted` boolean
+
+## Auth & User Management
+- User model pre-configured for Next-Auth
+- Organization models handle multi-tenancy
+- System roles: ADMIN
+- Org roles: OWNER, MANAGER, etc.
+
+## API & Server Components
+- API routes: `const session = await auth()`
+- Server Components: `const session = await getServerSession()`
+- Verify permissions before DB operations
+- Return appropriate status codes
+
+## Testing
+- Use Jest with Prisma mocking
+- Create multi-tenant test fixtures
+- Test role-based access
+- Verify tenant data isolation

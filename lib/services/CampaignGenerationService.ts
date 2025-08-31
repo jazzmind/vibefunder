@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import AIService, { AIResult } from '../aiService';
-import { MODELS } from '../models';
+import AIService, { AIResult } from '@/lib/ai/aiService';
+import { MODELS } from '@/lib/ai/models';
 
 // Input validation schema
 const CampaignGenerationInputSchema = z.object({
@@ -116,7 +116,7 @@ Create a comprehensive campaign that will attract both technical and non-technic
 
     try {
       const result = await this.callAI(
-        MODELS.best,
+        MODELS.fast,
         [
           { role: 'system', content: systemMessage },
           { role: 'user', content: userMessage }

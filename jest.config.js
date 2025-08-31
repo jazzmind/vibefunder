@@ -59,6 +59,11 @@ const customJestConfig = {
     }],
   },
   
+  // Handle ESM modules like @faker-js/faker
+  transformIgnorePatterns: [
+    'node_modules/(?!(@faker-js/faker)/)',
+  ],
+  
   // Global setup for database and environment
   globalSetup: '<rootDir>/__tests__/setup/global.setup.js',
   globalTeardown: '<rootDir>/__tests__/setup/global.teardown.js',

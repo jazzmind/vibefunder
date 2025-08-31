@@ -31,7 +31,9 @@ export async function POST(request: NextRequest) {
       id: user.id,
       userId: user.id,
       email: email.toLowerCase(),
-      roles: user.roles
+      roles: user.roles,  
+      iat: Date.now(),
+      exp: Date.now() + 7 * 24 * 60 * 60 * 1000
     });
 
     // Set cookie

@@ -37,4 +37,10 @@ optionalEnvVars.forEach(envVar => {
 process.env.NODE_ENV = 'test';
 process.env.API_TEST_URL = process.env.API_TEST_URL || `http://localhost:${process.env.TEST_PORT || 3101}`;
 
+// Ensure TEST_DATABASE_URL is used for tests
+if (process.env.TEST_DATABASE_URL) {
+  process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
+  console.log('📊 Using TEST_DATABASE_URL for testing');
+}
+
 console.log('✅ Environment setup complete for VibeFunder tests');

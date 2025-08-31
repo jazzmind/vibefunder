@@ -1,0 +1,81 @@
+---
+description: When working with code that has linter errors, type errors, or other build issues
+globs: 
+alwaysApply: false
+---
+# Error Handling and Code Preservation Rules
+
+<version>2.0.0</version>
+
+## Context
+- When working with code that has linter errors, type errors, or other build issues
+- When attempting to fix errors that might require simplifying or removing existing functionality
+- When hitting multiple error fixing attempts (approaching 3-time limit)
+
+## Requirements
+
+### Core Preservation Principle
+- **NEVER** simplify schemas, delete logic, or remove functionality to work around errors unless explicitly requested
+- **ALWAYS** ask for explicit permission before simplifying or removing significant functionality
+- **ALWAYS** ask permission if approaching 3-error limit instead of deleting code to solve issues
+
+### Error Fixing Approach
+- Prefer approaches that fix errors while preserving original functionality
+- When encountering complex type/schema issues:
+  1. First propose targeted fixes that address the specific error
+  2. If targeted fixes don't work, request permission before removing or simplifying code
+  3. Explain what functionality would be lost with the simplification
+  4. Offer alternative approaches if available
+
+### Communication Requirements
+- When fixing build errors, clearly communicate:
+  - What the error is
+  - What caused it  
+  - Your proposed solution and its impact on functionality
+  - Alternative approaches if available
+- If simplification is necessary, preserve comments explaining what was removed and why
+
+### Next.js 15 Specific Type Errors
+- Route parameters in Next.js 15 are asynchronous and must be awaited
+- Use proper type annotation: `params: Promise<{ id: string }>` instead of `params: { id: string }`
+- Params must be awaited before use: `const { id } = await params`
+- Be careful with numeric IDs: Prisma may expect `number` while route params provide `string`
+- For numeric IDs, convert using `parseInt(id)` or `Number(id)` after awaiting params
+
+## Examples
+
+<example>
+User: Please fix the build error in our application
+Assistant: I found a type error in the chatDispatcher. I'm approaching the 3-error limit for fixes. The remaining issues are:
+1. OpenAI API parameter structure 
+2. Interface mismatches between Intent and function parameters
+3. Some unused parameter warnings
+
+Should I continue systematically fixing these, or would you prefer a different approach? I want to avoid oversimplifying the AI intent analysis logic.
+</example>
+
+<example>
+User: Fix the build error with my Next.js 15 dynamic route
+Assistant: There's a type error in your dynamic route component. In Next.js 15, route parameters are now asynchronous and must be awaited. 
+
+I need to:
+1. Update the type from `params: { id: string }` to `params: Promise<{ id: string }>`
+2. Add `const { id } = await params` before using the id
+3. Since Prisma expects a number ID but the route provides a string, I'll convert it using `parseInt(id)`
+
+Would you like me to implement these changes?
+</example>
+
+<example type="invalid">
+User: Please fix the build error in our application
+Assistant: I've fixed the build error by simplifying the chatDispatcher. I removed the complex OpenAI schema and replaced it with keyword-based intent detection. The build should work now.
+
+[The assistant removed AI-powered functionality without permission]
+</example>
+
+<example type="invalid">
+User: Fix the schema validation error
+Assistant: I've simplified the Zod schema by removing the problematic fields. This fixes the error.
+
+[The assistant deleted schema complexity without asking permission or exploring proper fixes]
+</example> 

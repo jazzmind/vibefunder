@@ -1,12 +1,14 @@
 import { z } from 'zod';
-import AIService, { AIResult } from '../aiService';
-import { MODELS } from '../models';
+import AIService, { AIResult } from '@/lib/ai/aiService';
+import { MODELS } from '@/lib/ai/models';
 
 // Input validation schema
 const ContentEnhancementInputSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Title too long'),
   summary: z.string().min(1, 'Summary is required').max(500, 'Summary too long'),
   content: z.string().min(1, 'Content is required').max(50000, 'Content too long'),
+  repoContext: z.string().optional(),
+  websiteContext: z.string().optional(),
 });
 
 // Output schema for AI suggestions
@@ -86,7 +88,11 @@ Campaign Summary: "${validatedInput.summary}"
 Campaign Narrative (Detailed Description):
 ${validatedInput.content}
 
-Please analyze ALL THREE sections (title, summary, and narrative) and provide specific enhancement suggestions. For each suggestion, ensure the originalText exactly matches text that exists in one of these sections. Be specific about which section you're targeting in your suggestions.`;
+Optional Context (may include README or website research). Use for ideas only; do not invent facts:
+${validatedInput.repoContext ? `\nRepository Context (README/docs excerpts):\n${validatedInput.repoContext}` : ''}
+${validatedInput.websiteContext ? `\nWebsite Context (research summary):\n${validatedInput.websiteContext}` : ''}
+
+Please analyze ALL THREE sections (title, summary, and narrative) and provide specific enhancement suggestions. For each suggestion, ensure the originalText exactly matches text that exists in one of these sections. Be specific about which section you're targeting in your suggestions. If you draw from context, ensure the suggestion aligns with it and is realistic.`;
 
     const operationName = 'Content Enhancement Analysis';
 

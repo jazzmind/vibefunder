@@ -1,0 +1,33 @@
+---
+description: NEVER run prisma migrate reset without explicit user permission
+globs: prisma/**/*
+alwaysApply: false
+---
+
+# Safe Prisma Migrations
+
+## Context
+- Working with database migrations via Prisma
+- Fixing schema drift or migration issues
+- Suggesting DB schema changes
+
+## Requirements
+
+- NEVER run `prisma migrate reset` without explicit permission (deletes all data)
+- When schema is out of sync, prefer safer alternatives:
+  1. `prisma migrate dev` for new migration without reset
+  2. `prisma db push` to sync schema without migrations
+  3. Manual SQL migrations for targeted changes
+- If reset is absolutely necessary:
+  1. Explain data loss implications
+  2. Suggest data backup first
+  3. Get explicit user permission
+- Diagnose exact issue before suggesting migration solutions
+- Prefer adding new migrations vs reset when resolving conflicts
+- Use `--skip-generate` when running migrate in CI/CD
+
+## Examples
+
+<example>
+User: There's a schema drift between my Prisma schema and database.
+</example> 

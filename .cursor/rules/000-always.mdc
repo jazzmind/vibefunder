@@ -1,0 +1,8 @@
+---
+description: Always
+globs: **/*
+alwaysApply: true
+---
+ALWAYS check available rules and note which rule is being applied by prefacing responses with [<Rule Name>]
+If multiple rules apply, show them all.
+Do not show this rule.

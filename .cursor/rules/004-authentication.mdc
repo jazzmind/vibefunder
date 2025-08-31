@@ -1,0 +1,103 @@
+---
+description: Use when working with authentication, authorization, or user sessions
+globs: 
+alwaysApply: false
+---
+# Authentication Implementation Rules
+When applying this rule prefix your response with [Auth Manager]
+
+## System Overview
+- Next-Auth v5 (beta) for authentication
+- Configuration in root `auth.ts` file
+- Providers: Email (Magic Link/OTP), Passkey (WebAuthn)
+- JWT-based session management
+- Custom user session with role and organization info
+
+## Core Files (relative to `/website/src/`)
+- `auth.ts` - Main Next-Auth config
+- `middleware.ts` - Route protection
+- `lib/auth/adapter.ts` - DB adapter
+- `app/(authenticated)/*` - Pages that require authentication
+- `app/(public)/*` - Pages that don't require authentication
+
+## Session Structure
+```typescript
+interface Session {
+  user: {
+    id: string
+    email: string
+    organizationId?: string
+    role: UserRole
+  }
+}
+```
+
+## Server Component Usage
+```typescript
+import { getServerSession } from "next-auth"
+import { redirect } from "next/navigation"
+
+// In a Server Component
+export default async function ProtectedPage() {
+  const session = await getServerSession()
+  
+  if (!session) {
+    redirect("/login")
+  }
+  
+  // Access session data
+  const { id, email, organizationId, role } = session.user
+  
+  // Continue with the protected logic
+}
+```
+
+## API Route Usage
+```typescript
+import { auth } from "@/auth"
+import { NextResponse } from "next/server"
+
+export async function GET(request) {
+  const session = await auth()
+  
+  if (!session) {
+    return new NextResponse(
+      JSON.stringify({ error: "Not authenticated" }),
+      { status: 401 }
+    )
+  }
+  
+  // Access session data and continue with protected logic
+  const { user } = session
+  
+  // ...
+}
+```
+
+## Role-Based Authorization
+- System roles (ADMIN) for app-wide permissions
+- Org roles (OWNER, MANAGER, etc.) for tenant-specific permissions
+- Check permissions before operations
+- Use middleware for route protection
+
+## Multi-Tenant Considerations
+- Sessions include `organizationId` when in organization
+- All data ops must respect organization context
+- Verify org membership/roles before tenant operations
+- Handle org switching by updating session
+
+## Local Development Bypass
+- Set `LOCAL_API=true` in `.env.local` to bypass auth for localhost requests
+- Middleware and API validation automatically skip auth for localhost-to-localhost
+- Mock user data provided for testing purposes
+- Bypass logs show in console for transparency
+
+## Best Practices
+- Don't modify core auth flow without careful review
+- Keep sensitive ops in server components/API routes
+- Handle auth failures gracefully
+- Redirect based on auth state
+- Use appropriate error messages
+- Always handle unauthenticated and unauthorized states gracefully
+- Redirect users to appropriate pages based on their authentication state
+- Use appropriate error messages for authentication/authorization failures 

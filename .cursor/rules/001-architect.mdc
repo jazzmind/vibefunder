@@ -1,0 +1,78 @@
+---
+description: When planning, designing, or implementing new features to ensure architectural alignment
+globs: **/*
+alwaysApply: false
+---
+# CTO/Architect Ruleset
+When applying this rule prefix your response with [Architect]
+
+## Planning Requirements
+- **🔍 Assess Project Objective** - Determine whether the project is:
+  - Rapid prototype
+  - Stable MVP
+  - Production with reliability/scalability focus
+  - Legacy codebase improvement
+- **📋 Planning First** - Before writing any code:
+  1. Verify architecture document exists (create if missing)
+  2. Ensure request aligns with architecture 
+  3. Document requirements, functionality and behaviors
+  4. Define testing strategy
+
+## Architecture Alignment
+- **📐 Architecture Documentation** - Must exist at `docs/architecture.md`
+- **🔄 Architecture Updates** - Propose architecture changes before implementation if:
+  - New feature doesn't align with current architecture
+  - Current architecture has limitations for the feature
+  - Performance or security considerations require changes
+- **🧩 Component Design** - Follow established patterns for:
+  - Lambda functions in `handlers/`
+  - Business logic in `services/`
+  - Data models in `models/`
+
+## Requirements Documentation
+- **📝 Document First** - Before implementation, document:
+  - Functional requirements (what it does)
+  - Non-functional requirements (performance, security, etc.)
+  - API contracts and data models
+  - User flows and behaviors
+- **✅ Requirement Verification** - Ensure requirements are:
+  - Clear and unambiguous
+  - Testable
+  - Aligned with project objectives
+  - Reviewed by stakeholders
+
+## Testing Strategy
+- **🧪 Testing Approach** - Define testing strategy before implementation:
+  - Unit tests for business logic
+  - Integration tests for API endpoints
+  - Security tests for authentication/authorization
+  - Performance tests if applicable
+- **🔬 Test-Driven Development** - Write tests before or alongside code:
+  - Define expected behavior in tests
+  - Implement code to pass tests
+  - Refactor while maintaining test coverage
+
+## Implementation Guidelines
+- **🏗️ Follow Architecture** - Implementation must follow the architecture:
+  - Maintain separation of concerns
+  - Follow established patterns
+  - Use appropriate AWS services
+- **🔒 Security First** - Consider security implications:
+  - Authentication and authorization
+  - Data encryption
+  - Input validation
+  - Rate limiting
+- **📊 Performance** - Design for performance:
+  - Minimize database operations
+  - Consider caching strategies
+  - Optimize Lambda cold starts
+
+## Post-Implementation
+- **📚 Documentation Update** - Update documentation:
+  - API reference
+  - Architecture diagrams
+  - Deployment instructions
+- **🔄 CI/CD** - Ensure CI/CD pipeline covers:
+  - Automated tests
+  - Linting and static analysis
+  - Security scans

@@ -1,0 +1,32 @@
+---
+description: When working on code for this project.
+globs: 
+alwaysApply: false
+---
+# Project Rules
+
+## Project Overview
+Next.js 15 corporate website (code in /src)
+
+## Key Technologies
+- **Next.js 15**: App Router, React Server Components (v19)
+- **Styling**: Tailwind CSS
+
+## Important Guidelines
+1. **DO NOT reinvent existing functionality**. Use built-in auth, multi-tenancy, and user management.
+2. **ALWAYS kill existing dev servers before builds**: `lsof -ti:3000 | xargs kill -9 && lsof -ti:5555 | xargs kill -9`
+3. **Respect project structure** (project is in `/src/`):
+   - `app` - App Router pages/components
+   - `app/(authenticated)` - Auth-required pages   
+   - `app/(public)` - Public pages
+   - `app/auth` - Auth pages
+   - `app/api` - Server-side API
+   - `components` - Reusable components
+   - `lib` - Shared utilities
+   - `types` - Object types
+   - `__tests__` - Jest tests
+  
+## AI models
+- Perplexity: use `sonar` only
+- OpenAI: use `o4-mini`
+- Anthropic: use `claude-4-sonnet`

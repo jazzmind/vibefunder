@@ -59,6 +59,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       sectors,
       requireBackerAccount,
       onlyBackersComment,
+      repoUrl,
+      websiteUrl,
       milestones,
       stretchGoals,
       priceTiers,
@@ -97,6 +99,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       if (sectors !== undefined) updateData.sectors = sectors;
       if (requireBackerAccount !== undefined) updateData.requireBackerAccount = requireBackerAccount;
       if (onlyBackersComment !== undefined) updateData.onlyBackersComment = onlyBackersComment;
+      if (repoUrl !== undefined) updateData.repoUrl = repoUrl;
+      if (websiteUrl !== undefined) updateData.websiteUrl = websiteUrl;
     } else {
       // For live campaigns, only allow limited edits
       if (description !== undefined) updateData.description = description;

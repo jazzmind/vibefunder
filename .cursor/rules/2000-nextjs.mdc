@@ -1,0 +1,104 @@
+---
+description: Use when writing Next.js 15 API routes and handlers to ensure proper patterns
+globs: app/**/*,components/**/*,hooks/**/*,lib/**/*
+alwaysApply: false
+---
+# Next.js 15 Patterns and Best Practices
+
+## Context
+- Working with Next.js 15 app structure
+- Creating dynamic routes with parameters
+- Developing API routes and handlers
+
+## Requirements
+
+### Dynamic Route Parameters
+- Route parameters are async and must be awaited:
+  ```tsx
+  export default async function Page({
+    params,
+  }: {
+    params: Promise<{ id: string }>;
+  }) {
+    const { id } = await params;
+    // Now use id
+  }
+  ```
+- Multiple parameters possible in segments
+- Type params based on route pattern
+
+### API Routes
+- App Router pattern for API routes
+- Routes in `app/api/` directory
+- Named HTTP exports: `GET`, `POST`, etc.
+- Use `auth()` from `@/auth` (not deprecated `getServerSession`)
+
+### Server Components
+- Prefer Server Components for data fetching
+- Use `auth()` for authentication checks
+- Direct fetch calls in server components
+- `notFound()` for missing data
+
+## Examples
+
+<example>
+// Dynamic route parameter in Next.js 15
+export default async function ProductPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  
+  const product = await getProduct(slug);
+  if (!product) return notFound();
+  
+  return <ProductDetails product={product} />;
+}
+</example>
+
+<example type="invalid">
+// INCORRECT: Not awaiting params
+export default async function ProductPage({
+  params,
+}: {
+  params: { slug: string };
+}) {
+  // Type errors during build
+  const product = await getProduct(params.slug);
+  
+  if (!product) return notFound();
+  
+  return <ProductDetails product={product} />;
+}
+</example>
+
+<example>
+// Proper API route in Next.js 15
+import { auth } from "@/auth";
+import { NextResponse } from "next/server";
+
+export async function GET(request: Request) {
+  const session = await auth();
+  
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  
+  // Process request
+  return NextResponse.json({ data: "Success" });
+}
+</example>
+
+<example type="invalid">
+// INCORRECT: Using deprecated auth
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+
+export async function GET(request: Request) {
+  // Deprecated in Next.js 15
+  const session = await getServerSession(authOptions);
+  
+  // Rest of handler
+}
+</example> 

@@ -4,16 +4,17 @@ import { useState, useTransition, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { X, ImageIcon, Video } from 'lucide-react';
-import ImageGenerator from '@/app/components/campaign/ImageGenerator';
-import AIContentEnhancer from '@/app/components/campaign/AIContentEnhancer';
-import AIMilestoneSuggestions from '@/app/components/campaign/AIMilestoneSuggestions';
-import AIStretchGoalSuggestions from '@/app/components/campaign/AIStretchGoalSuggestions';
-import TiptapEditor from '@/app/components/editor/TiptapEditor';
-import ImageLibrary from '@/app/components/images/ImageLibrary';
-import MediaSelectorModal from '@/app/components/shared/MediaSelectorModal';
-import MilestoneStretchGoalModal, { MilestoneFormData, StretchGoalFormData } from '@/app/components/campaigns/MilestoneStretchGoalModal';
-import PriceTierModal, { PriceTierFormData } from '@/app/components/campaigns/PriceTierModal';
-import GitHubModal from '@/app/components/campaigns/GitHubModal';
+import ImageGenerator from '@/components/campaign/ImageGenerator';
+import AIContentEnhancer from '@/components/campaign/AIContentEnhancer';
+import AIMilestoneSuggestions from '@/components/campaign/AIMilestoneSuggestions';
+import AIStretchGoalSuggestions from '@/components/campaign/AIStretchGoalSuggestions';
+import TiptapEditor from '@/components/editor/TiptapEditor';
+import ImageLibrary from '@/components/images/ImageLibrary';
+import MediaSelectorModal from '@/components/shared/MediaSelectorModal';
+import MilestoneStretchGoalModal, { MilestoneFormData, StretchGoalFormData } from '@/components/campaigns/MilestoneStretchGoalModal';
+import PriceTierModal, { PriceTierFormData } from '@/components/campaigns/PriceTierModal';
+import GitHubModal from '@/components/campaigns/GitHubModal';
+import Modal from '@/components/shared/Modal';
 
 interface Milestone {
   id?: string;
@@ -46,6 +47,7 @@ interface Campaign {
   onlyBackersComment: boolean;
   status: string;
   repoUrl?: string | null;
+  websiteUrl?: string | null;
   milestones?: any[];
   stretchGoals?: any[];
   pledgeTiers?: any[];
@@ -94,6 +96,7 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
     requireBackerAccount: campaign.requireBackerAccount,
     onlyBackersComment: campaign.onlyBackersComment,
     repoUrl: campaign.repoUrl || '',
+    websiteUrl: (campaign as any).websiteUrl || '',
     milestones: (campaign.milestones || []).map((m: any) => ({
       id: m.id,
       name: m.name,
@@ -130,6 +133,21 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
   const [stretchGoalModalOpen, setStretchGoalModalOpen] = useState(false);
   const [priceTierModalOpen, setPriceTierModalOpen] = useState(false);
   const [gitHubModalOpen, setGitHubModalOpen] = useState(false);
+  const [gitHubAppModalOpen, setGitHubAppModalOpen] = useState(false);
+  const [githubConnection, setGithubConnection] = useState<{ connected: boolean; connection?: { username?: string | null } } | null>(null);
+  const [githubAppConnected, setGithubAppConnected] = useState<boolean | null>(null);
+  const [featureScan, setFeatureScan] = useState<any>(null);
+  const [featureLoading, setFeatureLoading] = useState(false);
+  const [featureError, setFeatureError] = useState<string | null>(null);
+  const [planLoading, setPlanLoading] = useState(false);
+  const [planError, setPlanError] = useState<string | null>(null);
+  const [masterPlanState, setMasterPlanState] = useState<any>(null);
+  const [gapLoading, setGapLoading] = useState(false);
+  const [gapError, setGapError] = useState<string | null>(null);
+  const [gapJobId, setGapJobId] = useState<string | null>(null);
+  const [gapStatus, setGapStatus] = useState<any>(null);
+  const [gapResult, setGapResult] = useState<any>(null);
+  const gapTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   // Editing state
   const [editingMilestone, setEditingMilestone] = useState<{index: number, data: any} | null>(null);
@@ -170,6 +188,34 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
     setMediaModalOpen(true);
   };
 
+  // Fetch GitHub integration status (PAT connection) and GitHub App installation status
+  useEffect(() => {
+    const fetchStatuses = async () => {
+      try {
+        const [connRes, appRes] = await Promise.all([
+          fetch('/api/github/connect', { cache: 'no-store' }).catch(() => null),
+          fetch('/api/github/app/status', { cache: 'no-store' }).catch(() => null),
+        ]);
+        if (connRes?.ok) {
+          const data = await connRes.json();
+          setGithubConnection({ connected: !!data.connected, connection: data.connection });
+        } else {
+          setGithubConnection({ connected: false });
+        }
+        if (appRes?.ok) {
+          const data = await appRes.json();
+          setGithubAppConnected(!!data.connected);
+        } else {
+          setGithubAppConnected(false);
+        }
+      } catch (_e) {
+        setGithubConnection({ connected: false });
+        setGithubAppConnected(false);
+      }
+    };
+    fetchStatuses();
+  }, []);
+
   // Smart autosave - only saves when data actually changes
   const autoSave = useCallback(async () => {
     if (autoSaving) return;
@@ -191,6 +237,7 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
           requireBackerAccount: formData.requireBackerAccount,
           onlyBackersComment: formData.onlyBackersComment,
           repoUrl: formData.repoUrl || null,
+          websiteUrl: formData.websiteUrl || null,
           milestones: formData.milestones,
           stretchGoals: formData.stretchGoals,
           priceTiers: formData.priceTiers,
@@ -430,6 +477,33 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
     }
   };
 
+  const handleGenerateFromWebsite = async (websiteUrl: string, userPrompt?: string) => {
+    try {
+      const response = await fetch('/api/services/generate-from-domain', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domain: websiteUrl, userPrompt, autoCreate: false })
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to generate from website');
+      }
+      const result = await response.json();
+      const generated = result.generated;
+      setFormData(prev => ({
+        ...prev,
+        title: generated.name || prev.title,
+        summary: prev.summary || (generated.valueProposition || generated.description || '').slice(0, 200),
+        description: generated.description || prev.description,
+        websiteUrl: websiteUrl
+      }));
+      setSuccess('Campaign content updated from website');
+    } catch (error) {
+      console.error('Generate from website error:', error);
+      throw error;
+    }
+  };
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
     
@@ -463,6 +537,8 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
             sectors: formData.sectors,
             requireBackerAccount: formData.requireBackerAccount,
             onlyBackersComment: formData.onlyBackersComment,
+            repoUrl: formData.repoUrl || null,
+            websiteUrl: formData.websiteUrl || null,
             milestones: formData.milestones,
             stretchGoals: formData.stretchGoals,
           }),
@@ -489,6 +565,7 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
     { id: 'milestones', label: 'Milestones', icon: '🎯' },
     { id: 'price-tiers', label: 'Price Tiers', icon: '💰' },
     { id: 'stretch-goals', label: 'Stretch Goals', icon: '🚀' },
+    { id: 'analysis', label: 'Gap Analysis', icon: '🔍' },
     { id: 'media', label: 'Media', icon: '🎬' },
     { id: 'settings', label: 'Settings', icon: '⚙️' },
   ];
@@ -512,16 +589,50 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
             )}
           </div>
         </div>
-        <nav className="flex space-x-8">
+        {/* GitHub Integration Status & Actions */}
+        <div className="mb-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/40 p-3">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+            <div className="text-sm flex flex-wrap items-center gap-2">
+              <span className="text-gray-700 dark:text-gray-300 font-medium">GitHub</span>
+              <span className={`px-2 py-1 rounded-full text-xs ${githubConnection?.connected ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'}`}>
+                {githubConnection?.connected
+                  ? `Connected${githubConnection?.connection?.username ? ` as ${githubConnection.connection.username}` : ''}`
+                  : 'Not connected'}
+              </span>
+              <span className="text-gray-500">•</span>
+              <span className="text-gray-700 dark:text-gray-300 font-medium">App</span>
+              <span className={`px-2 py-1 rounded-full text-xs ${githubAppConnected ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'}`}>
+                {githubAppConnected ? 'Installed' : 'Needs auth'}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setGitHubAppModalOpen(true)}
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                {githubAppConnected ? 'Re-auth GitHub App' : 'Connect GitHub App'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setGitHubModalOpen(true)}
+                className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                Set Repository
+              </button>
+            </div>
+          </div>
+        </div>
+        <nav className="flex space-x-8 overflow-x-auto">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`py-3 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
+              className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
                 activeTab === tab.id
                   ? 'border-brand text-brand'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
               }`}
             >
               <span>{tab.icon}</span>
@@ -562,6 +673,39 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
               placeholder="Enter a compelling campaign title"
             />
             {errors.title && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.title}</p>}
+          </div>
+
+          {/* Project Website */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Project Website
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="url"
+                value={formData.websiteUrl || ''}
+                onChange={(e) => handleInputChange('websiteUrl', e.target.value)}
+                className="flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                placeholder="https://example.com"
+              />
+              <button
+                type="button"
+                onClick={() => formData.websiteUrl && handleGenerateFromWebsite(formData.websiteUrl)}
+                className={`px-4 py-2 bg-gray-900 text-white rounded-lg transition-colors ${formData.websiteUrl ? 'hover:bg-gray-800' : 'opacity-50 pointer-events-none'}`}
+              >
+                Generate
+              </button>
+              {formData.websiteUrl && (
+                <button
+                  type="button"
+                  onClick={() => window.open(formData.websiteUrl!, '_blank')}
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  View
+                </button>
+              )}
+            </div>
+            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">We can analyze your website to enrich campaign content.</p>
           </div>
           {/* Lead Media Section */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -718,6 +862,8 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
               title={formData.title}
               summary={formData.summary}
               content={formData.description}
+              repoUrl={formData.repoUrl}
+              websiteUrl={formData.websiteUrl}
               onTitleUpdate={(newTitle) => handleInputChange('title', newTitle)}
               onSummaryUpdate={(newSummary) => handleInputChange('summary', newSummary)}
               onContentUpdate={(newContent) => handleInputChange('description', newContent)}
@@ -768,50 +914,7 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
             </p>
           </div>
 
-          {/* GitHub Repository Integration */}
-          <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                GitHub Repository
-              </label>
-              <input
-                type="url"
-                value={formData.repoUrl || ''}
-                onChange={(e) => handleInputChange('repoUrl', e.target.value)}
-                className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                placeholder="https://github.com/username/repository"
-              />
-              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                Link to your GitHub repository to enable automatic content generation and updates
-              </p>
-            </div>
-            
-            <div className="mt-4 flex items-center space-x-3">
-              <button
-                type="button"
-                onClick={() => setGitHubModalOpen(true)}
-                className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors flex items-center space-x-2"
-              >
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-                </svg>
-                <span>Generate from Repository</span>
-              </button>
-              
-              {formData.repoUrl && (
-                <button
-                  type="button"
-                  onClick={() => window.open(formData.repoUrl, '_blank')}
-                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center space-x-2"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                  </svg>
-                  <span>View Repository</span>
-                </button>
-              )}
-            </div>
-          </div>
+          {/* Removed GitHub repo field (handled via GitHub connection). Website field moved above. */}
 
         </div>
       )}
@@ -974,6 +1077,12 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
                 Define key checkpoints for your campaign development
               </p>
             </div>
+            <a
+              href={formData.repoUrl ? `/analyzer?repo=${encodeURIComponent(formData.repoUrl)}&auto=1` : '#'}
+              className={`px-3 py-2 bg-gray-900 text-white rounded-lg transition-colors ${formData.repoUrl ? 'hover:bg-gray-800' : 'opacity-50 pointer-events-none'}`}
+            >
+              Run Gap Analysis
+            </a>
           </div>
 
           {/* AI Milestone Suggestions */}
@@ -1042,12 +1151,16 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
                     <div className="bg-white dark:bg-gray-700 rounded p-3">
                       <h6 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Acceptance Criteria:</h6>
                       <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                        {milestone.acceptance.checklist.map((item: string, i: number) => (
-                          <li key={i} className="flex items-start">
-                            <span className="text-green-500 mr-2">•</span>
-                            {item}
-                          </li>
-                        ))}
+                        {Array.isArray(milestone.acceptance?.checklist) && milestone.acceptance.checklist.length > 0 ? (
+                          milestone.acceptance.checklist.map((item: string, i: number) => (
+                            <li key={i} className="flex items-start">
+                              <span className="text-green-500 mr-2">•</span>
+                              {item}
+                            </li>
+                          ))
+                        ) : (
+                          <li className="text-gray-500 dark:text-gray-300">No criteria listed</li>
+                        )}
                       </ul>
                     </div>
                   </div>
@@ -1291,6 +1404,362 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
           )}
         </div>
       )}
+      {activeTab === 'analysis' && (
+        <div className="space-y-8">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                Gap Analysis
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Plan, analyze, and generate milestones from automated scans
+              </p>
+            </div>
+            <a
+              href={formData.repoUrl ? `/analyzer?repo=${encodeURIComponent(formData.repoUrl)}&campaignId=${encodeURIComponent(campaign.id)}` : '#'}
+              className={`px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand/90 transition-colors ${!formData.repoUrl ? 'opacity-50 pointer-events-none' : ''}`}
+            >
+              Open Full Analyzer
+            </a>
+          </div>
+
+          {/* Master Plan Section */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h4 className="text-lg font-medium text-gray-900 dark:text-white">Master Plan Generation</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Generate a comprehensive product plan from campaign data and repository documentation
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!formData.title || !formData.summary) return;
+                  setPlanError(null);
+                  setPlanLoading(true);
+                  setMasterPlanState(null);
+                  try {
+                    const res = await fetch('/api/analyzer/master-plan', {
+                      method: 'POST',
+                      headers: { 'content-type': 'application/json' },
+                      body: JSON.stringify({
+                        repo_url: formData.repoUrl,
+                        website_url: formData.websiteUrl || undefined,
+                        campaign: { title: formData.title, summary: formData.summary, description: formData.description },
+                      }),
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data?.error || 'master_plan_failed');
+                    setMasterPlanState(data);
+                  } catch (e: any) {
+                    setPlanError(e?.message || 'master_plan_failed');
+                  } finally {
+                    setPlanLoading(false);
+                  }
+                }}
+                disabled={!formData.title || planLoading}
+                className={`px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                {planLoading ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Generating...</span>
+                  </div>
+                ) : 'Generate Master Plan'}
+              </button>
+            </div>
+
+            {planError && (
+              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <p className="text-sm text-red-600 dark:text-red-400">{planError}</p>
+              </div>
+            )}
+
+            {masterPlanState && (
+              <div className="space-y-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+                <div>
+                  <h5 className="font-medium text-gray-900 dark:text-white mb-2">Must-have Features</h5>
+                  <ul className="space-y-1">
+                    {(masterPlanState.mustHaveFeatures || []).map((f: string, i: number) => (
+                      <li key={i} className="flex items-start text-sm text-gray-700 dark:text-gray-300">
+                        <span className="text-green-500 mr-2 mt-0.5">•</span>
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                
+                {(masterPlanState.niceToHaveFeatures || []).length > 0 && (
+                  <div>
+                    <h5 className="font-medium text-gray-900 dark:text-white mb-2">Nice-to-have Features</h5>
+                    <ul className="space-y-1">
+                      {masterPlanState.niceToHaveFeatures.map((f: string, i: number) => (
+                        <li key={i} className="flex items-start text-sm text-gray-600 dark:text-gray-400">
+                          <span className="text-blue-500 mr-2 mt-0.5">•</span>
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Gap Analysis Section */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h4 className="text-lg font-medium text-gray-900 dark:text-white">Security & Quality Analysis</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Run automated scanners and generate actionable milestones from findings
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!formData.repoUrl) return;
+                  setGapError(null);
+                  setGapLoading(true);
+                  setGapResult(null);
+                  setGapStatus(null);
+                  try {
+                    const startRes = await fetch('/api/analyzer/start', {
+                      method: 'POST',
+                      headers: { 'content-type': 'application/json' },
+                      body: JSON.stringify({ repo_url: formData.repoUrl }),
+                    });
+                    const startData = await startRes.json();
+                    if (!startRes.ok) throw new Error(startData.error || 'start_failed');
+                    const jid = startData.job_id || startData.jobId;
+                    setGapJobId(jid);
+                    if (gapTimerRef.current) clearInterval(gapTimerRef.current);
+                    gapTimerRef.current = setInterval(async () => {
+                      try {
+                        const st = await fetch(`/api/analyzer/jobs/${jid}`);
+                        const sd = await st.json();
+                        setGapStatus(sd);
+                        if (sd.status === 'succeeded') {
+                          if (gapTimerRef.current) clearInterval(gapTimerRef.current);
+                          const gapRes = await fetch('/api/analyzer/gap', {
+                            method: 'POST',
+                            headers: { 'content-type': 'application/json' },
+                            body: JSON.stringify({ job_id: jid, repo_url: formData.repoUrl }),
+                          });
+                          const gapData = await gapRes.json();
+                          if (!gapRes.ok) throw new Error(gapData?.error || 'gap_failed');
+                          setGapResult(gapData);
+                          setGapLoading(false);
+                        } else if (sd.status === 'failed') {
+                          if (gapTimerRef.current) clearInterval(gapTimerRef.current);
+                          setGapLoading(false);
+                          setGapError(sd?.message || 'analysis_failed');
+                        }
+                      } catch (e: any) {
+                        if (gapTimerRef.current) clearInterval(gapTimerRef.current);
+                        setGapLoading(false);
+                        setGapError(e?.message || 'poll_failed');
+                      }
+                    }, 1500) as unknown as NodeJS.Timeout;
+                  } catch (e: any) {
+                    setGapLoading(false);
+                    setGapError(e?.message || 'start_failed');
+                  }
+                }}
+                disabled={!formData.repoUrl || gapLoading}
+                className={`px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                {gapLoading ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Running Analysis...</span>
+                  </div>
+                ) : 'Run Gap Analysis'}
+              </button>
+            </div>
+
+            {gapError && (
+              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <p className="text-sm text-red-600 dark:text-red-400">{gapError}</p>
+              </div>
+            )}
+
+            {gapStatus && (
+              <div className="mb-4 space-y-2">
+                <h5 className="font-medium text-gray-900 dark:text-white">Analysis Progress</h5>
+                {Array.isArray(gapStatus.steps) && gapStatus.steps.map((s: any, i: number) => (
+                  <div key={i} className="flex items-center justify-between bg-gray-50 dark:bg-gray-700 rounded-lg px-3 py-2">
+                    <div className="flex items-center space-x-2">
+                      <div className={`w-2 h-2 rounded-full ${
+                        s.status === 'succeeded' ? 'bg-green-500' : 
+                        s.status === 'running' ? 'bg-blue-500 animate-pulse' :
+                        s.status === 'failed' ? 'bg-red-500' : 'bg-gray-400'
+                      }`}></div>
+                      <span className="font-medium text-sm text-gray-900 dark:text-white">{s.name}</span>
+                      {s.message && <span className="text-sm text-gray-500">{s.message}</span>}
+                    </div>
+                    <span className={`text-xs font-medium px-2 py-1 rounded ${
+                      s.status === 'succeeded' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                      s.status === 'running' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                      s.status === 'failed' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                      'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+                    }`}>
+                      {s.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {gapResult && (
+              <div className="space-y-4">
+                <h5 className="font-medium text-gray-900 dark:text-white">Recommended Milestones</h5>
+                <div className="grid gap-4">
+                  {(gapResult.milestones || []).map((m: any, idx: number) => (
+                    <div key={idx} className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                      <h6 className="font-semibold text-gray-900 dark:text-white mb-2">{m.title}</h6>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">{m.description}</p>
+                      
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div>
+                          <div className="text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Acceptance Criteria</div>
+                          <ul className="text-sm space-y-1">
+                            {(m.acceptance || []).map((a: string, j: number) => (
+                              <li key={j} className="flex items-start text-gray-600 dark:text-gray-400">
+                                <span className="text-green-500 mr-2 mt-0.5">✓</span>
+                                {a}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                        
+                        <div>
+                          <div className="text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Scope of Work</div>
+                          <ul className="text-sm space-y-1">
+                            {(m.scope || []).map((s: string, j: number) => (
+                              <li key={j} className="flex items-start text-gray-600 dark:text-gray-400">
+                                <span className="text-blue-500 mr-2 mt-0.5">→</span>
+                                {s}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Feature Presence Section */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h4 className="text-lg font-medium text-gray-900 dark:text-white">Feature Presence Scan</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Check which planned features are already implemented in the codebase
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!formData.repoUrl) return;
+                  setFeatureError(null);
+                  setFeatureLoading(true);
+                  try {
+                    const plan = masterPlanState;
+                    const base: string[] = Array.isArray(plan?.mustHaveFeatures)
+                      ? plan.mustHaveFeatures
+                      : (formData.milestones || []).map((m: any) => m.name);
+                    const features = base.slice(0, 12).map((f: string) => ({
+                      name: f,
+                      keywords: f.split(/[^a-zA-Z0-9]+/).filter((t: string) => t.length > 3).map((t: string) => t.toLowerCase()),
+                    }));
+                    const res = await fetch('/api/analyzer/features', {
+                      method: 'POST',
+                      headers: { 'content-type': 'application/json' },
+                      body: JSON.stringify({ repo_url: formData.repoUrl, features }),
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data?.error || 'features_failed');
+                    setFeatureScan(data);
+                  } catch (e: any) {
+                    setFeatureError(e?.message || 'features_failed');
+                  } finally {
+                    setFeatureLoading(false);
+                  }
+                }}
+                disabled={!formData.repoUrl || featureLoading}
+                className={`px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                {featureLoading ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Scanning...</span>
+                  </div>
+                ) : 'Scan Features'}
+              </button>
+            </div>
+
+            {featureError && (
+              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <p className="text-sm text-red-600 dark:text-red-400">{featureError}</p>
+              </div>
+            )}
+
+            {featureScan && (
+              <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-600">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
+                  <thead className="bg-gray-50 dark:bg-gray-700">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Feature</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Keyword Hits</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Files Matched</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Robust Signals</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-600">
+                    {(featureScan.results || []).map((r: any, idx: number) => (
+                      <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">{r.feature}</td>
+                        <td className="px-4 py-3 text-sm">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            r.present 
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                              : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                          }`}>
+                            {r.present ? 'Present' : 'Missing'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{r.keyword_hits}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{r.files_matched}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{r.robust_signals_hits}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Tips Section */}
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+            <h4 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">💡 Analysis Tips</h4>
+            <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
+              <li>• Generate a master plan first to get comprehensive feature lists</li>
+              <li>• Run gap analysis to identify security and quality issues</li>
+              <li>• Use feature scanning to validate implementation progress</li>
+              <li>• Results help create realistic milestones and acceptance criteria</li>
+            </ul>
+          </div>
+        </div>
+      )}
+
+
 
 
 
@@ -1359,6 +1828,55 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
         onRepoUrlUpdate={handleRepoUrlUpdate}
         onGenerateContent={handleGenerateContent}
       />
+
+      {/* GitHub App Connect Modal */}
+      <Modal
+        isOpen={gitHubAppModalOpen}
+        onClose={() => setGitHubAppModalOpen(false)}
+        title={githubAppConnected ? 'Re-authenticate GitHub App' : 'Connect GitHub App'}
+        maxWidth="md"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-700 dark:text-gray-300">
+            This opens the GitHub App install page in a new tab. After installing and selecting repositories, click Done to refresh status.
+          </p>
+          <div className="flex items-center gap-2">
+            <a
+              href={`/api/github/app/start?state=${encodeURIComponent(`/campaigns/${campaign.id}/edit`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            >
+              Open Install Flow
+            </a>
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  // Try to sync installation from GitHub App in case callback didn't run
+                  await fetch('/api/github/app/sync', { method: 'POST' }).catch(() => null);
+                  const [connRes, appRes] = await Promise.all([
+                    fetch('/api/github/connect', { cache: 'no-store' }).catch(() => null),
+                    fetch('/api/github/app/status', { cache: 'no-store' }).catch(() => null),
+                  ]);
+                  if (connRes?.ok) {
+                    const data = await connRes.json();
+                    setGithubConnection({ connected: !!data.connected, connection: data.connection });
+                  }
+                  if (appRes?.ok) {
+                    const data = await appRes.json();
+                    setGithubAppConnected(!!data.connected || !!data.installed);
+                  }
+                } catch {}
+                setGitHubAppModalOpen(false);
+              }}
+              className="px-3 py-2 bg-brand text-white rounded-lg hover:bg-brand/90 transition-colors"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      </Modal>
     </form>
   );
 }

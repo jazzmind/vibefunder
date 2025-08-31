@@ -5,10 +5,10 @@ import { CommentSection } from "./comments";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import Link from "next/link";
-import ImageGenerator from "@/app/components/campaign/ImageGenerator";
+import ImageGenerator from "@/components/campaign/ImageGenerator";
 import AutoImageGenerationWrapper from "./AutoImageGenerationWrapper";
 import { DEMO_CAMPAIGNS } from "@/app/demo/campaigns";
-import VideoEmbed from '@/app/components/campaign/VideoEmbed';
+import VideoEmbed from '@/components/campaign/VideoEmbed';
 
 
 export default async function CampaignPage({params}:{params:Promise<{id:string}>}){

@@ -1,0 +1,45 @@
+---
+description: Use when implementing or updating QA testing procedures
+globs: __tests__/**/*
+alwaysApply: false
+---
+# QA Testing Rules
+When applying this rule prefix your response with [QA]
+
+## Testing Requirements
+- Write tests for all critical business logic
+- Follow the Arrange-Act-Assert pattern for test structure
+- Use descriptive test names following the pattern "should [expected behavior] when [condition]"
+- Mock external dependencies to ensure isolated testing
+- Implement both unit and integration tests
+- Use test fixtures for complex test data setup
+
+## Test Coverage
+- Aim for at least 80% code coverage for all services
+- Ensure 100% coverage for critical paths and security-related functions
+- Include happy path and error path testing
+- Test edge cases and boundary conditions
+
+## Test Organization
+- Group tests by feature or component
+- Use describe blocks to organize related tests
+- Use before/beforeEach for common setup
+- Use after/afterEach for cleanup
+
+## UI Testing
+- Implement end-to-end tests for critical user journeys
+- Test responsive behavior across different viewports
+- Include accessibility testing in the QA process
+- Test cross-browser compatibility for supported browsers
+
+## Performance Testing
+- Implement load tests for critical endpoints
+- Set performance benchmarks and enforce them
+- Include response time testing in the CI/CD pipeline
+- Monitor performance metrics in production
+
+## Continuous Integration
+- All tests must pass before merging to main branches
+- Run tests automatically on each pull request
+- Generate and store test reports for each build
+- Notify team of test failures immediately

@@ -27,6 +27,10 @@ export type {
   ImageGenerationResponse 
 } from './ImageGenerationService';
 
+// Export legacy function for backwards compatibility
+export { generateCampaignImage } from './ImageGenerationService';
+export type { ImageGenerationInput as CampaignImageData } from './ImageGenerationService';
+
 export { ImageLibraryService } from './ImageLibraryService';
 export type { 
   ImageGenerationInput as LibraryImageGenerationInput,
@@ -36,4 +40,4 @@ export type {
 } from './ImageLibraryService';
 
 // Re-export common AI service types
-export type { AIResult, AIError, AIErrorType } from '../aiService';
+export type { AIResult, AIError, AIErrorType } from '@/lib/ai/aiService';

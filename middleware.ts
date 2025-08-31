@@ -13,6 +13,21 @@ export async function middleware(request: NextRequest) {
       return NextResponse.next(); // Skip middleware auth for localhost API requests
     }
   }
+  const { pathname, search } = request.nextUrl;
+  // Always allow API and signin routes
+  if (pathname.startsWith('/api/') || pathname.startsWith('/signin')) {
+    return NextResponse.next();
+  }
+  // Require session cookie for all other routes
+  const hasSession = request.cookies.has('session');
+  if (!hasSession) {
+    const redirectUrl = new URL('/signin', request.url);
+    if (pathname && pathname !== '/signin') {
+      // Preserve original target
+      redirectUrl.searchParams.set('redirect_to', pathname + (search || ''));
+    }
+    return NextResponse.redirect(redirectUrl);
+  }
 
   // For all other requests, proceed with normal flow
   return NextResponse.next();

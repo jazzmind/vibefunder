@@ -101,7 +101,9 @@ export async function POST(request: NextRequest) {
       id: passkey.user.id,
       userId: passkey.user.id,
       email: passkey.user.email,
-      roles: passkey.user.roles
+      roles: passkey.user.roles,
+      iat: Date.now(),
+      exp: Date.now() + 7 * 24 * 60 * 60 * 1000
     });
 
     // Set cookie

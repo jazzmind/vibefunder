@@ -20,6 +20,20 @@ export default function SignIn() {
 
   // Check for existing passkeys and signup status on component mount
   useEffect(() => {
+    // If already authenticated, redirect away
+    (async () => {
+      try {
+        const res = await fetch('/api/auth/session');
+        const data = await res.json();
+        if (data?.user) {
+          const sp = new URLSearchParams(window.location.search);
+          const redirectTo = sp.get('redirect_to');
+          window.location.href = redirectTo || '/dashboard';
+          return;
+        }
+      } catch {}
+    })();
+
     const checkForPasskeys = () => {
       if (!browserSupportsWebAuthn()) {
         return;
@@ -146,9 +160,10 @@ export default function SignIn() {
         setUser(data.user);
         // Check if user already has passkeys
         const userHasPasskeys = await checkUserPasskeys(data.user.id);
+        const sp = new URLSearchParams(window.location.search);
+        const redirectTo = sp.get('redirect_to');
         if (userHasPasskeys) {
-          // User already has passkeys, redirect to dashboard
-          window.location.href = '/dashboard';
+          window.location.href = redirectTo || '/dashboard';
         } else {
           // User doesn't have passkeys, offer to set them up
           setStep('passkey-setup');
@@ -193,7 +208,9 @@ export default function SignIn() {
       if (response.ok) {
         // Mark that this device has used passkeys
         localStorage.setItem('vibefunder_has_passkeys', 'true');
-        window.location.href = '/dashboard';
+        const sp = new URLSearchParams(window.location.search);
+        const redirectTo = sp.get('redirect_to');
+        window.location.href = redirectTo || '/dashboard';
       } else {
         setError(data.error || 'Passkey authentication failed');
       }
@@ -232,7 +249,9 @@ export default function SignIn() {
       if (response.ok) {
         // Mark that this device now has passkeys
         localStorage.setItem('vibefunder_has_passkeys', 'true');
-        window.location.href = '/dashboard';
+        const sp = new URLSearchParams(window.location.search);
+        const redirectTo = sp.get('redirect_to');
+        window.location.href = redirectTo || '/dashboard';
       } else {
         setError(data.error || 'Failed to register passkey');
       }
@@ -244,7 +263,9 @@ export default function SignIn() {
   };
 
   const handleSkipPasskey = () => {
-    window.location.href = '/dashboard';
+    const sp = new URLSearchParams(window.location.search);
+    const redirectTo = sp.get('redirect_to');
+    window.location.href = redirectTo || '/dashboard';
   };
 
   return (

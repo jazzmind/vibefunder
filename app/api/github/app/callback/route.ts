@@ -26,16 +26,22 @@ export async function GET(request: Request) {
     }
 
     const token = await getInstallationToken(installationId);
-    cookieStore.set({
-      name: 'gh_installation_token',
-      value: token,
-      httpOnly: true,
-      secure: true,
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 60 * 60, // 1 hour
-    });
-    return NextResponse.redirect(redirectTo, { status: 302 });
+    // Attach cookie to the actual redirect response to ensure the browser receives it
+    const res = NextResponse.redirect(redirectTo, { status: 302 });
+    try {
+      res.cookies.set({
+        name: 'gh_installation_token',
+        value: token,
+        httpOnly: true,
+        secure: true,
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 60 * 60, // 1 hour
+      });
+    } catch {}
+    // eslint-disable-next-line no-console
+    console.log('[GitHubApp] callback set token cookie and redirecting to', redirectTo);
+    return res;
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'token_exchange_failed' }, { status: 500 });
   }

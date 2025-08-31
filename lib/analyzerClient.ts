@@ -3,6 +3,9 @@ const ANALYZER_CLIENT_ID = process.env.ANALYZER_CLIENT_ID || '';
 const ANALYZER_CLIENT_SECRET = process.env.ANALYZER_CLIENT_SECRET || '';
 const ANALYZER_DEBUG = process.env.ANALYZER_DEBUG === '1' || process.env.NODE_ENV !== 'production';
 
+let CACHED_TOKEN: string | null = null;
+let TOKEN_EXPIRES_AT_MS = 0;
+
 function debug(...args: any[]) {
   if (ANALYZER_DEBUG) {
     // eslint-disable-next-line no-console
@@ -19,6 +22,9 @@ function maskValue(value: string): string {
 async function getAccessToken(): Promise<string> {
   if (!ANALYZER_CLIENT_ID || !ANALYZER_CLIENT_SECRET) {
     throw new Error('Analyzer client credentials missing: set ANALYZER_CLIENT_ID and ANALYZER_CLIENT_SECRET');
+  }
+  if (CACHED_TOKEN && Date.now() < TOKEN_EXPIRES_AT_MS) {
+    return CACHED_TOKEN;
   }
   debug('getAccessToken: POST', `${ANALYZER_BASE_URL}/oauth/token`, 'client_id:', maskValue(ANALYZER_CLIENT_ID));
   const res = await fetch(`${ANALYZER_BASE_URL}/oauth/token`, {
@@ -41,7 +47,10 @@ async function getAccessToken(): Promise<string> {
   }
   const data = await res.json();
   debug('getAccessToken: token obtained');
-  return data.access_token as string;
+  const ttl = typeof data.expires_in === 'number' ? data.expires_in : 3600;
+  CACHED_TOKEN = data.access_token as string;
+  TOKEN_EXPIRES_AT_MS = Date.now() + Math.max(0, (ttl - 30) * 1000); // refresh 30s early
+  return CACHED_TOKEN;
 }
 
 export async function startAnalysis(payload: any): Promise<any> {
@@ -94,6 +103,56 @@ export async function getSow(jobId: string): Promise<any> {
   });
   debug('getSow: response', res.status);
   if (!res.ok) throw new Error(`Analyzer sow failed: ${res.status}`);
+  return res.json();
+}
+
+export async function getCapabilities(): Promise<any> {
+  const token = await getAccessToken();
+  debug('getCapabilities: GET', `${ANALYZER_BASE_URL}/api/v1/capabilities`);
+  const res = await fetch(`${ANALYZER_BASE_URL}/api/v1/capabilities`, {
+    headers: { 'authorization': `Bearer ${token}` },
+    cache: 'no-store',
+  });
+  debug('getCapabilities: response', res.status);
+  if (!res.ok) throw new Error(`Analyzer capabilities failed: ${res.status}`);
+  return res.json();
+}
+
+export async function cancelJob(jobId: string): Promise<void> {
+  const token = await getAccessToken();
+  debug('cancelJob: POST', `${ANALYZER_BASE_URL}/api/v1/jobs/${jobId}/cancel`);
+  const res = await fetch(`${ANALYZER_BASE_URL}/api/v1/jobs/${jobId}/cancel`, {
+    method: 'POST',
+    headers: { 'authorization': `Bearer ${token}` },
+    cache: 'no-store',
+  });
+  debug('cancelJob: response', res.status);
+  if (!res.ok) throw new Error(`Analyzer cancel failed: ${res.status}`);
+}
+
+export async function getPlan(payload: any): Promise<any> {
+  const token = await getAccessToken();
+  debug('getPlan: POST', `${ANALYZER_BASE_URL}/api/v1/plan`);
+  const res = await fetch(`${ANALYZER_BASE_URL}/api/v1/plan`, {
+    method: 'POST',
+    headers: { 'authorization': `Bearer ${token}`, 'content-type': 'application/json' },
+    body: JSON.stringify(payload),
+    cache: 'no-store',
+  });
+  debug('getPlan: response', res.status);
+  if (!res.ok) throw new Error(`Analyzer plan failed: ${res.status}`);
+  return res.json();
+}
+
+export async function getReport(jobId: string, name: string): Promise<{ name: string; content: string }> {
+  const token = await getAccessToken();
+  debug('getReport: GET', `${ANALYZER_BASE_URL}/api/v1/jobs/${jobId}/reports/${name}`);
+  const res = await fetch(`${ANALYZER_BASE_URL}/api/v1/jobs/${jobId}/reports/${encodeURIComponent(name)}`, {
+    headers: { 'authorization': `Bearer ${token}` },
+    cache: 'no-store',
+  });
+  debug('getReport: response', res.status);
+  if (!res.ok) throw new Error(`Analyzer report failed: ${res.status}`);
   return res.json();
 }
 

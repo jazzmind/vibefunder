@@ -6,11 +6,11 @@ const MasterPlanSchema = z.object({
   purpose: z.string(),
   audience: z.array(z.string()).min(1),
   mustHaveFeatures: z.array(z.string()).min(1),
-  niceToHaveFeatures: z.array(z.string()).optional().default([]),
-  gaps: z.array(z.string()).optional().default([]),
+  niceToHaveFeatures: z.array(z.string()).default([]),
+  gaps: z.array(z.string()).default([]),
   competitorAnalysis: z.object({
-    summary: z.string(),
-    competitors: z.array(z.object({ name: z.string(), notes: z.string().optional() })).optional().default([]),
+    summary: z.string().default(''),
+    competitors: z.array(z.object({ name: z.string(), notes: z.string().nullable().default('') })).default([]),
   }),
   roadmapMilestones: z.array(z.object({
     title: z.string(),
@@ -41,7 +41,7 @@ export class MasterPlanService extends AIService {
 
     const sys = `You are a product strategy and software delivery consultant. Synthesize inputs into a concise master plan covering purpose, audience, features (must-have vs nice-to-have), gaps, competitor context, and a pragmatic milestone roadmap with acceptance.`;
 
-    const user = `CAMPAIGN\nTitle: ${campaign.title}\nSummary: ${campaign.summary}\nDescription:\n${campaign.description}\n\nREPO DOCS (subset of .md):\n${mdBundle}\n\nWEBSITE (if any):\n${websiteText || ''}\n\nRESEARCH (optional):\n${research ? JSON.stringify(research).slice(0, 8000) : ''}\n\nPlease produce a JSON per schema with realistic, implementable recommendations.`;
+    const user = `CAMPAIGN\nTitle: ${campaign.title}\nSummary: ${campaign.summary}\nDescription:\n${campaign.description}\n\nREPO DOCS (subset of .md):\n${mdBundle}\n\nWEBSITE (if any):\n${websiteText || ''}\n\nRESEARCH (optional):\n${research ? JSON.stringify(research).slice(0, 8000) : ''}\n\nPlease produce a JSON per schema with realistic, implementable recommendations. Populate all schema fields; when unknown, use null (for nullable fields) or empty string/empty array as appropriate.`;
 
     const result = await this.callAI(
       MODELS.best,

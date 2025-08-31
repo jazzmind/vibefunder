@@ -136,6 +136,18 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
   const [gitHubAppModalOpen, setGitHubAppModalOpen] = useState(false);
   const [githubConnection, setGithubConnection] = useState<{ connected: boolean; connection?: { username?: string | null } } | null>(null);
   const [githubAppConnected, setGithubAppConnected] = useState<boolean | null>(null);
+  const [featureScan, setFeatureScan] = useState<any>(null);
+  const [featureLoading, setFeatureLoading] = useState(false);
+  const [featureError, setFeatureError] = useState<string | null>(null);
+  const [planLoading, setPlanLoading] = useState(false);
+  const [planError, setPlanError] = useState<string | null>(null);
+  const [masterPlanState, setMasterPlanState] = useState<any>(null);
+  const [gapLoading, setGapLoading] = useState(false);
+  const [gapError, setGapError] = useState<string | null>(null);
+  const [gapJobId, setGapJobId] = useState<string | null>(null);
+  const [gapStatus, setGapStatus] = useState<any>(null);
+  const [gapResult, setGapResult] = useState<any>(null);
+  const gapTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   // Editing state
   const [editingMilestone, setEditingMilestone] = useState<{index: number, data: any} | null>(null);
@@ -553,6 +565,7 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
     { id: 'milestones', label: 'Milestones', icon: '🎯' },
     { id: 'price-tiers', label: 'Price Tiers', icon: '💰' },
     { id: 'stretch-goals', label: 'Stretch Goals', icon: '🚀' },
+    { id: 'analysis', label: 'Gap Analysis', icon: '🔍' },
     { id: 'media', label: 'Media', icon: '🎬' },
     { id: 'settings', label: 'Settings', icon: '⚙️' },
   ];
@@ -610,16 +623,16 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
             </div>
           </div>
         </div>
-        <nav className="flex space-x-8">
+        <nav className="flex space-x-8 overflow-x-auto">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`py-3 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
+              className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
                 activeTab === tab.id
                   ? 'border-brand text-brand'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
               }`}
             >
               <span>{tab.icon}</span>
@@ -1391,8 +1404,364 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
           )}
         </div>
       )}
+      {activeTab === 'analysis' && (
+        <div className="space-y-8">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                Gap Analysis
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Plan, analyze, and generate milestones from automated scans
+              </p>
+            </div>
+            <a
+              href={formData.repoUrl ? `/analyzer?repo=${encodeURIComponent(formData.repoUrl)}&campaignId=${encodeURIComponent(campaign.id)}` : '#'}
+              className={`px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand/90 transition-colors ${!formData.repoUrl ? 'opacity-50 pointer-events-none' : ''}`}
+            >
+              Open Full Analyzer
+            </a>
+          </div>
+
+          {/* Master Plan Section */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h4 className="text-lg font-medium text-gray-900 dark:text-white">Master Plan Generation</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Generate a comprehensive product plan from campaign data and repository documentation
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!formData.title || !formData.summary) return;
+                  setPlanError(null);
+                  setPlanLoading(true);
+                  setMasterPlanState(null);
+                  try {
+                    const res = await fetch('/api/analyzer/master-plan', {
+                      method: 'POST',
+                      headers: { 'content-type': 'application/json' },
+                      body: JSON.stringify({
+                        repo_url: formData.repoUrl,
+                        website_url: formData.websiteUrl || undefined,
+                        campaign: { title: formData.title, summary: formData.summary, description: formData.description },
+                      }),
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data?.error || 'master_plan_failed');
+                    setMasterPlanState(data);
+                  } catch (e: any) {
+                    setPlanError(e?.message || 'master_plan_failed');
+                  } finally {
+                    setPlanLoading(false);
+                  }
+                }}
+                disabled={!formData.title || planLoading}
+                className={`px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                {planLoading ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Generating...</span>
+                  </div>
+                ) : 'Generate Master Plan'}
+              </button>
+            </div>
+
+            {planError && (
+              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <p className="text-sm text-red-600 dark:text-red-400">{planError}</p>
+              </div>
+            )}
+
+            {masterPlanState && (
+              <div className="space-y-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+                <div>
+                  <h5 className="font-medium text-gray-900 dark:text-white mb-2">Must-have Features</h5>
+                  <ul className="space-y-1">
+                    {(masterPlanState.mustHaveFeatures || []).map((f: string, i: number) => (
+                      <li key={i} className="flex items-start text-sm text-gray-700 dark:text-gray-300">
+                        <span className="text-green-500 mr-2 mt-0.5">•</span>
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                
+                {(masterPlanState.niceToHaveFeatures || []).length > 0 && (
+                  <div>
+                    <h5 className="font-medium text-gray-900 dark:text-white mb-2">Nice-to-have Features</h5>
+                    <ul className="space-y-1">
+                      {masterPlanState.niceToHaveFeatures.map((f: string, i: number) => (
+                        <li key={i} className="flex items-start text-sm text-gray-600 dark:text-gray-400">
+                          <span className="text-blue-500 mr-2 mt-0.5">•</span>
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Gap Analysis Section */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h4 className="text-lg font-medium text-gray-900 dark:text-white">Security & Quality Analysis</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Run automated scanners and generate actionable milestones from findings
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!formData.repoUrl) return;
+                  setGapError(null);
+                  setGapLoading(true);
+                  setGapResult(null);
+                  setGapStatus(null);
+                  try {
+                    const startRes = await fetch('/api/analyzer/start', {
+                      method: 'POST',
+                      headers: { 'content-type': 'application/json' },
+                      body: JSON.stringify({ repo_url: formData.repoUrl }),
+                    });
+                    const startData = await startRes.json();
+                    if (!startRes.ok) throw new Error(startData.error || 'start_failed');
+                    const jid = startData.job_id || startData.jobId;
+                    setGapJobId(jid);
+                    if (gapTimerRef.current) clearInterval(gapTimerRef.current);
+                    gapTimerRef.current = setInterval(async () => {
+                      try {
+                        const st = await fetch(`/api/analyzer/jobs/${jid}`);
+                        const sd = await st.json();
+                        setGapStatus(sd);
+                        if (sd.status === 'succeeded') {
+                          if (gapTimerRef.current) clearInterval(gapTimerRef.current);
+                          const gapRes = await fetch('/api/analyzer/gap', {
+                            method: 'POST',
+                            headers: { 'content-type': 'application/json' },
+                            body: JSON.stringify({ job_id: jid, repo_url: formData.repoUrl }),
+                          });
+                          const gapData = await gapRes.json();
+                          if (!gapRes.ok) throw new Error(gapData?.error || 'gap_failed');
+                          setGapResult(gapData);
+                          setGapLoading(false);
+                        } else if (sd.status === 'failed') {
+                          if (gapTimerRef.current) clearInterval(gapTimerRef.current);
+                          setGapLoading(false);
+                          setGapError(sd?.message || 'analysis_failed');
+                        }
+                      } catch (e: any) {
+                        if (gapTimerRef.current) clearInterval(gapTimerRef.current);
+                        setGapLoading(false);
+                        setGapError(e?.message || 'poll_failed');
+                      }
+                    }, 1500) as unknown as NodeJS.Timeout;
+                  } catch (e: any) {
+                    setGapLoading(false);
+                    setGapError(e?.message || 'start_failed');
+                  }
+                }}
+                disabled={!formData.repoUrl || gapLoading}
+                className={`px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                {gapLoading ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Running Analysis...</span>
+                  </div>
+                ) : 'Run Gap Analysis'}
+              </button>
+            </div>
+
+            {gapError && (
+              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <p className="text-sm text-red-600 dark:text-red-400">{gapError}</p>
+              </div>
+            )}
+
+            {gapStatus && (
+              <div className="mb-4 space-y-2">
+                <h5 className="font-medium text-gray-900 dark:text-white">Analysis Progress</h5>
+                {Array.isArray(gapStatus.steps) && gapStatus.steps.map((s: any, i: number) => (
+                  <div key={i} className="flex items-center justify-between bg-gray-50 dark:bg-gray-700 rounded-lg px-3 py-2">
+                    <div className="flex items-center space-x-2">
+                      <div className={`w-2 h-2 rounded-full ${
+                        s.status === 'succeeded' ? 'bg-green-500' : 
+                        s.status === 'running' ? 'bg-blue-500 animate-pulse' :
+                        s.status === 'failed' ? 'bg-red-500' : 'bg-gray-400'
+                      }`}></div>
+                      <span className="font-medium text-sm text-gray-900 dark:text-white">{s.name}</span>
+                      {s.message && <span className="text-sm text-gray-500">{s.message}</span>}
+                    </div>
+                    <span className={`text-xs font-medium px-2 py-1 rounded ${
+                      s.status === 'succeeded' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                      s.status === 'running' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                      s.status === 'failed' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                      'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+                    }`}>
+                      {s.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {gapResult && (
+              <div className="space-y-4">
+                <h5 className="font-medium text-gray-900 dark:text-white">Recommended Milestones</h5>
+                <div className="grid gap-4">
+                  {(gapResult.milestones || []).map((m: any, idx: number) => (
+                    <div key={idx} className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                      <h6 className="font-semibold text-gray-900 dark:text-white mb-2">{m.title}</h6>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">{m.description}</p>
+                      
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div>
+                          <div className="text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Acceptance Criteria</div>
+                          <ul className="text-sm space-y-1">
+                            {(m.acceptance || []).map((a: string, j: number) => (
+                              <li key={j} className="flex items-start text-gray-600 dark:text-gray-400">
+                                <span className="text-green-500 mr-2 mt-0.5">✓</span>
+                                {a}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                        
+                        <div>
+                          <div className="text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Scope of Work</div>
+                          <ul className="text-sm space-y-1">
+                            {(m.scope || []).map((s: string, j: number) => (
+                              <li key={j} className="flex items-start text-gray-600 dark:text-gray-400">
+                                <span className="text-blue-500 mr-2 mt-0.5">→</span>
+                                {s}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Feature Presence Section */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h4 className="text-lg font-medium text-gray-900 dark:text-white">Feature Presence Scan</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Check which planned features are already implemented in the codebase
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!formData.repoUrl) return;
+                  setFeatureError(null);
+                  setFeatureLoading(true);
+                  try {
+                    const plan = masterPlanState;
+                    const base: string[] = Array.isArray(plan?.mustHaveFeatures)
+                      ? plan.mustHaveFeatures
+                      : (formData.milestones || []).map((m: any) => m.name);
+                    const features = base.slice(0, 12).map((f: string) => ({
+                      name: f,
+                      keywords: f.split(/[^a-zA-Z0-9]+/).filter((t: string) => t.length > 3).map((t: string) => t.toLowerCase()),
+                    }));
+                    const res = await fetch('/api/analyzer/features', {
+                      method: 'POST',
+                      headers: { 'content-type': 'application/json' },
+                      body: JSON.stringify({ repo_url: formData.repoUrl, features }),
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data?.error || 'features_failed');
+                    setFeatureScan(data);
+                  } catch (e: any) {
+                    setFeatureError(e?.message || 'features_failed');
+                  } finally {
+                    setFeatureLoading(false);
+                  }
+                }}
+                disabled={!formData.repoUrl || featureLoading}
+                className={`px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                {featureLoading ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Scanning...</span>
+                  </div>
+                ) : 'Scan Features'}
+              </button>
+            </div>
+
+            {featureError && (
+              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <p className="text-sm text-red-600 dark:text-red-400">{featureError}</p>
+              </div>
+            )}
+
+            {featureScan && (
+              <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-600">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
+                  <thead className="bg-gray-50 dark:bg-gray-700">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Feature</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Keyword Hits</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Files Matched</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Robust Signals</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-600">
+                    {(featureScan.results || []).map((r: any, idx: number) => (
+                      <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">{r.feature}</td>
+                        <td className="px-4 py-3 text-sm">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            r.present 
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                              : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                          }`}>
+                            {r.present ? 'Present' : 'Missing'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{r.keyword_hits}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{r.files_matched}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{r.robust_signals_hits}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Tips Section */}
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+            <h4 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">💡 Analysis Tips</h4>
+            <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
+              <li>• Generate a master plan first to get comprehensive feature lists</li>
+              <li>• Run gap analysis to identify security and quality issues</li>
+              <li>• Use feature scanning to validate implementation progress</li>
+              <li>• Results help create realistic milestones and acceptance criteria</li>
+            </ul>
+          </div>
+        </div>
+      )}
 
 
+
+    
 
       {/* Media Selector Modal */}
       <MediaSelectorModal

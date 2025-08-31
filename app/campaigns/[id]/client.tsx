@@ -84,18 +84,22 @@ export function PledgeButton({ campaignId, pledgeTiers = [] }: { campaignId: str
                 {tier.description && (
                   <div className="text-xs text-gray-500 mt-1">{tier.description}</div>
                 )}
-                {tier.benefits.length > 0 && (
-                  <div className="text-xs text-gray-500 mt-2">
-                    <ul className="list-disc list-inside">
-                      {tier.benefits.slice(0, 2).map((benefit, i) => (
-                        <li key={i}>{benefit}</li>
-                      ))}
-                      {tier.benefits.length > 2 && (
-                        <li>+{tier.benefits.length - 2} more benefits</li>
-                      )}
-                    </ul>
-                  </div>
-                )}
+                {(() => {
+                  const benefits = Array.isArray(tier.benefits) ? tier.benefits : [];
+                  if (benefits.length === 0) return null;
+                  return (
+                    <div className="text-xs text-gray-500 mt-2">
+                      <ul className="list-disc list-inside">
+                        {benefits.slice(0, 2).map((benefit, i) => (
+                          <li key={i}>{benefit}</li>
+                        ))}
+                        {benefits.length > 2 && (
+                          <li>+{benefits.length - 2} more benefits</li>
+                        )}
+                      </ul>
+                    </div>
+                  );
+                })()}
               </button>
             ))}
           </div>

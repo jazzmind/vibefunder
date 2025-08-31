@@ -5,9 +5,9 @@ import { MODELS } from '@/lib/ai/models';
 const FindingSchema = z.object({
   scanner: z.enum(['semgrep','gitleaks','sbom']).describe('Source scanner'),
   title: z.string(),
-  severity: z.enum(['critical','high','medium','low','info']).optional(),
-  ruleId: z.string().optional(),
-  location: z.string().optional(),
+  severity: z.enum(['critical','high','medium','low','info']).nullable(),
+  ruleId: z.string().nullable(),
+  location: z.string().nullable(),
   summary: z.string(),
 });
 
@@ -16,12 +16,12 @@ const MilestoneSchema = z.object({
   description: z.string(),
   acceptance: z.array(z.string()).min(1),
   scope: z.array(z.string()).min(1),
-  relatedFindings: z.array(FindingSchema).optional(),
+  relatedFindings: z.array(FindingSchema).default([]),
 });
 
 const GapAnalysisResponseSchema = z.object({
   milestones: z.array(MilestoneSchema).min(1),
-  notes: z.string().optional(),
+  notes: z.string().default(''),
 });
 
 export type GapAnalysisResponse = z.infer<typeof GapAnalysisResponseSchema>;
@@ -39,7 +39,7 @@ export class AnalyzerGapService extends AIService {
   }): Promise<AIResult<GapAnalysisResponse>> {
     const { repoUrl, semgrepSarif, gitleaksSarif, grypeSarif } = input;
 
-    const system = `You are a senior security and reliability consultant. Given SARIF scanner outputs, produce a practical gap analysis with concrete milestones and scopes suitable for service providers. Align acceptance with OWASP ASVS L1-L2 spirit. Keep output concise and actionable.`;
+    const system = `You are a senior security and reliability consultant. Given SARIF scanner outputs, produce a practical gap analysis with concrete milestones and scopes suitable for service providers. Align acceptance with OWASP ASVS L1-L2 spirit. Keep output concise and actionable. Always populate all fields required by the schema; when a value is unknown, use null (for fields that allow null) or an empty array/string as appropriate.`;
 
     const user = `Repository: ${repoUrl}
 

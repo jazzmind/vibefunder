@@ -156,4 +156,34 @@ export async function getReport(jobId: string, name: string): Promise<{ name: st
   return res.json();
 }
 
+export async function getAggregate(payload: { repo_url: string; website_url?: string }): Promise<any> {
+  const token = await getAccessToken();
+  const body: any = { repo_url: payload.repo_url };
+  if (payload.website_url) body.semgrep_config_path = payload.website_url; // piggyback param
+  debug('getAggregate: POST', `${ANALYZER_BASE_URL}/api/v1/aggregate`);
+  const res = await fetch(`${ANALYZER_BASE_URL}/api/v1/aggregate`, {
+    method: 'POST',
+    headers: { 'authorization': `Bearer ${token}`, 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+    cache: 'no-store',
+  });
+  debug('getAggregate: response', res.status);
+  if (!res.ok) throw new Error(`Analyzer aggregate failed: ${res.status}`);
+  return res.json();
+}
+
+export async function featureScan(payload: { repo_url: string; features: Array<{ name: string; keywords?: string[]; file_globs?: string[]; robust_signals?: string[] }>; branch?: string; github_token?: string }): Promise<any> {
+  const token = await getAccessToken();
+  debug('featureScan: POST', `${ANALYZER_BASE_URL}/api/v1/features`);
+  const res = await fetch(`${ANALYZER_BASE_URL}/api/v1/features`, {
+    method: 'POST',
+    headers: { 'authorization': `Bearer ${token}`, 'content-type': 'application/json' },
+    body: JSON.stringify(payload),
+    cache: 'no-store',
+  });
+  debug('featureScan: response', res.status);
+  if (!res.ok) throw new Error(`Analyzer features failed: ${res.status}`);
+  return res.json();
+}
+
 

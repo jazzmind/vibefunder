@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import { JWTPayload, SignJWT } from 'jose';
 
 const GH_APP_ID = process.env.GH_APP_ID || '';
 const GH_APP_PRIVATE_KEY = (process.env.GH_APP_PRIVATE_KEY || '').replace(/\\n/g, '\n');
@@ -14,18 +14,26 @@ export function getInstallUrl(state?: string): string {
   return u.toString();
 }
 
-export function signAppJwt(): string {
+export async function signAppJwt() {
   const now = Math.floor(Date.now() / 1000);
   const payload = {
     iat: now - 60,
     exp: now + 9 * 60,
     iss: GH_APP_ID,
   };
-  return jwt.sign(payload, GH_APP_PRIVATE_KEY, { algorithm: 'RS256' });
+  const alg = 'RS256';
+  const jwtSecret = new TextEncoder().encode(
+    process.env.GH_APP_PRIVATE_KEY || 'your-very-long-secret-key-change-this-in-production'
+  );
+  return await new SignJWT(payload as unknown as JWTPayload)
+  .setProtectedHeader({ alg })
+  .setIssuedAt()
+  .setExpirationTime('7d')
+  .sign(jwtSecret);
 }
 
 export async function getInstallationToken(installationId: string): Promise<string> {
-  const appJwt = signAppJwt();
+  const appJwt = await signAppJwt();
   const res = await fetch(`https://api.github.com/app/installations/${installationId}/access_tokens`, {
     method: 'POST',
     headers: {

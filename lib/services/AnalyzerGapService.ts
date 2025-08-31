@@ -68,7 +68,7 @@ GRYPE=${grypeSarif || ''}`;
       GapAnalysisResponseSchema,
       'Gap Analysis from SARIF',
       'gap_analysis'
-    );
+    ) as GapAnalysisResponse;
 
     return {
       data,

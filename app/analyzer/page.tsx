@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
-export default function AnalyzerPage() {
+function AnalyzerContent() {
   const [repoUrl, setRepoUrl] = useState('');
   const [jobId, setJobId] = useState<string | null>(null);
   const [status, setStatus] = useState<any>(null);
@@ -368,6 +368,26 @@ export default function AnalyzerPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function AnalyzerPage() {
+  return (
+    <Suspense fallback={
+      <div className="max-w-3xl mx-auto p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-semibold">Analyzer</h1>
+          <div className="animate-pulse">Loading...</div>
+        </div>
+        <div className="space-y-4">
+          <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
+          <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
+          <div className="h-32 bg-gray-200 rounded animate-pulse"></div>
+        </div>
+      </div>
+    }>
+      <AnalyzerContent />
+    </Suspense>
   );
 }
 

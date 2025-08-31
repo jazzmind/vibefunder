@@ -20,7 +20,7 @@ export async function POST() {
       return NextResponse.json({ installed: false, message: 'GitHub username unknown. Connect account first.' }, { status: 200 });
     }
 
-    const appJwt = signAppJwt();
+    const appJwt = await signAppJwt();
     let installationId: string | null = null;
     for (let page = 1; page <= 5; page++) {
       const res = await fetch(`https://api.github.com/app/installations?per_page=100&page=${page}` , {

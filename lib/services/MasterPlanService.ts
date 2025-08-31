@@ -52,7 +52,7 @@ export class MasterPlanService extends AIService {
       MasterPlanSchema,
       'Master Plan Generation',
       'master_plan'
-    );
+    ) as MasterPlan;
 
     return result;
   }

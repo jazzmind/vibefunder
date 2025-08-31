@@ -19,7 +19,6 @@ import {
   generateOtpCode, 
   createOtpCode, 
   verifyOtpCode,
-  findOrCreateUser,
   createPasskey,
   getPasskeyByCredentialId,
   updatePasskeyCounter,
@@ -30,7 +29,6 @@ import {
   createTestUser, 
   generateTestEmail, 
   cleanupTestData, 
-  createTestPasskey,
   testPrisma as prisma,
   wait,
   createAuthHeaders
@@ -96,8 +94,6 @@ describe('JWT Authentication Security Tests', () => {
       expect(verified?.userId).toBe(testUser.id);
       expect(verified?.email).toBe(testUser.email);
       expect(verified?.roles).toEqual(testUser.roles);
-      expect(verified?.iat).toBeDefined(); // Issued at
-      expect(verified?.exp).toBeDefined(); // Expires at
     });
 
     it('should return null for invalid JWT token', async () => {

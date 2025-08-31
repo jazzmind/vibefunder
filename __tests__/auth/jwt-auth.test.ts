@@ -66,7 +66,9 @@ describe('JWT Authentication Security Tests', () => {
         id: testUser.id,
         userId: testUser.id,
         email: testUser.email,
-        roles: testUser.roles
+        roles: testUser.roles,
+        iat: Date.now(),
+        exp: Date.now() + 7 * 24 * 60 * 60 * 1000
       };
 
       const token = await createSession(payload);
@@ -84,7 +86,9 @@ describe('JWT Authentication Security Tests', () => {
         id: testUser.id,
         userId: testUser.id,
         email: testUser.email,
-        roles: testUser.roles
+        roles: testUser.roles,
+        iat: Date.now(),
+        exp: Date.now() + 7 * 24 * 60 * 60 * 1000
       };
 
       const token = await createSession(payload);
@@ -134,7 +138,9 @@ describe('JWT Authentication Security Tests', () => {
         id: testUser.id,
         userId: testUser.id,
         email: testUser.email,
-        roles: testUser.roles
+        roles: testUser.roles,
+        iat: Date.now(),
+        exp: Date.now() + 7 * 24 * 60 * 60 * 1000
       })
         .setProtectedHeader({ alg: 'HS256' })
         .setIssuedAt()
@@ -153,7 +159,9 @@ describe('JWT Authentication Security Tests', () => {
         id: testUser.id,
         userId: testUser.id,
         email: testUser.email,
-        roles: testUser.roles
+        roles: testUser.roles,
+        iat: Date.now(),
+        exp: Date.now() + 7 * 24 * 60 * 60 * 1000
       };
 
       const validToken = await createSession(payload);
@@ -172,7 +180,9 @@ describe('JWT Authentication Security Tests', () => {
         id: testUser.id,
         userId: testUser.id,
         email: testUser.email,
-        roles: testUser.roles
+        roles: testUser.roles,
+        iat: Date.now(),
+        exp: Date.now() + 7 * 24 * 60 * 60 * 1000
       };
 
       const validToken = await createSession(payload);
@@ -404,7 +414,9 @@ describe('JWT Authentication Security Tests', () => {
         id: testUser.id,
         userId: testUser.id,
         email: testUser.email,
-        roles: testUser.roles
+        roles: testUser.roles,  
+        iat: Date.now(),
+        exp: Date.now() + 7 * 24 * 60 * 60 * 1000
       };
 
       const token = await createSession(payload);

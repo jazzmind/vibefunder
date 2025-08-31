@@ -15,6 +15,8 @@ export interface SessionPayload {
   userId: string;
   email: string;
   roles: string[];
+  iat: number;
+  exp: number;
 }
 
 export async function createSession(payload: SessionPayload) {
@@ -163,8 +165,10 @@ export async function auth(): Promise<{ user: SessionPayload } | null> {
               id: testUser.id,
               userId: testUser.id,
               email: testUser.email,
-              roles: ['user', 'admin']
-            }
+              roles: ['user', 'admin'],
+              iat: Date.now(),
+              exp: Date.now() + 7 * 24 * 60 * 60 * 1000
+            } as SessionPayload
           };
         }
       } catch (dbError) {
@@ -177,8 +181,10 @@ export async function auth(): Promise<{ user: SessionPayload } | null> {
           id: 'test-session',
           userId: 'localhost-user',
           email: 'localhost@test.com',
-          roles: ['user', 'admin']
-        }
+          roles: ['user', 'admin'],
+          iat: Date.now(),
+          exp: Date.now() + 7 * 24 * 60 * 60 * 1000
+        } as SessionPayload
       };
     }
 

@@ -17,7 +17,9 @@ describe('JWT Authentication Unit Tests (No DB)', () => {
     id: 'test-id-123',
     userId: 'test-user-456',
     email: 'test@example.com',
-    roles: ['user']
+    roles: ['user'],
+    iat: Date.now(),
+    exp: Date.now() + 7 * 24 * 60 * 60 * 1000
   };
 
   describe('JWT Token Generation and Validation', () => {
@@ -171,13 +173,17 @@ describe('JWT Authentication Unit Tests (No DB)', () => {
           id: '',
           userId: '',
           email: '',
-          roles: []
+          roles: [],
+          iat: Date.now(),
+          exp: Date.now() + 7 * 24 * 60 * 60 * 1000
         },
         {
           id: 'very-long-id-' + 'x'.repeat(100),
           userId: 'very-long-user-id-' + 'x'.repeat(100),
           email: 'very-long-email-' + 'x'.repeat(50) + '@example.com',
-          roles: ['user', 'admin', 'moderator', 'super-admin', 'test-role']
+          roles: ['user', 'admin', 'moderator', 'super-admin', 'test-role'],
+          iat: Date.now(),
+          exp: Date.now() + 7 * 24 * 60 * 60 * 1000
         }
       ];
 
@@ -324,7 +330,9 @@ describe('JWT Authentication Unit Tests (No DB)', () => {
         id: 'id-with-special-chars-<>&"\'',
         userId: 'user-123',
         email: 'user+tag@domain.co.uk',
-        roles: ['user', 'role-with-dashes', 'role_with_underscores']
+        roles: ['user', 'role-with-dashes', 'role_with_underscores'],
+        iat: Date.now(),
+        exp: Date.now() + 7 * 24 * 60 * 60 * 1000
       };
       
       const token = await createSession(specialPayload);

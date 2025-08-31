@@ -5,6 +5,7 @@
  */
 
 import { PrismaClient } from '@prisma/client';
+import { Campaign } from '@prisma/client';
 
 // Use singleton pattern for test database connection
 let prisma: PrismaClient;
@@ -307,7 +308,7 @@ export async function cleanupTestData(): Promise<void> {
     });
 
     // Strategy 2: If no specific test data found, check for any test environment data
-    let allCampaigns = [];
+    let allCampaigns = [] as Campaign[];
     if (testUsers.length === 0 && recentCampaigns.length === 0) {
       // In test environment, clean up everything
       if (process.env.NODE_ENV === 'test') {

@@ -157,3 +157,50 @@ export class ImageGenerationService extends AIService {
 }
 
 export default ImageGenerationService;
+
+/**
+ * Legacy function for backwards compatibility with existing tests
+ * @deprecated Use ImageGenerationService class instead
+ */
+export async function generateCampaignImage(campaignData: ImageGenerationInput): Promise<string | null> {
+  try {
+    if (!ImageGenerationService.isAvailable()) {
+      return null;
+    }
+
+    const service = new ImageGenerationService();
+    const result = await service.generateCampaignImage(campaignData);
+    
+    if (!result.data?.image) {
+      return null;
+    }
+
+    // Save the image to the campaigns directory
+    const fs = await import('fs/promises');
+    const path = await import('path');
+    
+    const campaignsDir = path.join(process.cwd(), 'public', 'images', 'campaigns');
+    
+    // Ensure directory exists
+    try {
+      await fs.mkdir(campaignsDir, { recursive: true });
+    } catch (error) {
+      // Directory might already exist
+    }
+    
+    // Generate filename
+    const timestamp = Date.now();
+    const filename = `${campaignData.id}-${timestamp}.png`;
+    const filepath = path.join(campaignsDir, filename);
+    
+    // Save the image
+    await fs.writeFile(filepath, result.data.image);
+    
+    // Return the public URL
+    return `/images/campaigns/${filename}`;
+    
+  } catch (error) {
+    console.error('generateCampaignImage error:', error);
+    return null;
+  }
+}

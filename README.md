@@ -14,3 +14,22 @@
 ## S3
 - Set `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `S3_BUCKET`.
 - Use the campaign page uploader to PUT artifacts via pre-signed URLs.
+
+## GitHub App (recommended)
+- `GH_APP_ID` – GitHub App ID
+- `GH_APP_PRIVATE_KEY` – PEM contents (escape newlines as \n in .env)
+- `GH_APP_INSTALL_URL` – e.g., https://github.com/apps/<app-slug>/installations/new
+
+Connect flow:
+- Frontend links to `/api/github/app/start?redirect_to=/analyzer`.
+- After install, callback exchanges `installation_id` for an installation token stored as `gh_installation_token` cookie.
+
+## Analyzer API (server-to-server)
+- `ANALYZER_BASE_URL` – e.g., http://localhost:8080 or your Koyeb URL
+- `ANALYZER_CLIENT_ID` – client id configured on analyzer service
+- `ANALYZER_CLIENT_SECRET` – client secret configured on analyzer service
+
+Usage:
+- Start analysis via `POST /api/analyzer/start` with `{ repo_url, branch? }`.
+- Status at `GET /api/analyzer/jobs/:jobId`.
+- SoW at `GET /api/analyzer/jobs/:jobId/sow`.

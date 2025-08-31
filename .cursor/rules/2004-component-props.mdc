@@ -1,0 +1,90 @@
+---
+description: ALWAYS maintain consistent component prop naming across related components
+globs: 
+alwaysApply: false
+---
+
+# Component Props Consistency
+
+## Context
+- When creating or modifying React components that work together
+- When building sortable or draggable components with libraries like dnd-kit
+- When handling data models across multiple components
+
+## Requirements
+
+- Maintain consistent prop naming across related components
+- For data models:
+  - Use same property name in parent and child components
+  - If parent uses `item`, children should use `item`
+  - If parent uses `quote`, children should use `quote`
+- For callbacks:
+  - Consistent naming (e.g., `onEdit`, `onDelete`)
+  - Matching parameter names/types
+- For sortable components:
+  - Pass all required drag-and-drop props
+  - Consistent library prop naming (e.g., `id` for dnd-kit)
+
+## Examples
+
+<example>
+✅ Good:
+```tsx
+// Parent
+function QuoteManager({ quotes }: { quotes: Quote[] }) {
+  return (
+    <div>
+      {quotes.map(quote => (
+        <QuoteItem 
+          key={quote.id}
+          quote={quote}  // Consistent naming
+          onEdit={handleEdit} 
+        />
+      ))}
+    </div>
+  );
+}
+
+// Child
+function QuoteItem({ quote, onEdit }: { 
+  quote: Quote;  // Same name as parent
+  onEdit: (quote: Quote) => void; 
+}) {
+  return <div>{quote.text}</div>;
+}
+```
+</example>
+
+<example type="invalid">
+❌ Bad:
+```tsx
+// Parent passes 'quote'
+function QuoteManager({ quotes }: { quotes: Quote[] }) {
+  return (
+    <div>
+      {quotes.map(quote => (
+        <QuoteItem 
+          key={quote.id}
+          quote={quote}  // Named 'quote' here
+          onEdit={handleEdit} 
+        />
+      ))}
+    </div>
+  );
+}
+
+// Child expects 'item'
+function QuoteItem({ item, onEdit }: {  // Expects 'item'!
+  item: Quote;  // Inconsistent
+  onEdit: (item: Quote) => void; 
+}) {
+  return <div>{item.text}</div>;
+}
+```
+</example>
+
+<critical>
+- NEVER mix prop naming between related components
+- ALWAYS ensure callback parameter types match usage
+- When fixing mismatches, use consistent naming pattern
+</critical> 

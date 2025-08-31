@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import AIService, { AIResult } from '../aiService';
-import { MODELS } from '../models';
+import AIService, { AIResult } from '@/lib/ai/aiService';
+import { MODELS } from '@/lib/ai/models';
 
 // Input validation schema
 const CampaignGenerationInputSchema = z.object({

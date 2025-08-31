@@ -1,7 +1,7 @@
 import "./globals.css";
 import Link from "next/link";
-import { AuthProvider } from './providers/AuthProvider';
-import { AuthenticatedNav } from './components/AuthenticatedNav';
+import { AuthProvider } from '@/app/providers/AuthProvider';
+import { AuthenticatedNav } from '@/components/AuthenticatedNav';
 
 export const metadata = { 
   title: "VibeFunder — Ship the vibe. Not the pitch deck.", 

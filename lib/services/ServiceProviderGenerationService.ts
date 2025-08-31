@@ -1,9 +1,9 @@
 import { z } from 'zod';
-import AIService, { AIResult } from '../aiService';
-import { MODELS } from '../models';
+import AIService, { AIResult } from '@/lib/ai/aiService';
+import { MODELS } from '@/lib/ai/models';
 
 // Reuse the search functionality from ProposalHub
-import { searchPerplexity } from '../search/base';
+import { searchPerplexity } from '@/lib/ai/search/base';
 
 // Input validation schema
 const ServiceProviderInputSchema = z.object({

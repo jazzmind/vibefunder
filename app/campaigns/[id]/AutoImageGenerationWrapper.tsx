@@ -1,6 +1,6 @@
 'use client';
 
-import useAutoImageGeneration from '@/app/hooks/useAutoImageGeneration';
+import useAutoImageGeneration from '@/hooks/useAutoImageGeneration';
 
 interface AutoImageGenerationWrapperProps {
   campaignId: string;

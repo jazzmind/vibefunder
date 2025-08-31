@@ -1,0 +1,78 @@
+---
+description: MAKE small, targeted changes with proper debugging WHEN implementing fixes
+globs: *.ts,*.tsx
+alwaysApply: false
+---
+
+# Small Targeted Changes Rule
+
+## Context
+- When fixing bugs or implementing enhancements
+- When exploring solutions to complex issues
+- When code affects critical user workflows
+
+## Requirements
+
+- Make one small, targeted change at a time
+- Add debug console.log statements to track data flow before making changes
+- Verify the fix works before making additional changes
+- Get explicit confirmation from user before modifying multiple files
+- Prefer temporary debug logs over permanent code changes when diagnosing issues
+- Start with minimal changes to the most likely source of the problem
+
+## Examples
+
+<example>
+User: The headshot upload isn't passing back to the parent component.
+Assistant: I'll help find the issue. First, let's add some debugging to track the data flow:
+
+```javascript
+// In the HeadshotUploader component
+const handleUpload = (file) => {
+  console.log('HeadshotUploader - file before processing:', file);
+  // Process file
+  const processedFile = processImage(file);
+  console.log('HeadshotUploader - processedFile before callback:', processedFile);
+  onUploadComplete(processedFile);
+};
+```
+
+This will help us see if the data is being properly processed before being passed to the parent.
+</example>
+
+<example>
+User: The login form doesn't validate email addresses correctly.
+Assistant: I'll add debug logging to isolate the issue before making changes:
+
+```javascript
+function validateEmail(email) {
+  console.log('validateEmail input:', email);
+  const isValid = /^\S+@\S+\.\S+$/.test(email);
+  console.log('validateEmail result:', isValid, 'using regex:', /^\S+@\S+\.\S+$/);
+  return isValid;
+}
+```
+
+This will show us the exact input and what the validation is returning.
+</example>
+
+<example>
+User: Our API call to update user preferences is failing.
+Assistant: Let's first add logging to identify where the issue occurs:
+
+```javascript
+async function updatePreferences(userId, preferences) {
+  console.log('updatePreferences called with:', { userId, preferences });
+  try {
+    const response = await api.put(`/users/${userId}/preferences`, preferences);
+    console.log('API response:', response);
+    return response.data;
+  } catch (error) {
+    console.error('API error details:', error.response?.data || error.message);
+    throw error;
+  }
+}
+```
+
+This will help us see the exact request data and response/error before we modify any logic.
+</example> 

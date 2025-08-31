@@ -1,0 +1,111 @@
+---
+description: Use when working with API integrations, especially OpenAI
+globs: lib/ai/**/*
+alwaysApply: false
+---
+# API Integration Rules
+
+## OpenAI Model Usage
+- **ALWAYS** use `MODELS` export from `@/src/lib/ai/models` instead of hardcoded model names
+- **NEVER** change OpenAI models unless explicitly requested by user
+- Use `MODELS.default` as default model for most OpenAI API calls
+- Use `MODELS.reasoning` for complex reasoning tasks
+- Use `MODELS.perplexity` for search/web-based tasks
+- Maintain model consistency across application
+- Document model choices in comments
+
+## API Abstraction Patterns
+- **ALWAYS** abstract AI calls into `src/lib/ai/` modules instead of direct API calls in route handlers
+- Create dedicated functions for specific AI tasks (e.g., `extractOrganizationInfo`, `generateSlides`)
+- Use modern OpenAI API: `openai.responses.parse()` with Zod schemas instead of `chat.completions.create()`
+- Export reusable functions from abstraction modules
+- Keep route handlers lightweight - delegate to abstraction functions
+
+## Modern OpenAI API Usage
+- Use `openai.responses.parse()` with Zod schemas for structured responses
+- Import zodTextFormat: `import { zodTextFormat } from 'openai/helpers/zod.mjs'`
+- Define response schemas with appropriate Zod types
+- Handle parsing errors gracefully
+
+## API Configuration
+- Store API keys as environment variables
+- Never expose keys in client-side code
+- Use server-side API routes for external calls
+- Implement proper error handling for all API calls
+- Validate all API endpoint requests
+
+## Response Formatting
+- Use consistent JSON response structures
+- Include appropriate HTTP status codes
+- Implement clear error messages
+- Consider rate limiting for expensive calls
+- Log API usage and performance
+
+## Error Handling
+- Use try/catch blocks for all external API calls
+- Return proper status codes (4xx: client, 5xx: server errors)
+- Log detailed error information
+- Provide user-friendly error messages
+- Consider retries for transient failures
+
+## Examples
+
+<example>
+✅ Good Abstracted Implementation:
+```typescript
+// In src/lib/ai/generation/slideGeneration.ts
+import { MODELS } from './models';
+import { z } from 'zod';
+import { zodTextFormat } from 'openai/helpers/zod.mjs';
+
+const slideResponseFormat = z.object({
+  markdown: z.string()
+});
+
+export async function generateSlides(sections: Section[]): Promise<string> {
+  const response = await openai.responses.parse({
+    model: MODELS.default,
+    messages: [
+      { role: "system", content: "Generate RevealJS slides..." },
+      { role: "user", content: JSON.stringify(sections) }
+    ],
+    response_format: zodTextFormat(slideResponseFormat, 'slides')
+  });
+  
+  return response.output_parsed.markdown;
+}
+
+// In route handler
+import { generateSlides } from '@/src/lib/ai/generation/slideGeneration';
+
+export async function POST(req: NextRequest) {
+  const { sections } = await req.json();
+  const markdown = await generateSlides(sections);
+  return NextResponse.json({ markdown });
+}
+```
+</example>
+
+<example type="invalid">
+❌ Bad Direct API Implementation:
+```typescript
+// Direct OpenAI call in route handler
+export async function POST(req: NextRequest) {
+  const response = await openai.chat.completions.create({
+    model: "o3-mini", // Hardcoded model instead of MODELS.default
+    messages: [/* Messages... */]
+  });
+  const content = response.choices[0].message.content;
+  return NextResponse.json({ content });
+}
+```
+</example>
+
+<critical>
+- ALWAYS abstract AI calls to src/lib/ai/ modules instead of direct usage in routes
+- ALWAYS use MODELS export instead of hardcoded model names
+- ALWAYS use openai.responses.parse() with Zod schemas for structured responses
+- NEVER change OpenAI models from MODELS.default without explicit request
+- ALWAYS implement proper error handling for API calls
+- ALWAYS keep API auth data secure and server-side only
+</critical> 

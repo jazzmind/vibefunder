@@ -1,0 +1,74 @@
+---
+description: ALWAYS use asynchronous params when implementing dynamic routes in Next.js 15 page components
+globs: *.ts,*.tsx
+alwaysApply: false
+---
+
+# Next.js 15 Dynamic Routes
+
+<version>1.0.0</version>
+
+## Context
+- When creating page components that use dynamic route segments in Next.js 15+
+- When working with pages that use parameters from the URL (e.g., [id], [...slug])
+
+## Requirements
+- Define page components as async functions
+- Type params as Promise: `params: Promise<YourParamsType>`
+- Await params when accessing: `const { id } = await params`
+- Handle loading states when awaiting params
+
+## Examples
+
+<example>
+```tsx
+// Correct implementation
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ slug: string }>
+}) {
+  const { slug } = await params;
+  
+  return <div>My Page: {slug}</div>;
+}
+```
+</example>
+
+<example type="invalid">
+```tsx
+// Incorrect (Next.js 14 style)
+export default function Page({
+  params,
+}: {
+  params: { slug: string }
+}) {
+  // Error: not awaiting params
+  const { slug } = params;
+  
+  return <div>My Page: {slug}</div>;
+}
+```
+</example>
+
+<example>
+```tsx
+// With loading state
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}) {
+  const { id } = await params;
+  
+  const data = await fetchData(id);
+  
+  return (
+    <div>
+      <h1>Details for {id}</h1>
+      {data ? <div>{/* Content */}</div> : <div>Loading...</div>}
+    </div>
+  );
+}
+```
+</example> 

@@ -36,4 +36,4 @@ export type {
 } from './ImageLibraryService';
 
 // Re-export common AI service types
-export type { AIResult, AIError, AIErrorType } from '../aiService';
+export type { AIResult, AIError, AIErrorType } from '@/lib/ai/aiService';

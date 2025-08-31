@@ -206,6 +206,14 @@ export default function CampaignCreationWizard({ createManualCampaign, session }
         <p className="text-gray-600 dark:text-gray-300">We'll analyze your repository and generate campaign content automatically</p>
       </div>
 
+      <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 rounded-lg flex items-center justify-between">
+        <div>
+          <div className="font-medium text-gray-900 dark:text-white">Prefer GitHub App?</div>
+          <div className="text-sm text-gray-600 dark:text-gray-300">Connect via the VibeFunder GitHub App for repository access without personal tokens.</div>
+        </div>
+        <a href="/api/github/app/start?redirect_to=/analyzer" className="px-4 py-2 border rounded-lg text-sm">Connect GitHub App</a>
+      </div>
+
       {verificationError && (
         <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
           <div className="flex items-center">

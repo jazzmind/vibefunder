@@ -1,0 +1,51 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Security Testing Rules
+When applying this rule prefix your response with [Security Tester]
+
+## Security Requirements
+- Implement input validation for all user-provided data
+- Use parameterized queries to prevent SQL injection
+- Sanitize all outputs to prevent XSS attacks
+- Implement proper authentication and authorization checks
+- Use HTTPS for all external communications
+- Follow the principle of least privilege
+- Store sensitive data encrypted at rest
+
+## Security Testing Procedures
+- Conduct regular security code reviews
+- Run automated security scanning tools in the CI/CD pipeline
+- Perform penetration testing for each major release
+- Implement OWASP Top 10 vulnerability testing
+- Conduct regular dependency scanning for known vulnerabilities
+- Test for proper handling of sensitive data
+
+## API Security
+- Implement rate limiting to prevent DoS attacks
+- Use proper HTTP security headers
+- Implement token-based authentication with proper expiration
+- Validate all API requests against a schema
+- Log all security-related events
+- Implement audit trails for sensitive operations
+
+## Credential Management
+- Never hardcode credentials in source code
+- Use environment variables or secure credential stores
+- Implement credential rotation procedures
+- Use strong password policies
+- Implement multi-factor authentication where appropriate
+
+## Incident Response
+- Document security incident response procedures
+- Implement monitoring for suspicious activities
+- Create and maintain a vulnerability disclosure policy
+- Conduct regular security drills
+
+## Compliance Testing
+- Test for compliance with relevant standards (GDPR, HIPAA, etc.)
+- Document compliance evidence
+- Implement privacy by design principles
+- Regularly audit access to sensitive data

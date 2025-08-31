@@ -1,0 +1,79 @@
+---
+description: Use universal test runner for ALL testing to ensure consistent infrastructure and automatic server management
+globs: __tests__/**/*,package.*,scripts/**/*
+alwaysApply: false
+---
+# Universal Test Runner
+
+<version>1.0.0</version>
+
+## Context
+- When running any tests in the project
+- When adding new test commands to package.json
+- When debugging test infrastructure issues
+
+## Requirements
+
+### Primary Command
+- Use `npm run test [jest-args...]` for ALL test execution
+- NEVER run `jest` directly or use custom server startup scripts
+
+### Test Commands
+- `npm run test` - Universal test runner with Jest args
+- `npm run test:chat` - Chat integration tests  
+- `npm run test:ai` - AI library tests
+- `npm run test:integration` - All integration tests
+- `npm run test -- --watch` - Watch mode
+- `npm run test -- --coverage` - Coverage mode
+
+### Infrastructure Benefits
+- ✅ Automatic TEST_PORT detection from .env.local (default: 3101)
+- ✅ Automatic server cleanup (kills existing processes)
+- ✅ Automatic LOCAL_API=true server startup
+- ✅ Automatic server readiness verification
+- ✅ Automatic cleanup on completion/failure
+- ✅ Consistent environment variables (API_TEST_URL, TEST_PORT)
+
+### Environment Setup
+- TEST_PORT in .env.local (optional, defaults to 3101)
+- Universal runner handles all server lifecycle automatically
+
+## Examples
+
+<example>
+# Run specific test file
+npm run test src/__tests__/integration/chat-api-server.test.ts
+
+# Run tests with pattern
+npm run test --testNamePattern="Enhanced Document Actions"
+
+# Run all chat tests
+npm run test:chat
+
+# Run with coverage
+npm run test -- --coverage
+</example>
+
+<example type="invalid">
+# DON'T run Jest directly
+jest src/__tests__/integration/chat-api-server.test.ts
+
+# DON'T use manual server setup
+npm run api & jest --detectOpenHandles
+
+# DON'T use old custom test scripts
+npx tsx scripts/test-chat-integration.ts
+</example>
+
+## Architecture
+
+The universal test runner (`scripts/universal-test-runner.ts`) handles:
+1. 🔍 Port detection and cleanup
+2. 🚀 Server startup with LOCAL_API=true
+3. ⏳ Server readiness verification  
+4. 🧪 Jest execution with environment variables
+5. 🧹 Automatic cleanup
+
+<critical>
+  Always use npm run test for consistency. The universal runner solves server conflicts, environment setup, and cleanup automatically.
+</critical>

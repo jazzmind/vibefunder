@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useRef, useEffect } from 'react';
-import { useAuth } from '../providers/AuthProvider';
+import { useAuth } from '@/app/providers/AuthProvider';
 
 export function AuthenticatedNav() {
   const { user, signOut, isAuthenticated } = useAuth();

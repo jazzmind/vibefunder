@@ -1,0 +1,88 @@
+---
+description: ALWAYS use type imports with Prisma client to avoid type errors
+globs: 
+alwaysApply: false
+---
+
+# Prisma Type Handling
+
+## Context
+- When working with Prisma models in TypeScript files
+- When importing types from Prisma Client 
+- When defining component props or state variables that use Prisma models
+
+## Requirements
+
+- ALWAYS use `type` keyword: `import type { ModelName } from '@prisma/client'`
+- Use local interfaces when imports fail
+- Handle null image fields (headshots/logos)
+- For type issues:
+  1. Regenerate Prisma client after schema changes
+  2. Create explicit interfaces when imports fail
+  3. Verify fields against Prisma schema
+
+### Quote Model Example
+```typescript
+interface Quote {
+  id: string;
+  createdAt: Date;
+  updatedAt: Date;
+  text: string;
+  author: string;
+  role: string;
+  company?: string | null;
+  type: string;
+  featured: boolean;
+  active: boolean;
+  headshot?: string | null;
+  companyLogo?: string | null;
+  sequence: number;
+}
+```
+
+## Examples
+
+<example>
+✅ Good type import:
+```typescript
+import type { Quote, User } from '@prisma/client';
+
+function QuoteManager({ initialQuotes }: { initialQuotes: Quote[] }) {
+  // Implementation
+}
+```
+</example>
+
+<example>
+✅ Good fallback:
+```typescript
+interface Quote {
+  id: string;
+  text: string;
+  author: string;
+  // other fields
+}
+
+function QuoteManager({ initialQuotes }: { initialQuotes: Quote[] }) {
+  // Implementation
+}
+```
+</example>
+
+<example type="invalid">
+❌ Bad usage:
+```typescript
+import { Quote } from '@prisma/client'; // Missing 'type'
+
+// Or assuming unknown fields:
+function QuoteDisplay({ quote }: { quote: any }) {
+  return <div>{quote.nonExistentField}</div>
+}
+```
+</example>
+
+<critical>
+- NEVER use Prisma import without 'type' keyword for models
+- ALWAYS check schema when uncertain about fields
+- Define local interfaces when type errors occur
+</critical> 

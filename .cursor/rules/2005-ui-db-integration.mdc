@@ -1,0 +1,145 @@
+---
+description: ALWAYS use consistent patterns when integrating UI components with database models
+globs: 
+alwaysApply: false
+---
+
+# UI and Database Integration
+
+## Context
+- When building UI components that display or manage database models
+- When working with Prisma schema types in UI components
+- When creating components that use image uploads or file management
+
+## Requirements
+
+### Type Handling
+- Define interfaces locally if Prisma imports fail
+- Null-check optional fields in components
+- Format date fields before display
+
+### Component Composition
+- Use consistent prop naming between components
+- For drag-and-drop/sorting:
+  - Consistent ID handling
+  - Consistent prop naming
+  - Proper sequence management
+
+### Image/File Management
+- Handle null/undefined with fallbacks
+- Standardize image formats/sizes
+- Consistent image management modals
+- Include alt text for accessibility
+
+### Error Handling
+- Robust error handling for API calls
+- Show loading states for async ops
+- Provide clear success feedback
+- Verify fields exist before access
+
+## Common Types
+
+```typescript
+interface Quote {
+  id: string;
+  createdAt: Date;
+  updatedAt: Date;
+  text: string;
+  author: string;
+  role: string;
+  company?: string | null;
+  type: string;
+  featured: boolean;
+  active: boolean;
+  headshot?: string | null;
+  companyLogo?: string | null;
+  sequence: number;
+}
+```
+
+## Examples
+
+<example>
+✅ Good:
+```tsx
+// Local interface if needed
+interface Quote {
+  id: string;
+  text: string;
+  author: string;
+  // other fields
+}
+
+// Consistent prop naming
+function QuoteList({ quotes }: { quotes: Quote[] }) {
+  return (
+    <div>
+      {quotes.map(quote => (
+        <QuoteItem 
+          key={quote.id}
+          quote={quote}
+          onEdit={handleEdit} 
+        />
+      ))}
+    </div>
+  );
+}
+
+// Matching prop names
+function QuoteItem({ quote, onEdit }: { 
+  quote: Quote;
+  onEdit: (quote: Quote) => void; 
+}) {
+  // Null checking
+  const hasHeadshot = Boolean(quote.headshot);
+  
+  return (
+    <div>
+      {hasHeadshot ? (
+        <img src={quote.headshot!} alt={`${quote.author}'s headshot`} />
+      ) : (
+        <div className="placeholder">{quote.author.charAt(0)}</div>
+      )}
+      <p>{quote.text}</p>
+    </div>
+  );
+}
+```
+</example>
+
+<example type="invalid">
+❌ Bad:
+```tsx
+// Missing types, inconsistent props
+function QuoteList({ data }) {
+  return (
+    <div>
+      {data.map(quote => (
+        <QuoteDisplay 
+          item={quote}  // Parent uses "quote", child uses "item"
+          edit={handleEdit}  // Should be onEdit
+        />
+      ))}
+    </div>
+  );
+}
+
+// No null checking
+function QuoteDisplay({ item, edit }) {
+  return (
+    <div>
+      <img src={item.headshot} />  // No null check!
+      <p>{item.text}</p>
+      <button onClick={() => edit(item)}>Edit</button>
+    </div>
+  );
+}
+```
+</example>
+
+<critical>
+- NEVER use inconsistent prop naming
+- ALWAYS check Prisma schema for field names
+- ALWAYS implement proper null checking
+- Maintain consistent error handling
+</critical> 

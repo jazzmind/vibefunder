@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import Modal from '@/app/components/shared/Modal';
+import Modal from '@/components/shared/Modal';
 
 interface GitHubModalProps {
   isOpen: boolean;
@@ -123,6 +123,12 @@ export default function GitHubModal({
           </button>
           
           <div className="flex space-x-3">
+            <a
+              href="/api/github/app/start?redirect_to=/analyzer"
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            >
+              Connect GitHub App
+            </a>
             <button
               type="button"
               onClick={handleUpdateRepo}

@@ -1,0 +1,175 @@
+---
+description: ALWAYS use auto-setup API testing WHEN testing APIs locally TO enable zero-friction authentication-free debugging
+alwaysApply: false
+---
+
+# Local API Auto-Setup Testing
+
+<version>2.0.0</version>
+
+## Context
+- Testing API endpoints locally during development
+- AI debugging sessions requiring API access
+- Creating curl commands for API testing
+- Integration testing without authentication complexity
+- Zero-friction testing with automatic environment management
+
+## Requirements
+
+### Auto-Setup Testing (Zero Manual Setup)
+- Commands automatically detect if test environment is needed
+- Isolated test server starts on port 3333 with LOCAL_API=true
+- Test database with mock users created automatically
+- Environment cleans up automatically after tests
+- No separate setup or cleanup commands needed
+
+### Essential Commands
+- `npm run test:api test <endpoint>` - Test endpoint (auto-setup)
+- `npm run test:api:suite` - Run complete test suite (auto-setup)
+- `npm run test:api list` - List all testable endpoints
+- `npm run test:api curl <endpoint> <method>` - Generate curl command
+- `npm run test:api ai-debug` - Generate AI debugging templates
+
+### Mock User Data (Consistent)
+- User ID: `localhost-user`
+- Contact ID: `localhost-contact`
+- Organization: `localhost-org` with admin role
+- Platform role: `admin`
+- Test server: `http://localhost:3333`
+
+### AI-Friendly Features
+- Automatic environment isolation (no conflicts)
+- Consistent mock data for reproducible results
+- Clear error reporting and logging
+- Perfect for curl generation and API debugging
+- Complete session context available
+
+## Examples
+
+<example>
+# Test any endpoint (everything automatic)
+npm run test:api test /api/user
+npm run test:api test /api/auth/debug-session
+</example>
+
+<example>
+# Test with POST data (auto-setup)
+npm run test:api test /api/chat POST '{"action":"documentAnalysis","entityType":"opportunity","entityId":"test-123"}'
+</example>
+
+<example>
+# Generate curl for AI debugging
+npm run test:api curl /api/chat POST
+npm run test:api ai-debug
+</example>
+
+<example>
+# Run complete test suite
+npm run test:api:suite
+</example>
+
+<example type="invalid">
+# Manual setup (not needed anymore)
+LOCAL_API=true npm run dev
+npm run test:api test /api/user
+# ❌ Auto-setup handles this automatically
+</example>
+
+<example type="invalid">
+# Using wrong port
+curl http://localhost:3000/api/user
+# ❌ Test environment uses port 3333
+</example>
+
+## Benefits
+- **Zero Cognitive Overhead**: Just run tests, everything else automatic
+- **Perfect for AI**: Consistent environment for debugging sessions  
+- **Isolated**: No conflicts with main development server
+- **Secure**: Localhost-only bypass with automatic cleanup
+- **Fast**: Smart reuse of existing test environment when possible
+Rule Name: 005-local-api-testing
+Description: ALWAYS use auto-setup API testing WHEN testing APIs locally TO enable zero-friction authentication-free debugging
+# Local API Auto-Setup Testing
+
+<version>2.0.0</version>
+
+## Context
+- Testing API endpoints locally during development
+- AI debugging sessions requiring API access
+- Creating curl commands for API testing
+- Integration testing without authentication complexity
+- Zero-friction testing with automatic environment management
+
+## Requirements
+
+### Auto-Setup Testing (Zero Manual Setup)
+- Commands automatically detect if test environment is needed
+- Isolated test server starts on port 3333 with LOCAL_API=true
+- Test database with mock users created automatically
+- Environment cleans up automatically after tests
+- No separate setup or cleanup commands needed
+
+### Essential Commands
+- `npm run test:api test <endpoint>` - Test endpoint (auto-setup)
+- `npm run test:api:suite` - Run complete test suite (auto-setup)
+- `npm run test:api list` - List all testable endpoints
+- `npm run test:api curl <endpoint> <method>` - Generate curl command
+- `npm run test:api ai-debug` - Generate AI debugging templates
+
+### Mock User Data (Consistent)
+- User ID: `localhost-user`
+- Contact ID: `localhost-contact`
+- Organization: `localhost-org` with admin role
+- Platform role: `admin`
+- Test server: `http://localhost:3333`
+
+### AI-Friendly Features
+- Automatic environment isolation (no conflicts)
+- Consistent mock data for reproducible results
+- Clear error reporting and logging
+- Perfect for curl generation and API debugging
+- Complete session context available
+
+## Examples
+
+<example>
+# Test any endpoint (everything automatic)
+npm run test:api test /api/user
+npm run test:api test /api/auth/debug-session
+</example>
+
+<example>
+# Test with POST data (auto-setup)
+npm run test:api test /api/chat POST '{"action":"documentAnalysis","entityType":"opportunity","entityId":"test-123"}'
+</example>
+
+<example>
+# Generate curl for AI debugging
+npm run test:api curl /api/chat POST
+npm run test:api ai-debug
+</example>
+
+<example>
+# Run complete test suite
+npm run test:api:suite
+</example>
+
+<example type="invalid">
+# Manual setup (not needed anymore)
+LOCAL_API=true npm run dev
+npm run test:api test /api/user
+# ❌ Auto-setup handles this automatically
+</example>
+
+<example type="invalid">
+# Using wrong port
+curl http://localhost:3000/api/user
+# ❌ Test environment uses port 3333
+</example>
+
+## Benefits
+- **Zero Cognitive Overhead**: Just run tests, everything else automatic
+- **Perfect for AI**: Consistent environment for debugging sessions  
+- **Isolated**: No conflicts with main development server
+- **Secure**: Localhost-only bypass with automatic cleanup
+- **Fast**: Smart reuse of existing test environment when possible

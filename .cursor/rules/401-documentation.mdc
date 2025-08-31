@@ -1,0 +1,55 @@
+---
+description: When working on the API or documenting the API
+globs: *.md,*.ts,*.tsx
+alwaysApply: false
+---
+# Documentation Rules
+When applying this rule prefix your response with [Documenter]
+
+## API Documentation
+- Document all API endpoints with:
+  - URL path
+  - HTTP method
+  - Request parameters
+  - Request body schema
+  - Response body schema
+  - Authentication requirements
+  - Error responses
+  - Example requests and responses
+
+## Code Documentation
+- Use JSDoc for all functions and methods:
+  ```typescript
+  /**
+   * Description of the function
+   * @param {Type} paramName - Description of the parameter
+   * @returns {Type} Description of the return value
+   * @throws {Error} Description of potential errors
+   */
+  ```
+- Document complex algorithms with clear explanations
+- Include references to external resources or standards when applicable
+
+## Markdown Guidelines
+- Use consistent headings (# for title, ## for sections, ### for subsections)
+- Use code blocks with language specification for code examples
+- Use tables for structured data
+- Use bullet points for lists
+- Include a table of contents for documents longer than 3 sections
+
+## README Guidelines
+- Include a brief project description
+- List prerequisites and dependencies
+- Include installation instructions
+- Include usage examples
+- Include deployment instructions
+- List contributors and maintainers
+
+## Environment Variables
+- Document all environment variables in .env.example
+- Include descriptions, default values, and whether they are required
+
+## Diagrams
+- Include system architecture diagrams when applicable
+- Use sequence diagrams for complex flows
+- Use entity-relationship diagrams for data models 

@@ -11,13 +11,24 @@ const customJestConfig = {
   testEnvironment: 'node',
   preset: 'ts-jest',
   
-  // Enable parallel testing
-  maxWorkers: 4, // Use 3-4 workers as requested
+  // Optimized parallel testing - auto-detect CPU cores
+  maxWorkers: process.env.CI ? 2 : 3, // Limit to 3 workers locally to prevent database connection issues
   
-  // Test patterns
+  // Enable caching for faster subsequent runs
+  cache: true,
+  cacheDirectory: '<rootDir>/node_modules/.cache/jest',
+  
+  // Test patterns - exclude helper files
   testMatch: [
-    '<rootDir>/__tests__/**/*.{js,jsx,ts,tsx}',
+    '<rootDir>/__tests__/**/*.test.{js,jsx,ts,tsx}',
     '<rootDir>/**/*.test.{js,jsx,ts,tsx}'
+  ],
+  
+  // Skip tests in these patterns to speed up execution
+  testPathIgnorePatterns: [
+    '<rootDir>/.next/',
+    '<rootDir>/node_modules/',
+    '<rootDir>/coverage/'
   ],
   
   // Module resolution
@@ -25,6 +36,8 @@ const customJestConfig = {
     '^@/(.*)$': '<rootDir>/$1',
     '^@lib/(.*)$': '<rootDir>/lib/$1',
     '^@app/(.*)$': '<rootDir>/app/$1',
+    '^@components/(.*)$': '<rootDir>/app/components/$1',
+    '^@utils/(.*)$': '<rootDir>/lib/utils/$1',
   },
   
   // Coverage configuration
@@ -36,6 +49,26 @@ const customJestConfig = {
     '!app/**/not-found.{js,ts,tsx}',
     '!**/*.d.ts',
     '!**/node_modules/**',
+    '!**/*.config.{js,ts}',
+    '!**/coverage/**',
+  ],
+  
+  // Coverage thresholds
+  coverageThreshold: {
+    global: {
+      branches: 70,
+      functions: 75,
+      lines: 75,
+      statements: 75
+    }
+  },
+  
+  // Coverage reporters
+  coverageReporters: [
+    'text',
+    'text-summary',
+    'lcov',
+    'html'
   ],
   
   // Test environment setup
@@ -43,26 +76,32 @@ const customJestConfig = {
     url: 'http://localhost:3900'
   },
   
-  // Timeout for tests (especially important for AI tests)
-  testTimeout: 30000,
+  // Test timeout - increased for database operations
+  testTimeout: process.env.CI ? 60000 : 30000,
   
   // Handle ES modules
   extensionsToTreatAsEsm: ['.ts', '.tsx'],
   
-  // Transform configuration
+  // Optimized transform configuration
   transform: {
     '^.+\\.(js|jsx|ts|tsx)$': ['ts-jest', {
       useESM: true,
+      isolatedModules: true, // Faster compilation
       tsconfig: {
         jsx: 'react-jsx',
+        module: 'esnext',
+        target: 'es2020'
       },
     }],
   },
   
-  // Handle ESM modules like @faker-js/faker
+  // Handle ESM modules like @faker-js/faker and other ES modules
   transformIgnorePatterns: [
-    'node_modules/(?!(@faker-js/faker)/)',
+    'node_modules/(?!(@faker-js|uuid|@testing-library)/)',
   ],
+  
+  // Module file extensions
+  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   
   // Global setup for database and environment
   globalSetup: '<rootDir>/__tests__/setup/global.setup.js',
@@ -70,6 +109,26 @@ const customJestConfig = {
   
   // Setup files
   setupFiles: ['<rootDir>/__tests__/setup/env.setup.js'],
+  
+  // Reporters for CI/CD
+  reporters: process.env.CI ? [
+    'default',
+    ['jest-junit', {
+      outputDirectory: './coverage',
+      outputName: 'junit.xml',
+      classNameTemplate: '{classname}',
+      titleTemplate: '{title}',
+      ancestorSeparator: ' › ',
+      usePathForSuiteName: true
+    }]
+  ] : ['default'],
+  
+  // Optimize module resolution
+  moduleDirectories: ['node_modules', '<rootDir>'],
+  
+  // Clear mocks between tests for better isolation
+  clearMocks: true,
+  restoreMocks: true,
 }
 
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async

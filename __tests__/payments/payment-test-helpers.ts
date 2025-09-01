@@ -6,8 +6,9 @@
  */
 
 import Stripe from 'stripe';
-// Use require for faker to avoid ESM issues in Jest
-const { faker } = require('@faker-js/faker');
+
+// Use our mock data generator instead of Faker.js to avoid ESM/CommonJS issues
+import { mockFaker as faker } from './mock-data-generator';
 
 // Mock Stripe Objects Factory
 export class StripeObjectFactory {

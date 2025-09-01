@@ -19,7 +19,8 @@ export default async function AdminDashboard() {
     draftCampaigns,
     liveCampaigns,
     completedCampaigns,
-    totalPledges
+    totalPledges,
+    totalOrganizations
   ] = await Promise.all([
     prisma.user.count(),
     prisma.campaign.count(),
@@ -28,7 +29,8 @@ export default async function AdminDashboard() {
     prisma.campaign.count({ where: { status: 'draft' } }),
     prisma.campaign.count({ where: { status: 'live' } }),
     prisma.campaign.count({ where: { status: 'completed' } }),
-    prisma.pledge.count()
+    prisma.pledge.count(),
+    prisma.organization.count()
   ]);
 
   // Get recent activity
@@ -45,7 +47,7 @@ export default async function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Admin Dashboard</h1>
           <p className="text-gray-600 dark:text-gray-300">Manage users, campaigns, and platform analytics</p>
@@ -99,7 +101,7 @@ export default async function AdminDashboard() {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Organizations</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">-</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{totalOrganizations}</p>
               </div>
             </div>
           </Link>
@@ -152,6 +154,10 @@ export default async function AdminDashboard() {
               <div className="flex justify-between items-center">
                 <span className="text-gray-600 dark:text-gray-400">Active Campaigns</span>
                 <span className="font-semibold text-gray-900 dark:text-white">{activeCampaigns}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600 dark:text-gray-400">Total Organizations</span>
+                <span className="font-semibold text-purple-600">{totalOrganizations}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-600 dark:text-gray-400">Success Rate</span>

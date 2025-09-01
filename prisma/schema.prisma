@@ -8,158 +8,158 @@ datasource db {
 }
 
 model User {
-  id        String       @id @default(cuid())
-  email     String       @unique
-  name      String?
-  org       String?
-  roles     String[]     @default([])
-  createdAt DateTime     @default(now())
-  campaigns Campaign[]   @relation("MakerCampaigns")
-  pledges   Pledge[]
-  comments  Comment[]
-  otpCodes  OtpCode[]
-  passkeys  Passkey[]
-  teamMemberships TeamMember[]
-  campaignUpdates CampaignUpdate[]
-  adminSettingsUpdates AdminSettings[]
-  waitlistApprovals Waitlist[]
-  organizations Organization[]
-  organizationApprovals Organization[] @relation("OrganizationApprover")
+  id                          String                   @id @default(cuid())
+  email                       String                   @unique
+  name                        String?
+  org                         String?
+  roles                       String[]                 @default([])
+  createdAt                   DateTime                 @default(now())
+  adminSettingsUpdates        AdminSettings[]
+  campaigns                   Campaign[]               @relation("MakerCampaigns")
+  campaignUpdates             CampaignUpdate[]
+  comments                    Comment[]
+  generatedImages             GeneratedImage[]
+  githubConnections           GitHubConnection?
+  githubInstallations         GitHubInstallation?
+  organizationApprovals       Organization[]           @relation("OrganizationApprover")
+  organizations               Organization[]
   organizationTeamMemberships OrganizationTeamMember[]
-  generatedImages GeneratedImage[]
-  githubConnections GitHubConnection[]
-  githubInstallations GitHubInstallation[]
+  otpCodes                    OtpCode[]
+  passkeys                    Passkey[]
+  pledges                     Pledge[]
+  teamMemberships             TeamMember[]
+  waitlistApprovals           Waitlist[]
 }
 
 model Campaign {
-  id              String        @id @default(cuid())
-  makerId         String
-  maker           User          @relation("MakerCampaigns", fields: [makerId], references: [id], onDelete: Restrict)
-  organizationId  String?
-  organization    Organization? @relation("OrganizationCampaigns", fields: [organizationId], references: [id], onDelete: SetNull)
-  title           String
-  summary         String
-  description     String?
-  fundingGoalDollars Int  @default(0) 
-  raisedDollars     Int           @default(0)
-  currency        String        @default("USD")
-  status          String        @default("draft")
-  repoUrl         String?
-  websiteUrl      String?
-  videoUrl        String?
-  image           String?
-  leadVideoUrl    String?
-  deployModes     String[]      @default([])
-  sectors         String[]      @default([])
-  requireBackerAccount Boolean   @default(true)
-  onlyBackersComment Boolean     @default(false)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @default(now()) @updatedAt
-  endsAt          DateTime?
-  milestones      Milestone[]
-  pledges         Pledge[]
-  badges          Badge[]
-  license         License?
-  stretchGoals    StretchGoal[]
-  pledgeTiers     PledgeTier[]
-  comments        Comment[]
-  teamMembers     TeamMember[]
-  updates         CampaignUpdate[]
+  id                   String           @id @default(cuid())
+  makerId              String
+  title                String
+  summary              String
+  description          String?
+  currency             String           @default("USD")
+  status               String           @default("draft")
+  repoUrl              String?
+  videoUrl             String?
+  deployModes          String[]         @default([])
+  createdAt            DateTime         @default(now())
+  endsAt               DateTime?
+  onlyBackersComment   Boolean          @default(false)
+  requireBackerAccount Boolean          @default(true)
+  updatedAt            DateTime         @default(now()) @updatedAt
+  fundingGoalDollars   Int              @default(0)
+  raisedDollars        Int              @default(0)
+  organizationId       String?
+  image                String?
+  sectors              String[]         @default([])
+  leadVideoUrl         String?
+  websiteUrl           String?
+  badges               Badge[]
+  maker                User             @relation("MakerCampaigns", fields: [makerId], references: [id])
+  organization         Organization?    @relation("OrganizationCampaigns", fields: [organizationId], references: [id])
+  updates              CampaignUpdate[]
+  comments             Comment[]
+  license              License?
+  milestones           Milestone[]
+  pledges              Pledge[]
+  pledgeTiers          PledgeTier[]
+  stretchGoals         StretchGoal[]
+  teamMembers          TeamMember[]
   analysis        CampaignAnalysis?
 }
 
 model Milestone {
-  id            String   @id @default(cuid())
-  campaignId    String
-  campaign      Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  name          String
-  pct           Int
-  dueDate       DateTime?
-  acceptance    Json
-  status        String   @default("pending")
-  evidence      Json     @default("[]")
-  createdAt     DateTime @default(now())
+  id         String    @id @default(cuid())
+  campaignId String
+  name       String
+  pct        Int
+  dueDate    DateTime?
+  acceptance Json
+  status     String    @default("pending")
+  evidence   Json      @default("[]")
+  createdAt  DateTime  @default(now())
+  campaign   Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
 }
 
 model Pledge {
-  id          String   @id @default(cuid())
-  campaignId  String
-  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  backerId    String
-  backer      User     @relation(fields: [backerId], references: [id], onDelete: Restrict)
+  id            String   @id @default(cuid())
+  campaignId    String
+  backerId      String
+  status        String   @default("authorized")
+  paymentRef    String?
+  createdAt     DateTime @default(now())
   amountDollars Int
-  status      String   @default("authorized")
-  paymentRef  String?
-  createdAt   DateTime @default(now())
+  backer        User     @relation(fields: [backerId], references: [id])
+  campaign      Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
 }
 
 model Badge {
   id         String   @id @default(cuid())
   campaignId String
-  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   code       String
   status     String
   evidence   Json
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
 }
 
 model License {
-  id          String   @id @default(cuid())
-  campaignId  String   @unique
-  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  kind        String
-  termsUrl    String?
-  triggers    Json
+  id         String   @id @default(cuid())
+  campaignId String   @unique
+  kind       String
+  termsUrl   String?
+  triggers   Json
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
 }
 
 model StretchGoal {
-  id              String   @id @default(cuid())
-  campaignId      String
-  campaign        Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  title           String
-  description     String
-  targetDollars   Int @default(0) // in dollars 
-  isUnlocked      Boolean  @default(false)
-  order           Int
-  createdAt       DateTime @default(now())
+  id            String   @id @default(cuid())
+  campaignId    String
+  title         String
+  description   String
+  isUnlocked    Boolean  @default(false)
+  order         Int
+  createdAt     DateTime @default(now())
+  targetDollars Int      @default(0)
+  campaign      Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
 }
 
 model PledgeTier {
-  id              String   @id @default(cuid())
-  campaignId      String
-  campaign        Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  title           String
-  description     String?
-  amountDollars   Int      // in dollars
-  benefits        Json     @default("[]") // Array of benefits/perks
-  isActive        Boolean  @default(true)
-  order           Int      @default(1)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id            String   @id @default(cuid())
+  campaignId    String
+  title         String
+  description   String?
+  amountDollars Int
+  benefits      Json     @default("[]")
+  isActive      Boolean  @default(true)
+  order         Int      @default(1)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  campaign      Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
 }
 
 model Comment {
-  id         String   @id @default(cuid())
-  campaignId String
-  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Restrict)
-  content    String
-  parentId   String?
-  parent     Comment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
-  replies    Comment[] @relation("CommentReplies")
-  isTeamMember Boolean @default(false)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id           String    @id @default(cuid())
+  campaignId   String
+  userId       String
+  content      String
+  parentId     String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  isTeamMember Boolean   @default(false)
+  campaign     Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  parent       Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies      Comment[] @relation("CommentReplies")
+  user         User      @relation(fields: [userId], references: [id])
 }
 
 model TeamMember {
   id         String   @id @default(cuid())
   campaignId String
-  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Restrict)
-  role       String   @default("member") // "owner", "admin", "member"
+  role       String   @default("member")
   joinedAt   DateTime @default(now())
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id])
 
   @@unique([campaignId, userId])
 }
@@ -167,194 +167,172 @@ model TeamMember {
 model CampaignUpdate {
   id         String   @id @default(cuid())
   campaignId String
-  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   authorId   String
-  author     User     @relation(fields: [authorId], references: [id], onDelete: Restrict)
   title      String
   content    String
   isPublic   Boolean  @default(true)
   emailSent  Boolean  @default(false)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+  author     User     @relation(fields: [authorId], references: [id])
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
 }
 
 model OtpCode {
   id        String   @id @default(cuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   code      String
   expiresAt DateTime
   used      Boolean  @default(false)
   createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, code])
 }
 
 model Passkey {
-  id            String   @id @default(cuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  credentialId  String   @unique
-  publicKey     String
-  counter       Int      @default(0)
-  name          String?
-  createdAt     DateTime @default(now())
-  lastUsed      DateTime?
+  id           String    @id @default(cuid())
+  userId       String
+  credentialId String    @unique
+  publicKey    String
+  counter      Int       @default(0)
+  name         String?
+  createdAt    DateTime  @default(now())
+  lastUsed     DateTime?
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
 
 model AdminSettings {
-  id                      String   @id @default(cuid())
-  waitlistEnabled         Boolean  @default(false)
-  organizationApprovalRequired Boolean @default(true)
-  updatedAt               DateTime @updatedAt
-  updatedBy               String?
-  updater                 User?    @relation(fields: [updatedBy], references: [id], onDelete: SetNull)
+  id                           String   @id @default(cuid())
+  organizationApprovalRequired Boolean  @default(true)
+  updatedAt                    DateTime @updatedAt
+  updatedBy                    String?
+  waitlistEnabled              Boolean  @default(false)
+  updater                      User?    @relation(fields: [updatedBy], references: [id])
 }
 
 model Waitlist {
-  id            String   @id @default(cuid())
-  email         String   @unique
-  reason        String   // "back_campaign", "create_campaign", or "provide_services"
-  status        String   @default("pending") // "pending", "approved", "rejected"
-  notes         String?  // Admin notes
-  approvedAt    DateTime?
-  approvedBy    String?
-  approver      User?    @relation(fields: [approvedBy], references: [id], onDelete: SetNull)
-  createdAt     DateTime @default(now())
+  id         String    @id @default(cuid())
+  email      String    @unique
+  reason     String
+  status     String    @default("pending")
+  notes      String?
+  approvedAt DateTime?
+  approvedBy String?
+  createdAt  DateTime  @default(now())
+  approver   User?     @relation(fields: [approvedBy], references: [id])
 }
 
 model Organization {
-  id                String    @id @default(cuid())
-  name              String
-  description       String?
-  website           String?
-  email             String
-  ownerId           String
-  owner             User      @relation(fields: [ownerId], references: [id], onDelete: Restrict)
-  type              String    @default("creator") // "creator", "service_provider"
-  status            String    @default("pending") // "pending", "approved", "rejected"
-  stripeAccountId   String?   @unique
-  stripeAccountStatus String? // "pending", "active", "restricted"
-  businessType      String?   // "individual", "company", "non_profit"
-  taxId             String?
-  address           Json?     // Address information
-  notes             String?   // Admin notes
-  approvedAt        DateTime?
-  approvedBy        String?
-  approver          User?     @relation("OrganizationApprover", fields: [approvedBy], references: [id], onDelete: SetNull)
-  
-  // Service Provider specific fields
-  listingVisibility String    @default("public") // "public", "creators_only", "limited"
-  shortDescription  String?   // Brief tagline for marketplace listings
-  logo              String?   // Organization logo URL
-  portfolioItems    Json?     // Array of portfolio/case study items
-  
-  // Relationships
-  campaigns         Campaign[] @relation("OrganizationCampaigns")
-  services          OrganizationService[]
-  teamMembers       OrganizationTeamMember[]
-  generatedImages   GeneratedImage[]
-  
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  id                  String                   @id @default(cuid())
+  name                String
+  description         String?
+  website             String?
+  email               String
+  ownerId             String
+  status              String                   @default("pending")
+  stripeAccountId     String?                  @unique
+  stripeAccountStatus String?
+  businessType        String?
+  taxId               String?
+  address             Json?
+  notes               String?
+  approvedAt          DateTime?
+  approvedBy          String?
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+  listingVisibility   String                   @default("public")
+  logo                String?
+  portfolioItems      Json?
+  shortDescription    String?
+  type                String                   @default("creator")
+  campaigns           Campaign[]               @relation("OrganizationCampaigns")
+  generatedImages     GeneratedImage[]
+  approver            User?                    @relation("OrganizationApprover", fields: [approvedBy], references: [id])
+  owner               User                     @relation(fields: [ownerId], references: [id])
+  services            OrganizationService[]
+  teamMembers         OrganizationTeamMember[]
 }
 
 model ServiceCategory {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  slug        String   @unique
+  id          String                @id @default(cuid())
+  name        String                @unique
+  slug        String                @unique
   description String?
-  icon        String?  // Icon name or emoji
-  order       Int      @default(0)
-  isActive    Boolean  @default(true)
+  icon        String?
+  order       Int                   @default(0)
+  isActive    Boolean               @default(true)
+  createdAt   DateTime              @default(now())
   services    OrganizationService[]
-  createdAt   DateTime @default(now())
 }
 
 model OrganizationService {
   id             String          @id @default(cuid())
   organizationId String
-  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   categoryId     String
-  category       ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  
-  // Service details
   title          String
   description    String?
-  deliverables   Json?    // Array of what's delivered
-  pricing        Json?    // Pricing structure (hourly, project, retainer)
-  estimatedTime  String?  // "1-2 weeks", "2-4 months", etc.
-  prerequisites  Json?    // Array of requirements from client
-  
-  // Display options
-  isActive       Boolean  @default(true)
-  isFeatured     Boolean  @default(false)
-  order          Int      @default(0)
-  
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  
+  deliverables   Json?
+  pricing        Json?
+  estimatedTime  String?
+  prerequisites  Json?
+  isActive       Boolean         @default(true)
+  isFeatured     Boolean         @default(false)
+  order          Int             @default(0)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  category       ServiceCategory @relation(fields: [categoryId], references: [id])
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
   @@unique([organizationId, categoryId])
 }
 
 model OrganizationTeamMember {
-  id             String       @id @default(cuid())
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  userId         String
-  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  // Team member details
-  role           String       // "owner", "admin", "member", "lead", etc.
-  title          String?      // Job title/position
-  bio            String?      // Professional bio
-  headshot       String?      // Profile photo URL
-  linkedinUrl    String?
-  githubUrl      String?
-  portfolioUrl   String?
-  specialties    Json?        // Array of skill areas
-  
-  // Display options
-  isPubliclyVisible Boolean   @default(true)
-  order          Int          @default(0)
-  
-  joinedAt       DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  
+  id                String       @id @default(cuid())
+  organizationId    String
+  userId            String
+  role              String
+  title             String?
+  bio               String?
+  headshot          String?
+  linkedinUrl       String?
+  githubUrl         String?
+  portfolioUrl      String?
+  specialties       Json?
+  isPubliclyVisible Boolean      @default(true)
+  order             Int          @default(0)
+  joinedAt          DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([organizationId, userId])
 }
 
 model GeneratedImage {
-  id             String       @id @default(cuid())
-  organizationId String?      // Associate with organization for reuse
-  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
-  userId         String       // Creator of the image
-  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  // Image metadata
-  filename       String       // Original filename
-  blobUrl        String       // Vercel Blob URL
-  blobKey        String       // Vercel Blob key for management
-  width          Int?         // Image dimensions
+  id             String        @id @default(cuid())
+  organizationId String?
+  userId         String
+  filename       String
+  blobUrl        String
+  blobKey        String
+  width          Int?
   height         Int?
-  fileSize       Int?         // File size in bytes
-  mimeType       String       @default("image/png")
-  
-  // Generation metadata
-  prompt         String       // AI prompt used to generate
-  model          String       @default("dall-e-3") // AI model used
-  theme          String?      // Detected theme (tech, healthcare, etc.)
-  tags           String[]     @default([]) // Searchable tags
-  
-  // Usage tracking
-  campaignTitle  String?      // Original campaign title (if generated for campaign)
-  usageCount     Int          @default(1) // How many times used
-  isPublic       Boolean      @default(false) // Can other orgs see this
-  
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  fileSize       Int?
+  mimeType       String        @default("image/png")
+  prompt         String
+  model          String        @default("dall-e-3")
+  theme          String?
+  tags           String[]      @default([])
+  campaignTitle  String?
+  usageCount     Int           @default(1)
+  isPublic       Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([organizationId])
   @@index([userId])
@@ -364,27 +342,25 @@ model GeneratedImage {
 
 model GitHubConnection {
   id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  githubToken String   // Encrypted GitHub personal access token
-  username    String?  // GitHub username
+  userId      String   @unique
+  githubToken String
+  username    String?
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId]) // One GitHub connection per user
   @@index([userId])
 }
 
 model GitHubInstallation {
   id             String   @id @default(cuid())
-  userId         String
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String   @unique
   installationId String
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId])
   @@index([installationId])
 }
 

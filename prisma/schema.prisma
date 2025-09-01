@@ -65,6 +65,7 @@ model Campaign {
   comments        Comment[]
   teamMembers     TeamMember[]
   updates         CampaignUpdate[]
+  analysis        CampaignAnalysis?
 }
 
 model Milestone {
@@ -385,4 +386,36 @@ model GitHubInstallation {
 
   @@unique([userId])
   @@index([installationId])
+}
+
+model CampaignAnalysis {
+  id              String   @id @default(cuid())
+  campaignId      String   @unique
+  campaign        Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  
+  // Master Plan results
+  masterPlan      Json?    // Stores mustHaveFeatures, niceToHaveFeatures, etc.
+  
+  // Gap Analysis results
+  gapAnalysis     Json?    // Stores recommended milestones from security/quality analysis
+  gapJobId        String?  // Job ID for tracking gap analysis status
+  
+  // Feature Scan results
+  featureScan     Json?    // Stores feature presence analysis
+  
+  // Competitor Research results
+  competitorResearch Json? // Stores competitor analysis and market insights
+  
+  // SOW and other analysis artifacts
+  sowMarkdown     String?  // Generated Statement of Work
+  
+  // Analysis metadata
+  repoUrl         String?  // Repository URL analyzed
+  lastAnalyzedAt  DateTime?
+  analysisVersion String?  // Version of analyzer used
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([campaignId])
 }

@@ -6,8 +6,14 @@
     "dev": "lsof -ti:3900 | xargs -r kill -9 2>/dev/null || true && next dev --port 3900",
     "build": "lsof -ti:3900 | xargs -r kill -9 2>/dev/null || true && next build",
     "api": "lsof -ti:3901 | xargs -r kill -9 2>/dev/null || true && LOCAL_API=true next dev --port 3901",
+    "dev:test": "lsof -ti:3101 | xargs -r kill -9 2>/dev/null || true && TEST_PORT=3101 NODE_ENV=test LOCAL_API=true next dev --port 3101",
     "postinstall": "prisma generate",
     "test": "jest",
+    "test:with-server": "concurrently -k -s first \"npm run dev:test\" \"wait-on http://localhost:3101 && npm test\"",
+    "test:full": "CLEANUP_TEST_DATA=true npm run test:with-server",
+    "test:quick": "./scripts/test-runner.sh quick",
+    "test:all": "./scripts/test-runner.sh full",
+    "test:clean": "CLEANUP_TEST_DATA=true ./scripts/test-runner.sh full",
     "test:unit": "jest __tests__/unit/",
     "test:integration": "jest __tests__/integration/",
     "test:ai": "jest __tests__/ai/",
@@ -92,6 +98,7 @@
     "audit-ci": "^7.1.0",
     "autoprefixer": "^10.4.20",
     "babel-jest": "^30.1.1",
+    "concurrently": "^9.2.1",
     "eslint": "^9.5.0",
     "eslint-config-next": "^15.0.3",
     "husky": "^9.0.11",
@@ -99,12 +106,14 @@
     "jest-environment-node": "^29.7.0",
     "jest-fetch-mock": "^3.0.3",
     "jest-junit": "^16.0.0",
+    "jest-mock-extended": "^4.0.0",
     "postcss": "^8.4.47",
     "prettier": "^3.2.5",
     "prisma": "^6.15.0",
     "tailwindcss": "^4.0.0",
     "ts-jest": "^29.1.1",
     "tsx": "^4.7.0",
-    "typescript": "^5.4.5"
+    "typescript": "^5.4.5",
+    "wait-on": "^8.0.4"
   }
 }

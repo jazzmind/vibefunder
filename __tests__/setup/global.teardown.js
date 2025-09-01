@@ -44,8 +44,10 @@ async function cleanupTestData() {
       return;
     }
 
-    // Skip data cleanup unless explicitly requested (to avoid accidental data loss)
-    if (!process.env.CLEANUP_TEST_DATA) {
+    // Auto-cleanup in CI, respect env var locally
+    const shouldCleanup = process.env.CI === 'true' || process.env.CLEANUP_TEST_DATA === 'true';
+    
+    if (!shouldCleanup) {
       console.log('ℹ️  Skipping test data cleanup (set CLEANUP_TEST_DATA=true to enable)');
       return;
     }

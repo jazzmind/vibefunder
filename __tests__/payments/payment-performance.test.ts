@@ -1,4 +1,4 @@
-import { describe, expect, test, beforeEach, afterEach, jest } from '@jest/globals';
+import { describe, expect, test, beforeEach, afterEach } from '@jest/globals';
 import { NextRequest } from 'next/server';
 import { POST as checkoutHandler } from '@/app/api/payments/checkout-session/route';
 import { POST as webhookHandler } from '@/app/api/payments/stripe/webhook/route';
@@ -7,24 +7,15 @@ import {
   PaymentTestData,
   StripeObjectFactory
 } from './payment-test-helpers';
-import { prisma } from '@/lib/db';
-// Mock modules
-jest.mock('@/lib/stripe');
-jest.mock('@/lib/db');
-jest.mock('@/lib/auth');
-jest.mock('@/lib/email');
+import {
+  prismaMock,
+  authMock,
+  stripeMock,
+  resetAllMocks,
+  setupDefaultMocks
+} from './setup-payment-mocks';
 
-const mockStripe = require('@/lib/stripe').stripe as jest.Mocked<any>;
-const mockPrisma = prisma as jest.Mocked<typeof prisma>;
-const mockAuth = jest.fn();
-
-// Replace the auth function with our mock
-jest.mock('@/lib/auth', () => ({
-  ...jest.requireActual('@/lib/auth'),
-  auth: mockAuth
-}));
-
-describe.skip('Payment Performance Tests (SKIPPED: Mock setup issues)', () => {
+describe('Payment Performance Tests', () => {
   const mockCampaign = PaymentTestData.generateCampaign();
   const mockUser = PaymentTestData.generateUser();
 
@@ -39,14 +30,15 @@ describe.skip('Payment Performance Tests (SKIPPED: Mock setup issues)', () => {
     process.env.STRIPE_APPLICATION_FEE_BPS = '500';
     process.env.STRIPE_DESTINATION_ACCOUNT_ID = 'acct_test123';
 
-    // Setup default mocks
-    mockAuth.mockResolvedValue({ user: mockUser });
-    mockPrisma.campaign.findUnique.mockResolvedValue(mockCampaign);
-    mockPrisma.user.upsert.mockResolvedValue(mockUser);
+    // Setup default mocks using new mock utilities
+    const defaults = setupDefaultMocks({
+      user: mockUser,
+      campaign: mockCampaign
+    });
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    resetAllMocks();
   });
 
   describe('Checkout Session Performance', () => {

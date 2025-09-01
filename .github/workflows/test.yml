@@ -65,8 +65,22 @@ jobs:
         run: |
           npm run db:migrate || echo "Migration command not found, skipping..."
 
+      - name: Start test server
+        run: |
+          npm run dev:test &
+          sleep 5
+          npx wait-on http://localhost:3101 --timeout 30000
+        env:
+          LOCAL_API: true
+          TEST_DATABASE_URL: postgresql://vibefunder:test123@localhost:5432/vibefunder_test
+          NEXTAUTH_SECRET: test-secret-for-ci
+
       - name: Run tests with coverage
         run: npm run test:ci
+        env:
+          CLEANUP_TEST_DATA: true
+          TEST_DATABASE_URL: postgresql://vibefunder:test123@localhost:5432/vibefunder_test
+          NEXTAUTH_SECRET: test-secret-for-ci
 
       - name: Generate coverage reports
         run: |

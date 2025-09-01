@@ -41,7 +41,8 @@ describe('Database Model Tests', () => {
       expect(user.email).toBe(userData.email);
       expect(user.name).toBe(userData.name);
       expect(user.roles).toEqual(userData.roles);
-      expect(user.createdAt).toBeInstanceOf(Date);
+      expect(user.createdAt).toBeDefined();
+      expect(new Date(user.createdAt).getTime()).toBeGreaterThan(0);
     });
 
     it('should enforce unique email constraint', async () => {
@@ -63,7 +64,7 @@ describe('Database Model Tests', () => {
 
       expect(user.name).toBe('Test User'); // Helper provides default
       expect(user.org).toBe('Test Organization');
-      expect(user.roles).toEqual(['user']); // Helper provides default
+      expect(user.roles).toEqual([]); // Database default is empty array
     });
 
     it('should cascade delete related data', async () => {

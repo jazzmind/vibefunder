@@ -239,12 +239,7 @@ async function createTestUser(userData = {}) {
     });
     return user;
   } catch (error) {
-    if (error.code === 'P2002') {
-      // User already exists, find and return it
-      return await client.user.findUnique({
-        where: { email: defaultUser.email }
-      });
-    }
+    // Re-throw the error to let tests handle it
     throw error;
   }
 }
@@ -261,7 +256,8 @@ async function createTestCampaign(campaignData = {}, userId = null) {
     throw new Error('Database client not available');
   }
 
-  let creatorId = userId;
+  // Only create a user if neither userId nor makerId is provided in campaignData
+  let creatorId = userId || campaignData.makerId;
   if (!creatorId) {
     const testUser = await createTestUser();
     creatorId = testUser.id;
@@ -271,9 +267,8 @@ async function createTestCampaign(campaignData = {}, userId = null) {
     title: `Test Campaign ${Date.now()}`,
     summary: `Test summary ${Date.now()}`,
     description: 'This is a test campaign',
-    goalAmount: 10000,
-    creatorId: creatorId,
-    creatorEmail: `test-creator-${Date.now()}@example.com`,
+    fundingGoalDollars: 10000,
+    makerId: creatorId,
     status: 'ACTIVE',
     ...campaignData
   };
@@ -282,7 +277,7 @@ async function createTestCampaign(campaignData = {}, userId = null) {
     const campaign = await client.campaign.create({
       data: defaultCampaign,
       include: {
-        creator: true
+        maker: true
       }
     });
     return campaign;
@@ -501,6 +496,88 @@ function createAuthHeaders(user = null) {
   return headers;
 }
 
+/**
+ * Create a test organization
+ * @param {Object} orgData - Organization data
+ * @returns {Promise<Object>} - Created organization
+ */
+async function createTestOrganization(orgData = {}) {
+  const client = getPrismaClient();
+  
+  const defaultOrg = {
+    name: `Test Organization ${Date.now()}`,
+    email: generateTestEmail('org'),
+    stripeAccountId: `acct_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+    ...orgData
+  };
+
+  try {
+    const organization = await client.organization.create({
+      data: defaultOrg
+    });
+    return organization;
+  } catch (error) {
+    console.error('Error creating test organization:', error);
+    throw error;
+  }
+}
+
+/**
+ * Create a test passkey
+ * @param {string} userId - User ID
+ * @param {Object} passkeyData - Passkey data
+ * @returns {Promise<Object>} - Created passkey
+ */
+async function createTestPasskey(userId, passkeyData = {}) {
+  const client = getPrismaClient();
+  
+  const defaultPasskey = {
+    userId,
+    credentialId: `credential_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+    publicKey: Buffer.from('test-public-key'),
+    counter: 0,
+    ...passkeyData
+  };
+
+  try {
+    const passkey = await client.passkey.create({
+      data: defaultPasskey
+    });
+    return passkey;
+  } catch (error) {
+    console.error('Error creating test passkey:', error);
+    throw error;
+  }
+}
+
+/**
+ * Create a test OTP code
+ * @param {string} userId - User ID
+ * @param {Object} otpData - OTP data
+ * @returns {Promise<Object>} - Created OTP code
+ */
+async function createTestOtpCode(userId, otpData = {}) {
+  const client = getPrismaClient();
+  
+  const defaultOtp = {
+    userId,
+    code: generateOtpCode(),
+    expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes from now
+    used: false,
+    ...otpData
+  };
+
+  try {
+    const otpCode = await client.otpCode.create({
+      data: defaultOtp
+    });
+    return otpCode;
+  } catch (error) {
+    console.error('Error creating test OTP code:', error);
+    throw error;
+  }
+}
+
 // Export a default testPrisma instance for tests
 const testPrisma = getPrismaClient();
 
@@ -513,6 +590,9 @@ module.exports = {
   cleanupTestData,
   createTestUser,
   createTestCampaign,
+  createTestOrganization,
+  createTestPasskey,
+  createTestOtpCode,
   waitForDatabase,
   isDatabaseAvailable,
   getDatabaseInfo,

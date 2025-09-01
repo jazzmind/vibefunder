@@ -25,13 +25,13 @@ import {
   resetAllMocks, 
   setupDefaultMocks,
   emailMock
-} from '../../payments/setup-payment-mocks';
+} from '../payments/setup-payment-mocks';
 
 import { jest } from '@jest/globals';
 
 // Mock Stripe constants and configuration
 jest.mock('@/lib/stripe', () => {
-  const originalModule = jest.requireActual('../../payments/setup-payment-mocks');
+  const originalModule = jest.requireActual('../payments/setup-payment-mocks');
   return {
     stripe: originalModule.stripeMock,
     STRIPE_CURRENCY: 'usd',

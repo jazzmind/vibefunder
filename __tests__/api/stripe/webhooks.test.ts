@@ -30,16 +30,9 @@ import {
 } from '../../payments/setup-payment-mocks';
 
 // Mock Stripe webhook verification
-jest.mock('@/lib/stripe', () => {
-  const originalModule = jest.requireActual('../../payments/setup-payment-mocks');
-  return {
-    stripe: originalModule.stripeMock,
-    STRIPE_CURRENCY: 'usd',
-    STRIPE_PRICE_DOLLARS: 1,
-    STRIPE_APP_FEE_BPS: 500,
-    DEST_ACCOUNT: 'acct_test_destination',
-  };
-});
+jest.mock('@/lib/stripe', () => ({
+  stripe: require('../../payments/setup-payment-mocks').stripeMock,
+}));
 
 import { NextRequest } from 'next/server';
 import { POST } from '@/app/api/payments/stripe/webhook/route';

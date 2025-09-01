@@ -157,7 +157,7 @@ export function resetAllMocks() {
 }
 
 /**
- * Setup default mock responses
+ * Setup default mock responses with enhanced webhook support
  */
 export function setupDefaultMocks(overrides = {}) {
   const defaults = {
@@ -175,10 +175,32 @@ export function setupDefaultMocks(overrides = {}) {
       summary: 'Test Summary',
       description: 'Test Description',
       fundingGoalDollars: 50000,
-      raisedAmountDollars: 25000,
+      raisedDollars: 25000, // Fixed property name
       status: 'published',
       makerId: 'user-123',
       organizationId: 'org-123',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      pledgeTiers: [
+        {
+          id: 'tier-123',
+          title: 'Basic Tier',
+          description: 'Basic support level',
+          amountDollars: 100,
+          isActive: true
+        }
+      ]
+    },
+    pledge: {
+      id: 'pledge-123',
+      campaignId: 'campaign-123',
+      backerId: 'user-123',
+      pledgeTierId: 'tier-123',
+      amountDollars: 100,
+      currency: 'USD',
+      status: 'pending',
+      paymentRef: 'pi_test_123',
+      stripeSessionId: 'cs_test_123',
       createdAt: new Date(),
       updatedAt: new Date(),
     },
@@ -193,9 +215,10 @@ export function setupDefaultMocks(overrides = {}) {
       cancel_url: 'http://localhost:3000/cancel',
       amount_total: 10000,
       currency: 'usd',
+      payment_intent: 'pi_test_123',
       metadata: {
         campaignId: 'campaign-123',
-        userId: 'user-123',
+        backerId: 'user-123',
       },
     },
     ...overrides,
@@ -214,9 +237,51 @@ export function setupDefaultMocks(overrides = {}) {
   prismaMock.campaign.create.mockResolvedValue(defaults.campaign as any);
   prismaMock.campaign.update.mockResolvedValue(defaults.campaign as any);
 
-  // Setup Stripe mocks
+  // Setup pledge mocks
+  prismaMock.pledge.create.mockResolvedValue({
+    ...defaults.pledge,
+    backer: defaults.user,
+    campaign: defaults.campaign
+  } as any);
+  prismaMock.pledge.updateMany.mockResolvedValue({ count: 1 });
+  prismaMock.pledge.findFirst.mockResolvedValue({
+    ...defaults.pledge,
+    backer: defaults.user,
+    campaign: defaults.campaign
+  } as any);
+
+  // Setup Stripe mocks with enhanced webhook support
   stripeMock.checkout.sessions.create.mockResolvedValue(defaults.session as any);
   stripeMock.checkout.sessions.retrieve.mockResolvedValue(defaults.session as any);
+  
+  // Setup webhook constructEvent to return passed event by default
+  stripeMock.webhooks.constructEvent.mockImplementation((body, signature, secret) => {
+    // Basic signature validation mock
+    if (!signature) {
+      throw new Error('Missing signature');
+    }
+    if (signature === 'invalid_signature') {
+      throw new Error('Invalid signature');
+    }
+    if (signature.includes('expired')) {
+      throw new Error('Timestamp outside the tolerance zone');
+    }
+    
+    // Parse the body and return it as the event
+    try {
+      return typeof body === 'string' ? JSON.parse(body) : body;
+    } catch (e) {
+      throw new Error('Invalid JSON payload');
+    }
+  });
+
+  // Setup email mocks to resolve successfully by default
+  emailMock.sendPledgeConfirmationEmail.mockResolvedValue(undefined);
+  emailMock.sendEmail.mockResolvedValue(undefined);
+  emailMock.sendWelcomeEmail.mockResolvedValue(undefined);
+  emailMock.sendPasswordResetEmail.mockResolvedValue(undefined);
+  emailMock.sendPaymentConfirmation.mockResolvedValue(undefined);
+  emailMock.sendPaymentFailure.mockResolvedValue(undefined);
 
   return defaults;
 }

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
 import request from 'supertest';
-import app from '../../../src/app';
+import app from '@/app';
 import { createTestUser, createAuthHeaders, cleanupTestData } from '../../helpers/testHelpers';
 import { User } from '../../../src/models/User';
 import { AuditLog } from '../../../src/models/AuditLog';

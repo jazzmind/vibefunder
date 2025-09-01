@@ -67,12 +67,6 @@ describe('Webhook Retry Logic and Exponential Backoff', () => {
 
       prismaMock.campaign.update.mockResolvedValue(PaymentTestData.generateCampaign() as any);
 
-      const request = new NextRequest('http://localhost:3000/api/payments/stripe/webhook', {
-        method: 'POST',
-        headers: { 'stripe-signature': 'valid_signature' },
-        body: JSON.stringify(webhookEvent)
-      });
-
       let attempt = 0;
       let lastResponse: Response | null = null;
 
@@ -85,6 +79,13 @@ describe('Webhook Retry Logic and Exponential Backoff', () => {
             await new Promise(resolve => setTimeout(resolve, Math.min(delay, 100))); // Reduced delay for tests
           }
         }
+
+        // Create a new request for each attempt (avoid body reuse issues)
+        const request = new NextRequest('http://localhost:3000/api/payments/stripe/webhook', {
+          method: 'POST',
+          headers: { 'stripe-signature': 'valid_signature' },
+          body: JSON.stringify(webhookEvent)
+        });
 
         lastResponse = await POST(request);
 
@@ -123,16 +124,17 @@ describe('Webhook Retry Logic and Exponential Backoff', () => {
       // Mock persistent database failure
       prismaMock.pledge.create.mockRejectedValue(new Error('Persistent database failure'));
 
-      const request = new NextRequest('http://localhost:3000/api/payments/stripe/webhook', {
-        method: 'POST',
-        headers: { 'stripe-signature': 'valid_signature' },
-        body: JSON.stringify(webhookEvent)
-      });
-
       let finalResponse: Response | null = null;
 
       // Simulate retry logic
       for (let attempt = 0; attempt < maxRetries; attempt++) {
+        // Create a new request for each attempt (avoid body reuse issues)
+        const request = new NextRequest('http://localhost:3000/api/payments/stripe/webhook', {
+          method: 'POST',
+          headers: { 'stripe-signature': 'valid_signature' },
+          body: JSON.stringify(webhookEvent)
+        });
+        
         finalResponse = await POST(request);
 
         if (finalResponse.status === 200) {

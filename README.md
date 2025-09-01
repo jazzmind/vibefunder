@@ -73,6 +73,11 @@ Ready to build your business on a foundation of value? [Get Started Today](#) //
 
 # Next.js MVP (with Stripe & S3)
 
+[![Test Coverage CI/CD](https://github.com/nateaune/vibefunder/actions/workflows/test.yml/badge.svg)](https://github.com/nateaune/vibefunder/actions/workflows/test.yml)
+[![codecov](https://codecov.io/gh/nateaune/vibefunder/branch/main/graph/badge.svg?token=YOUR_TOKEN_HERE)](https://codecov.io/gh/nateaune/vibefunder)
+[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-000000?style=flat-square&logo=next.js&logoColor=white)](https://nextjs.org/)
+
 ## Setup
 1. `npm install`
 2. `cp .env.example .env` and set values

@@ -1,0 +1,47 @@
+coverage:
+  status:
+    project:
+      default:
+        target: 10%
+        threshold: 5%
+        if_not_found: success
+        if_ci_failed: error
+    patch:
+      default:
+        target: 10%
+        threshold: 1%
+        if_not_found: success
+
+comment:
+  layout: "reach,diff,flags,tree"
+  behavior: default
+  require_changes: false
+
+ignore:
+  - "**/*.test.ts"
+  - "**/*.test.tsx"
+  - "**/*.spec.ts"
+  - "**/*.spec.tsx"
+  - "**/__tests__/**"
+  - "**/node_modules/**"
+  - "**/coverage/**"
+  - "**/build/**"
+  - "**/dist/**"
+  - "**/*.config.js"
+  - "**/*.config.ts"
+  - "**/prisma/migrations/**"
+  - "**/next.config.js"
+  - "**/tailwind.config.js"
+  - "**/postcss.config.js"
+
+github_checks:
+  annotations: true
+
+flags:
+  unittests:
+    paths:
+      - src/
+      - app/
+      - components/
+      - lib/
+      - utils/

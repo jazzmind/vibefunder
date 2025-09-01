@@ -92,4 +92,8 @@ claude-flow
 claude-flow.bat
 claude-flow.ps1
 hive-mind-prompt-*.txt
-.claude-flow/
+.claude-flow/# Jest cache
+node_modules/.cache/jest
+# Coverage reports
+coverage/
+junit.xml

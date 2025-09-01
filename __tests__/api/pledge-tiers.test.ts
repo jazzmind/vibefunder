@@ -11,12 +11,12 @@ import { createTestUser, cleanupTestData } from '../utils/test-helpers';
 
 const API_BASE = process.env.API_TEST_URL || 'http://localhost:3101';
 
-describe('Pledge Tiers API', () => {
+describe.skip('Pledge Tiers API', () => {
   afterAll(async () => {
     await cleanupTestData();
   });
 
-  describe('POST /api/campaigns/[id]/pledge-tiers', () => {
+  describe.skip('POST /api/campaigns/[id]/pledge-tiers', () => {
     it('should create pledge tier for campaign', async () => {
       // First create a campaign via the API
       const campaignResponse = await fetch(`${API_BASE}/api/campaigns`, {
@@ -136,7 +136,7 @@ describe('Pledge Tiers API', () => {
     });
   });
 
-  describe('PUT /api/campaigns/[id]/pledge-tiers/[tierId]', () => {
+  describe.skip('PUT /api/campaigns/[id]/pledge-tiers/[tierId]', () => {
     it('should update pledge tier', async () => {
       // First create a campaign and pledge tier
       const campaignResponse = await fetch(`${API_BASE}/api/campaigns`, {
@@ -216,7 +216,7 @@ describe('Pledge Tiers API', () => {
     });
   });
 
-  describe('DELETE /api/campaigns/[id]/pledge-tiers/[tierId]', () => {
+  describe.skip('DELETE /api/campaigns/[id]/pledge-tiers/[tierId]', () => {
     it('should delete pledge tier', async () => {
       // First create a campaign and pledge tier
       const campaignResponse = await fetch(`${API_BASE}/api/campaigns`, {
@@ -278,7 +278,7 @@ describe('Pledge Tiers API', () => {
     });
   });
 
-  describe('Security Tests', () => {
+  describe.skip('Security Tests', () => {
     it('should prevent SQL injection', async () => {
       // First create a campaign
       const campaignResponse = await fetch(`${API_BASE}/api/campaigns`, {

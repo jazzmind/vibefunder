@@ -1,0 +1,184 @@
+name: Test Coverage CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+env:
+  NODE_ENV: test
+  DATABASE_URL: postgresql://vibefunder:test123@localhost:5432/vibefunder_test
+
+jobs:
+  test:
+    name: Test & Coverage
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: vibefunder
+          POSTGRES_PASSWORD: test123
+          POSTGRES_DB: vibefunder_test
+          POSTGRES_HOST_AUTH_METHOD: trust
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Cache node modules
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Wait for PostgreSQL
+        run: |
+          until pg_isready -h localhost -p 5432 -U vibefunder; do
+            echo "Waiting for PostgreSQL..."
+            sleep 2
+          done
+
+      - name: Run database migrations
+        run: |
+          npm run db:migrate || echo "Migration command not found, skipping..."
+
+      - name: Start test server
+        run: |
+          npm run dev:test &
+          sleep 5
+          npx wait-on http://localhost:3101 --timeout 30000
+        env:
+          LOCAL_API: true
+          TEST_DATABASE_URL: postgresql://vibefunder:test123@localhost:5432/vibefunder_test
+          NEXTAUTH_SECRET: test-secret-for-ci
+
+      - name: Run tests with coverage
+        run: npm run test:ci
+        env:
+          CLEANUP_TEST_DATA: true
+          TEST_DATABASE_URL: postgresql://vibefunder:test123@localhost:5432/vibefunder_test
+          NEXTAUTH_SECRET: test-secret-for-ci
+
+      - name: Generate coverage reports
+        run: |
+          npm run coverage:html
+          npm run coverage:lcov
+
+      - name: Check coverage thresholds
+        run: |
+          # Extract coverage percentage from coverage summary
+          if [ -f coverage/coverage-summary.json ]; then
+            COVERAGE=$(node -e "const fs = require('fs'); const data = JSON.parse(fs.readFileSync('coverage/coverage-summary.json')); console.log(data.total.lines.pct);")
+            echo "Current coverage: $COVERAGE%"
+            
+            # Set minimum coverage threshold (start with 10%)
+            MIN_COVERAGE=10
+            
+            if (( $(echo "$COVERAGE >= $MIN_COVERAGE" | bc -l) )); then
+              echo "✅ Coverage check passed: $COVERAGE% >= $MIN_COVERAGE%"
+            else
+              echo "❌ Coverage check failed: $COVERAGE% < $MIN_COVERAGE%"
+              exit 1
+            fi
+          else
+            echo "Coverage summary not found, running coverage check script..."
+            npm run coverage:check || echo "Coverage check script not available"
+          fi
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/lcov.info
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: true
+
+      - name: Comment PR with coverage
+        if: github.event_name == 'pull_request'
+        uses: romeovs/lcov-reporter-action@v0.3.1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          lcov-file: ./coverage/lcov.info
+          delete-old-comments: true
+
+      - name: Archive coverage reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports
+          path: |
+            coverage/
+            !coverage/tmp/
+
+  lint:
+    name: Lint & Format
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Run Prettier check
+        run: npm run format:check
+
+      - name: Run TypeScript check
+        run: npm run type-check
+
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run security audit
+        run: npm audit --audit-level=high
+
+      - name: Run dependency check
+        run: |
+          npx audit-ci --config .audit-ci.json || echo "audit-ci not configured"

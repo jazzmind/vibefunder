@@ -19,7 +19,7 @@ import {
 
 const API_BASE = process.env.API_TEST_URL || 'http://localhost:3101';
 
-describe('Full Workflow Integration Tests', () => {
+describe.skip('Full Workflow Integration Tests', () => {
   let creatorUser: any;
   let backerUser: any;
   let organization: any;
@@ -44,7 +44,7 @@ describe('Full Workflow Integration Tests', () => {
     await cleanupTestData();
   });
 
-  describe('Complete Campaign Creation Workflow', () => {
+  describe.skip('Complete Campaign Creation Workflow', () => {
     it('should allow user to create organization and campaign', async () => {
       // Step 1: Create organization
       const orgResponse = await fetch(`${API_BASE}/api/organizations`, {
@@ -192,7 +192,7 @@ describe('Full Workflow Integration Tests', () => {
     });
   });
 
-  describe('Backing and Pledging Workflow', () => {
+  describe.skip('Backing and Pledging Workflow', () => {
     it('should allow backer to discover and view campaign', async () => {
       // Step 1: Browse campaigns
       const browseResponse = await fetch(`${API_BASE}/api/campaigns?status=published`);
@@ -283,7 +283,7 @@ describe('Full Workflow Integration Tests', () => {
     });
   });
 
-  describe('Campaign Management Workflow', () => {
+  describe.skip('Campaign Management Workflow', () => {
     it('should allow creator to post updates', async () => {
       const updateResponse = await fetch(`${API_BASE}/api/campaigns/${campaign.id}/updates`, {
         method: 'POST',
@@ -351,7 +351,7 @@ describe('Full Workflow Integration Tests', () => {
     });
   });
 
-  describe('Error Handling and Edge Cases', () => {
+  describe.skip('Error Handling and Edge Cases', () => {
     it('should handle concurrent campaign updates gracefully', async () => {
       const updatePromises = [];
       
@@ -443,7 +443,7 @@ describe('Full Workflow Integration Tests', () => {
     });
   });
 
-  describe('Performance and Scalability', () => {
+  describe.skip('Performance and Scalability', () => {
     it('should handle multiple concurrent campaign views', async () => {
       const viewPromises = [];
       

@@ -48,11 +48,18 @@ describe('Database Model Tests', () => {
     it('should enforce unique email constraint', async () => {
       const email = generateTestEmail('unique-email');
       
-      await createTestUser({ email, name: 'First User' });
+      const firstUser = await createTestUser({ email, name: 'First User' });
+      expect(firstUser.email).toBe(email);
       
-      await expect(
-        createTestUser({ email, name: 'Second User' })
-      ).rejects.toThrow();
+      // Try to create second user with same email - should fail
+      let errorThrown = false;
+      try {
+        await createTestUser({ email, name: 'Second User' });
+      } catch (error: any) {
+        errorThrown = true;
+        expect(error.code).toBe('P2002'); // Prisma unique constraint violation
+      }
+      expect(errorThrown).toBe(true);
     });
 
     it('should handle optional fields', async () => {
@@ -86,9 +93,14 @@ describe('Database Model Tests', () => {
       });
 
       // Delete user should fail due to foreign key constraints
-      await expect(
-        testPrisma.user.delete({ where: { id: user.id } })
-      ).rejects.toThrow();
+      let deleteError = false;
+      try {
+        await testPrisma.user.delete({ where: { id: user.id } });
+      } catch (error: any) {
+        deleteError = true;
+        expect(error.code).toBe('P2003'); // Foreign key constraint violation
+      }
+      expect(deleteError).toBe(true);
 
       // Delete related data first
       await testPrisma.campaign.delete({ where: { id: campaign.id } });
@@ -128,13 +140,18 @@ describe('Database Model Tests', () => {
     });
 
     it('should enforce foreign key constraints', async () => {
-      await expect(
-        createTestCampaign({
+      let errorThrown = false;
+      try {
+        await createTestCampaign({
           makerId: 'non-existent-user-id',
           title: 'Invalid Campaign',
           summary: 'Should fail'
-        })
-      ).rejects.toThrow();
+        });
+      } catch (error: any) {
+        errorThrown = true;
+        expect(error.code).toBe('P2003'); // Foreign key constraint violation
+      }
+      expect(errorThrown).toBe(true);
     });
 
     it('should handle organization relationships', async () => {
@@ -165,7 +182,7 @@ describe('Database Model Tests', () => {
 
       // Create related data
       const milestone = await createTestMilestone(campaign.id);
-      const pledge = await createTestPledge(campaign.id, testUser.id, 100);
+      const pledge = await createTestPledge(campaign.id, testUser.id, { amountDollars: 100 });
       const tier = await createTestPledgeTier(campaign.id);
 
       // Delete campaign
@@ -281,16 +298,21 @@ describe('Database Model Tests', () => {
         }
       });
 
-      await expect(
-        testPrisma.organization.create({
+      let errorThrown = false;
+      try {
+        await testPrisma.organization.create({
           data: {
             name: 'Second Stripe Org',
             email: generateTestEmail('stripe2'),
             ownerId: testUser.id,
             stripeAccountId
           }
-        })
-      ).rejects.toThrow();
+        });
+      } catch (error: any) {
+        errorThrown = true;
+        expect(error.code).toBe('P2002'); // Unique constraint violation
+      }
+      expect(errorThrown).toBe(true);
 
       // Cleanup
       await testPrisma.organization.delete({ where: { id: org1.id } });
@@ -413,7 +435,7 @@ describe('Database Model Tests', () => {
 
     it('should create pledge with valid amount', async () => {
       const pledgeAmount = 150;
-      const pledge = await createTestPledge(testCampaign.id, backer.id, pledgeAmount);
+      const pledge = await createTestPledge(testCampaign.id, backer.id, { amountDollars: pledgeAmount });
 
       expect(pledge.id).toBeDefined();
       expect(pledge.campaignId).toBe(testCampaign.id);
@@ -590,9 +612,14 @@ describe('Database Model Tests', () => {
 
       await createTestPasskey(testUser.id, { credentialId });
 
-      await expect(
-        createTestPasskey(testUser.id, { credentialId })
-      ).rejects.toThrow();
+      let errorThrown = false;
+      try {
+        await createTestPasskey(testUser.id, { credentialId });
+      } catch (error: any) {
+        errorThrown = true;
+        expect(error.code).toBe('P2002'); // Unique constraint violation
+      }
+      expect(errorThrown).toBe(true);
     });
 
     it('should create OTP code with expiration', async () => {
@@ -712,10 +739,11 @@ describe('Database Model Tests', () => {
     });
 
     it('should enforce unique organization-category constraint', async () => {
+      const uniqueSuffix = Date.now();
       const category = await testPrisma.serviceCategory.create({
         data: {
-          name: 'Unique Test Category',
-          slug: 'unique-test',
+          name: `Unique Test Category ${uniqueSuffix}`,
+          slug: `unique-test-${uniqueSuffix}`,
           createdAt: new Date()
         }
       });
@@ -732,8 +760,9 @@ describe('Database Model Tests', () => {
       });
 
       // Try to create second service with same org-category combo
-      await expect(
-        testPrisma.organizationService.create({
+      let errorThrown = false;
+      try {
+        await testPrisma.organizationService.create({
           data: {
             organizationId: serviceOrg.id,
             categoryId: category.id,
@@ -741,8 +770,12 @@ describe('Database Model Tests', () => {
             createdAt: new Date(),
             updatedAt: new Date()
           }
-        })
-      ).rejects.toThrow();
+        });
+      } catch (error: any) {
+        errorThrown = true;
+        expect(error.code).toBe('P2002'); // Unique constraint violation
+      }
+      expect(errorThrown).toBe(true);
 
       // Cleanup
       await testPrisma.organizationService.delete({ where: { id: service1.id } });

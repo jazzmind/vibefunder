@@ -269,7 +269,7 @@ async function createTestCampaign(campaignData = {}, userId = null) {
     description: 'This is a test campaign',
     fundingGoalDollars: 10000,
     makerId: creatorId,
-    status: 'ACTIVE',
+    // Don't set status - let database use its default
     ...campaignData
   };
 
@@ -277,7 +277,8 @@ async function createTestCampaign(campaignData = {}, userId = null) {
     const campaign = await client.campaign.create({
       data: defaultCampaign,
       include: {
-        maker: true
+        maker: true,
+        organization: true
       }
     });
     return campaign;
@@ -534,7 +535,7 @@ async function createTestPasskey(userId, passkeyData = {}) {
   const defaultPasskey = {
     userId,
     credentialId: `credential_${Date.now()}_${Math.random().toString(36).substring(7)}`,
-    publicKey: Buffer.from('test-public-key'),
+    publicKey: 'test-public-key-' + Math.random().toString(36).substring(7),
     counter: 0,
     ...passkeyData
   };
@@ -578,6 +579,120 @@ async function createTestOtpCode(userId, otpData = {}) {
   }
 }
 
+/**
+ * Create a test comment
+ * @param {string} campaignId - Campaign ID
+ * @param {string} userId - User ID
+ * @param {string} content - Comment content
+ * @param {Object} commentData - Additional comment data
+ * @returns {Promise<Object>} - Created comment
+ */
+async function createTestComment(campaignId, userId, content, commentData = {}) {
+  const client = getPrismaClient();
+  
+  const defaultComment = {
+    campaignId,
+    userId,
+    content,
+    ...commentData
+  };
+
+  try {
+    const comment = await client.comment.create({
+      data: defaultComment
+    });
+    return comment;
+  } catch (error) {
+    console.error('Error creating test comment:', error);
+    throw error;
+  }
+}
+
+/**
+ * Create a test milestone
+ * @param {string} campaignId - Campaign ID
+ * @param {Object} milestoneData - Milestone data
+ * @returns {Promise<Object>} - Created milestone
+ */
+async function createTestMilestone(campaignId, milestoneData = {}) {
+  const client = getPrismaClient();
+  
+  const defaultMilestone = {
+    campaignId,
+    name: `Test Milestone ${Date.now()}`,
+    pct: 25,
+    acceptance: { criteria: 'Test criteria' },
+    evidence: [],
+    ...milestoneData
+  };
+
+  try {
+    const milestone = await client.milestone.create({
+      data: defaultMilestone
+    });
+    return milestone;
+  } catch (error) {
+    console.error('Error creating test milestone:', error);
+    throw error;
+  }
+}
+
+/**
+ * Create a test pledge
+ * @param {string} campaignId - Campaign ID
+ * @param {string} backerId - Backer user ID
+ * @param {Object} pledgeData - Pledge data
+ * @returns {Promise<Object>} - Created pledge
+ */
+async function createTestPledge(campaignId, backerId, pledgeData = {}) {
+  const client = getPrismaClient();
+  
+  const defaultPledge = {
+    campaignId,
+    backerId,
+    amountDollars: 50, // $50 default
+    ...pledgeData
+  };
+
+  try {
+    const pledge = await client.pledge.create({
+      data: defaultPledge
+    });
+    return pledge;
+  } catch (error) {
+    console.error('Error creating test pledge:', error);
+    throw error;
+  }
+}
+
+/**
+ * Create a test pledge tier
+ * @param {string} campaignId - Campaign ID
+ * @param {Object} tierData - Pledge tier data
+ * @returns {Promise<Object>} - Created pledge tier
+ */
+async function createTestPledgeTier(campaignId, tierData = {}) {
+  const client = getPrismaClient();
+  
+  const defaultTier = {
+    campaignId,
+    title: `Test Tier ${Date.now()}`,
+    amountDollars: 10, // $10 minimum
+    benefits: [],
+    ...tierData
+  };
+
+  try {
+    const tier = await client.pledgeTier.create({
+      data: defaultTier
+    });
+    return tier;
+  } catch (error) {
+    console.error('Error creating test pledge tier:', error);
+    throw error;
+  }
+}
+
 // Export a default testPrisma instance for tests
 const testPrisma = getPrismaClient();
 
@@ -593,6 +708,10 @@ module.exports = {
   createTestOrganization,
   createTestPasskey,
   createTestOtpCode,
+  createTestComment,
+  createTestMilestone,
+  createTestPledge,
+  createTestPledgeTier,
   waitForDatabase,
   isDatabaseAvailable,
   getDatabaseInfo,

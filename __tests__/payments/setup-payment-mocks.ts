@@ -126,6 +126,7 @@ export const emailMock = {
   sendPasswordResetEmail: jest.fn(),
   sendPaymentConfirmation: jest.fn(),
   sendPaymentFailure: jest.fn(),
+  sendPledgeConfirmationEmail: jest.fn(),
 };
 
 jest.mock('@/lib/email', () => ({

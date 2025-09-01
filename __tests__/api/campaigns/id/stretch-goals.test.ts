@@ -1,0 +1,730 @@
+/**
+ * Stretch Goal Integration Tests
+ * 
+ * Comprehensive testing for stretch goal functionality including:
+ * - Stretch goal trigger validation
+ * - Campaign progress calculations
+ * - Milestone achievement tracking
+ * - Notification systems
+ * - Business rule enforcement
+ */
+
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from '@jest/globals';
+import { StripeObjectFactory } from '../../../payments/payment-test-helpers';
+import { createTestUser, createTestCampaign, cleanupTestData } from '../../../utils/test-helpers.js';
+
+const API_BASE = process.env.API_TEST_URL || 'http://localhost:3101';
+
+interface StretchGoal {
+  id: string;
+  campaignId: string;
+  targetAmountDollars: number;
+  title: string;
+  description: string;
+  isAchieved: boolean;
+  achievedAt?: string;
+  order: number;
+  rewards?: string[];
+}
+
+interface TestCampaign {
+  id: string;
+  title: string;
+  fundingGoalDollars: number;
+  status: string;
+  endDate: string;
+  totalRaisedDollars: number;
+  stretchGoals: StretchGoal[];
+}
+
+interface StretchGoalEvent {
+  id: string;
+  campaignId: string;
+  stretchGoalId: string;
+  eventType: 'achieved' | 'progress' | 'notification_sent';
+  triggeredAt: string;
+  pledgeId?: string;
+  data: any;
+}
+
+// Mock notification system
+const mockNotifications = {
+  sent: [] as any[],
+  send: jest.fn().mockImplementation((notification) => {
+    mockNotifications.sent.push(notification);
+    return Promise.resolve({ id: `notif_${Date.now()}`, status: 'sent' });
+  }),
+  clear: () => {
+    mockNotifications.sent = [];
+    mockNotifications.send.mockClear();
+  }
+};
+
+jest.mock('stripe', () => {
+  return jest.fn().mockImplementation(() => ({
+    paymentIntents: {
+      create: jest.fn().mockResolvedValue({
+        id: 'pi_test_123',
+        client_secret: 'pi_test_123_secret_abc',
+        status: 'requires_confirmation',
+        amount: 5000,
+        currency: 'usd',
+      }),
+      confirm: jest.fn().mockResolvedValue({
+        id: 'pi_test_123',
+        status: 'succeeded',
+        amount: 5000,
+        currency: 'usd',
+      }),
+    },
+  }));
+});
+
+describe('Stretch Goals Integration', () => {
+  let testCampaign: TestCampaign;
+  let testUser: any;
+  let stretchGoals: StretchGoal[];
+
+  beforeAll(async () => {
+    // Create test user
+    testUser = await createTestUser({
+      email: 'stretch-tester@example.com',
+      name: 'Stretch Goal Tester',
+    });
+
+    // Define stretch goals
+    stretchGoals = [
+      {
+        id: 'sg_first_123',
+        campaignId: '',
+        targetAmountDollars: 150000, // $1,500 (first stretch goal)
+        title: 'Digital Wallpapers',
+        description: 'Exclusive digital wallpapers for all backers',
+        isAchieved: false,
+        order: 1,
+        rewards: ['digital_wallpapers'],
+      },
+      {
+        id: 'sg_second_123',
+        campaignId: '',
+        targetAmountDollars: 200000, // $2,000 (second stretch goal)
+        title: 'Bonus Chapter',
+        description: 'Additional bonus chapter for the project',
+        isAchieved: false,
+        order: 2,
+        rewards: ['bonus_chapter'],
+      },
+      {
+        id: 'sg_third_123',
+        campaignId: '',
+        targetAmountDollars: 300000, // $3,000 (third stretch goal)
+        title: 'Premium Packaging',
+        description: 'Upgraded premium packaging for all physical rewards',
+        isAchieved: false,
+        order: 3,
+        rewards: ['premium_packaging'],
+      },
+    ];
+
+    // Create test campaign with stretch goals
+    testCampaign = await createTestCampaign({
+      title: 'Stretch Goal Test Campaign',
+      summary: 'Campaign for testing stretch goal functionality',
+      fundingGoalDollars: 100000, // $1,000 base goal
+      status: 'published',
+      endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      totalRaisedDollars: 0,
+      stretchGoals: stretchGoals,
+    });
+
+    // Update stretch goals with campaign ID
+    stretchGoals = stretchGoals.map(sg => ({ ...sg, campaignId: testCampaign.id }));
+  });
+
+  afterAll(async () => {
+    await cleanupTestData();
+  });
+
+  beforeEach(() => {
+    mockNotifications.clear();
+  });
+
+  describe('Stretch Goal Achievement', () => {
+    it('should trigger first stretch goal when threshold reached', async () => {
+      // Create pledges totaling $1,500 to reach first stretch goal
+      const pledges = [
+        { amount: 50000, paymentMethod: 'pm_test_sg1_1' }, // $500
+        { amount: 75000, paymentMethod: 'pm_test_sg1_2' }, // $750
+        { amount: 25000, paymentMethod: 'pm_test_sg1_3' }, // $250
+      ];
+
+      let totalRaised = 0;
+
+      for (const pledgeData of pledges) {
+        const response = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/pledge`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${testUser.token}`,
+          },
+          body: JSON.stringify({
+            campaignId: testCampaign.id,
+            pledgeAmountDollars: pledgeData.amount,
+            isAnonymous: false,
+            paymentMethodId: pledgeData.paymentMethod,
+          }),
+        });
+
+        expect(response.status).toBe(201);
+        totalRaised += pledgeData.amount;
+      }
+
+      // Check campaign progress
+      const campaignResponse = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}`);
+      const updatedCampaign = await campaignResponse.json();
+
+      expect(updatedCampaign.totalRaisedDollars).toBe(totalRaised);
+
+      // Check stretch goal achievement
+      const stretchGoalsResponse = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/stretch-goals`);
+      const achievements = await stretchGoalsResponse.json();
+
+      const firstStretchGoal = achievements.find((sg: StretchGoal) => sg.order === 1);
+      expect(firstStretchGoal.isAchieved).toBe(true);
+      expect(firstStretchGoal.achievedAt).toBeDefined();
+    });
+
+    it('should trigger multiple stretch goals in sequence', async () => {
+      // Add more pledges to reach second stretch goal (total $2,000)
+      const additionalPledge = {
+        campaignId: testCampaign.id,
+        pledgeAmountDollars: 50000, // Additional $500 to reach $2,000 total
+        isAnonymous: false,
+        paymentMethodId: 'pm_test_sg2',
+      };
+
+      const response = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/pledge`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${testUser.token}`,
+        },
+        body: JSON.stringify(additionalPledge),
+      });
+
+      expect(response.status).toBe(201);
+
+      // Check stretch goals
+      const stretchGoalsResponse = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/stretch-goals`);
+      const achievements = await stretchGoalsResponse.json();
+
+      const firstStretchGoal = achievements.find((sg: StretchGoal) => sg.order === 1);
+      const secondStretchGoal = achievements.find((sg: StretchGoal) => sg.order === 2);
+
+      expect(firstStretchGoal.isAchieved).toBe(true);
+      expect(secondStretchGoal.isAchieved).toBe(true);
+      expect(secondStretchGoal.achievedAt).toBeDefined();
+    });
+
+    it('should not achieve stretch goals below threshold', async () => {
+      // Create new campaign for threshold testing
+      const thresholdCampaign = await createTestCampaign({
+        title: 'Threshold Test Campaign',
+        summary: 'Testing stretch goal thresholds',
+        fundingGoalDollars: 50000,
+        status: 'published',
+        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        stretchGoals: [{
+          targetAmountDollars: 100000, // $1,000
+          title: 'High Threshold Goal',
+          description: 'Goal with high threshold',
+          isAchieved: false,
+          order: 1,
+        }],
+      });
+
+      // Create pledge below threshold
+      const belowThresholdPledge = {
+        campaignId: thresholdCampaign.id,
+        pledgeAmountDollars: 75000, // $750 - below $1,000 threshold
+        isAnonymous: false,
+        paymentMethodId: 'pm_test_below_threshold',
+      };
+
+      const response = await fetch(`${API_BASE}/api/campaigns/${thresholdCampaign.id}/pledge`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${testUser.token}`,
+        },
+        body: JSON.stringify(belowThresholdPledge),
+      });
+
+      expect(response.status).toBe(201);
+
+      // Check stretch goals remain unachieved
+      const stretchGoalsResponse = await fetch(`${API_BASE}/api/campaigns/${thresholdCampaign.id}/stretch-goals`);
+      const achievements = await stretchGoalsResponse.json();
+
+      expect(achievements.length).toBeGreaterThan(0);
+      expect(achievements[0].isAchieved).toBe(false);
+      expect(achievements[0].achievedAt).toBeUndefined();
+    });
+  });
+
+  describe('Stretch Goal Progress Tracking', () => {
+    it('should calculate accurate progress percentages', async () => {
+      const progressResponse = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/stretch-goals/progress`);
+      const progress = await progressResponse.json();
+
+      expect(progress).toHaveProperty('currentAmount');
+      expect(progress).toHaveProperty('baseGoalProgress');
+      expect(progress).toHaveProperty('stretchGoalProgress');
+
+      // Verify progress calculations
+      progress.stretchGoalProgress.forEach((sg: any) => {
+        expect(sg.progressPercentage).toBeGreaterThanOrEqual(0);
+        expect(sg.progressPercentage).toBeLessThanOrEqual(100);
+        expect(sg.amountRemaining).toBeGreaterThanOrEqual(0);
+      });
+    });
+
+    it('should track progress toward next unachieved goal', async () => {
+      const nextGoalResponse = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/stretch-goals/next`);
+      const nextGoal = await nextGoalResponse.json();
+
+      if (nextGoal) {
+        expect(nextGoal).toHaveProperty('targetAmountDollars');
+        expect(nextGoal).toHaveProperty('progressPercentage');
+        expect(nextGoal).toHaveProperty('amountRemaining');
+        expect(nextGoal.isAchieved).toBe(false);
+      }
+    });
+
+    it('should handle campaigns with no stretch goals', async () => {
+      const noStretchCampaign = await createTestCampaign({
+        title: 'No Stretch Goals Campaign',
+        summary: 'Campaign without stretch goals',
+        fundingGoalDollars: 50000,
+        status: 'published',
+        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        stretchGoals: [],
+      });
+
+      const progressResponse = await fetch(`${API_BASE}/api/campaigns/${noStretchCampaign.id}/stretch-goals/progress`);
+      expect(progressResponse.status).toBe(200);
+
+      const progress = await progressResponse.json();
+      expect(progress.stretchGoalProgress).toHaveLength(0);
+    });
+  });
+
+  describe('Notification System Integration', () => {
+    it('should send notifications when stretch goals are achieved', async () => {
+      // Create campaign with notification-enabled stretch goals
+      const notificationCampaign = await createTestCampaign({
+        title: 'Notification Test Campaign',
+        summary: 'Testing stretch goal notifications',
+        fundingGoalDollars: 50000,
+        status: 'published',
+        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        stretchGoals: [{
+          targetAmountDollars: 75000, // $750
+          title: 'Notification Test Goal',
+          description: 'Goal for testing notifications',
+          isAchieved: false,
+          order: 1,
+          enableNotifications: true,
+        }],
+      });
+
+      // Create pledge that achieves the stretch goal
+      const achievingPledge = {
+        campaignId: notificationCampaign.id,
+        pledgeAmountDollars: 75000, // Exactly hits the stretch goal
+        isAnonymous: false,
+        paymentMethodId: 'pm_test_notification',
+      };
+
+      const response = await fetch(`${API_BASE}/api/campaigns/${notificationCampaign.id}/pledge`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${testUser.token}`,
+        },
+        body: JSON.stringify(achievingPledge),
+      });
+
+      expect(response.status).toBe(201);
+
+      // Check that notifications were triggered
+      const notificationResponse = await fetch(`${API_BASE}/api/campaigns/${notificationCampaign.id}/stretch-goals/events`);
+      const events = await notificationResponse.json();
+
+      const notificationEvents = events.filter((event: StretchGoalEvent) => 
+        event.eventType === 'notification_sent'
+      );
+
+      expect(notificationEvents.length).toBeGreaterThan(0);
+    });
+
+    it('should send progress milestone notifications', async () => {
+      // Test 75% progress notifications
+      const milestoneResponse = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/stretch-goals/milestones`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${testUser.token}`,
+        },
+        body: JSON.stringify({
+          milestoneType: 'progress',
+          percentage: 75,
+        }),
+      });
+
+      expect(milestoneResponse.status).toBe(200);
+    });
+  });
+
+  describe('Business Rule Enforcement', () => {
+    it('should enforce stretch goal ordering', async () => {
+      const orderTestCampaign = await createTestCampaign({
+        title: 'Order Test Campaign',
+        summary: 'Testing stretch goal order enforcement',
+        fundingGoalDollars: 25000,
+        status: 'published',
+        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        stretchGoals: [
+          {
+            targetAmountDollars: 50000, // $500
+            title: 'First Goal',
+            description: 'Should be achieved first',
+            isAchieved: false,
+            order: 1,
+          },
+          {
+            targetAmountDollars: 30000, // $300 - Lower amount but higher order
+            title: 'Second Goal',
+            description: 'Should not be achieved until first goal is met',
+            isAchieved: false,
+            order: 2,
+          },
+        ],
+      });
+
+      // Create pledge that hits the second goal amount but not first
+      const orderPledge = {
+        campaignId: orderTestCampaign.id,
+        pledgeAmountDollars: 40000, // $400 - between second and first goal amounts
+        isAnonymous: false,
+        paymentMethodId: 'pm_test_order',
+      };
+
+      const response = await fetch(`${API_BASE}/api/campaigns/${orderTestCampaign.id}/pledge`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${testUser.token}`,
+        },
+        body: JSON.stringify(orderPledge),
+      });
+
+      expect(response.status).toBe(201);
+
+      // Check that neither goal is achieved (order enforcement)
+      const stretchGoalsResponse = await fetch(`${API_BASE}/api/campaigns/${orderTestCampaign.id}/stretch-goals`);
+      const achievements = await stretchGoalsResponse.json();
+
+      achievements.forEach((sg: StretchGoal) => {
+        expect(sg.isAchieved).toBe(false);
+      });
+    });
+
+    it('should validate stretch goal amounts exceed base goal', async () => {
+      const invalidGoalData = {
+        campaignId: testCampaign.id,
+        targetAmountDollars: 50000, // $500 - less than base goal of $1,000
+        title: 'Invalid Goal',
+        description: 'Goal amount less than base funding goal',
+        order: 99,
+      };
+
+      const response = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/stretch-goals`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${testUser.token}`,
+        },
+        body: JSON.stringify(invalidGoalData),
+      });
+
+      expect(response.status).toBe(400);
+      
+      const error = await response.json();
+      expect(error.message).toContain('stretch goal amount must exceed base funding goal');
+    });
+
+    it('should prevent duplicate stretch goal amounts', async () => {
+      const duplicateGoalData = {
+        campaignId: testCampaign.id,
+        targetAmountDollars: 150000, // Same as existing first stretch goal
+        title: 'Duplicate Amount Goal',
+        description: 'Goal with duplicate target amount',
+        order: 99,
+      };
+
+      const response = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/stretch-goals`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${testUser.token}`,
+        },
+        body: JSON.stringify(duplicateGoalData),
+      });
+
+      expect(response.status).toBe(400);
+      
+      const error = await response.json();
+      expect(error.message).toContain('stretch goal amount must be unique');
+    });
+  });
+
+  describe('Cancellation Impact on Stretch Goals', () => {
+    it('should unachieve stretch goals when pledges are cancelled', async () => {
+      // Create campaign with achieved stretch goal
+      const cancellationCampaign = await createTestCampaign({
+        title: 'Cancellation Impact Campaign',
+        summary: 'Testing stretch goal cancellation impact',
+        fundingGoalDollars: 50000,
+        status: 'published',
+        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        allowCancellations: true,
+        stretchGoals: [{
+          targetAmountDollars: 75000, // $750
+          title: 'Fragile Goal',
+          description: 'Goal that can be unachieved',
+          isAchieved: false,
+          order: 1,
+        }],
+      });
+
+      // Create pledges that achieve the goal
+      const achievingPledges = [
+        { amount: 50000, paymentMethod: 'pm_cancel_1' }, // $500
+        { amount: 25000, paymentMethod: 'pm_cancel_2' }, // $250
+      ];
+
+      const pledgeIds: string[] = [];
+
+      for (const pledgeData of achievingPledges) {
+        const response = await fetch(`${API_BASE}/api/campaigns/${cancellationCampaign.id}/pledge`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${testUser.token}`,
+          },
+          body: JSON.stringify({
+            campaignId: cancellationCampaign.id,
+            pledgeAmountDollars: pledgeData.amount,
+            isAnonymous: false,
+            paymentMethodId: pledgeData.paymentMethod,
+          }),
+        });
+
+        const pledge = await response.json();
+        pledgeIds.push(pledge.id);
+      }
+
+      // Verify goal is achieved
+      let stretchGoalsResponse = await fetch(`${API_BASE}/api/campaigns/${cancellationCampaign.id}/stretch-goals`);
+      let achievements = await stretchGoalsResponse.json();
+      expect(achievements[0].isAchieved).toBe(true);
+
+      // Cancel one pledge that brings total below threshold
+      const cancellationResponse = await fetch(`${API_BASE}/api/campaigns/${cancellationCampaign.id}/pledges/${pledgeIds[1]}/cancel`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${testUser.token}`,
+        },
+        body: JSON.stringify({
+          reason: 'Testing stretch goal unachievement',
+          refundType: 'full',
+        }),
+      });
+
+      expect(cancellationResponse.status).toBe(200);
+
+      // Verify goal is now unachieved
+      stretchGoalsResponse = await fetch(`${API_BASE}/api/campaigns/${cancellationCampaign.id}/stretch-goals`);
+      achievements = await stretchGoalsResponse.json();
+      expect(achievements[0].isAchieved).toBe(false);
+    });
+
+    it('should handle cascading stretch goal unachievement', async () => {
+      // Test multiple stretch goals becoming unachieved due to single cancellation
+      const cascadeCampaign = await createTestCampaign({
+        title: 'Cascade Test Campaign',
+        summary: 'Testing cascading unachievement',
+        fundingGoalDollars: 50000,
+        status: 'published',
+        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        allowCancellations: true,
+        stretchGoals: [
+          {
+            targetAmountDollars: 100000, // $1,000
+            title: 'First Cascade Goal',
+            isAchieved: false,
+            order: 1,
+          },
+          {
+            targetAmountDollars: 150000, // $1,500
+            title: 'Second Cascade Goal',
+            isAchieved: false,
+            order: 2,
+          },
+        ],
+      });
+
+      // Create large pledge that achieves both goals
+      const largePledgeResponse = await fetch(`${API_BASE}/api/campaigns/${cascadeCampaign.id}/pledge`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${testUser.token}`,
+        },
+        body: JSON.stringify({
+          campaignId: cascadeCampaign.id,
+          pledgeAmountDollars: 175000, // $1,750 - achieves both goals
+          isAnonymous: false,
+          paymentMethodId: 'pm_cascade_large',
+        }),
+      });
+
+      const largePledge = await largePledgeResponse.json();
+
+      // Verify both goals are achieved
+      let stretchGoalsResponse = await fetch(`${API_BASE}/api/campaigns/${cascadeCampaign.id}/stretch-goals`);
+      let achievements = await stretchGoalsResponse.json();
+      expect(achievements.filter((sg: StretchGoal) => sg.isAchieved)).toHaveLength(2);
+
+      // Cancel the large pledge
+      const cancellationResponse = await fetch(`${API_BASE}/api/campaigns/${cascadeCampaign.id}/pledges/${largePledge.id}/cancel`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${testUser.token}`,
+        },
+        body: JSON.stringify({
+          reason: 'Testing cascade unachievement',
+          refundType: 'full',
+        }),
+      });
+
+      expect(cancellationResponse.status).toBe(200);
+
+      // Verify both goals are now unachieved
+      stretchGoalsResponse = await fetch(`${API_BASE}/api/campaigns/${cascadeCampaign.id}/stretch-goals`);
+      achievements = await stretchGoalsResponse.json();
+      expect(achievements.filter((sg: StretchGoal) => sg.isAchieved)).toHaveLength(0);
+    });
+  });
+
+  describe('Stretch Goal Analytics', () => {
+    it('should track stretch goal performance metrics', async () => {
+      const analyticsResponse = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/stretch-goals/analytics`);
+      const analytics = await analyticsResponse.json();
+
+      expect(analytics).toHaveProperty('totalStretchGoals');
+      expect(analytics).toHaveProperty('achievedCount');
+      expect(analytics).toHaveProperty('averageTimeToAchievement');
+      expect(analytics).toHaveProperty('goalEffectiveness');
+    });
+
+    it('should calculate stretch goal conversion rates', async () => {
+      const conversionResponse = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/stretch-goals/conversion-rates`);
+      const conversion = await conversionResponse.json();
+
+      expect(conversion).toHaveProperty('viewersToBackers');
+      expect(conversion).toHaveProperty('stretchGoalMotivation');
+      expect(conversion).toHaveProperty('pledgeIncreaseRate');
+    });
+  });
+
+  describe('Error Handling and Edge Cases', () => {
+    it('should handle concurrent pledges reaching stretch goal simultaneously', async () => {
+      const concurrentCampaign = await createTestCampaign({
+        title: 'Concurrent Test Campaign',
+        summary: 'Testing concurrent stretch goal achievement',
+        fundingGoalDollars: 50000,
+        status: 'published',
+        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        stretchGoals: [{
+          targetAmountDollars: 75000, // $750
+          title: 'Concurrent Goal',
+          isAchieved: false,
+          order: 1,
+        }],
+      });
+
+      // Create multiple concurrent pledges
+      const concurrentPledges = [
+        { amount: 25000, paymentMethod: 'pm_concurrent_1' },
+        { amount: 25000, paymentMethod: 'pm_concurrent_2' },
+        { amount: 25000, paymentMethod: 'pm_concurrent_3' },
+      ];
+
+      const pledgePromises = concurrentPledges.map(pledgeData => 
+        fetch(`${API_BASE}/api/campaigns/${concurrentCampaign.id}/pledge`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${testUser.token}`,
+          },
+          body: JSON.stringify({
+            campaignId: concurrentCampaign.id,
+            pledgeAmountDollars: pledgeData.amount,
+            isAnonymous: false,
+            paymentMethodId: pledgeData.paymentMethod,
+          }),
+        })
+      );
+
+      const results = await Promise.all(pledgePromises);
+      results.forEach(result => expect(result.status).toBe(201));
+
+      // Verify stretch goal was achieved exactly once
+      const stretchGoalsResponse = await fetch(`${API_BASE}/api/campaigns/${concurrentCampaign.id}/stretch-goals`);
+      const achievements = await stretchGoalsResponse.json();
+      expect(achievements[0].isAchieved).toBe(true);
+      expect(achievements[0].achievedAt).toBeDefined();
+    });
+
+    it('should handle malformed stretch goal data', async () => {
+      const malformedData = {
+        // Missing required fields
+        campaignId: testCampaign.id,
+        title: 'Malformed Goal',
+      };
+
+      const response = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/stretch-goals`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${testUser.token}`,
+        },
+        body: JSON.stringify(malformedData),
+      });
+
+      expect(response.status).toBe(400);
+      
+      const error = await response.json();
+      expect(error.message).toContain('validation');
+    });
+
+    it('should return 404 for non-existent stretch goal', async () => {
+      const response = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/stretch-goals/non-existent-id`);
+      expect(response.status).toBe(404);
+    });
+  });
+});

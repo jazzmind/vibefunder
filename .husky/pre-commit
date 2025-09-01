@@ -1,0 +1,91 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "🔍 Running pre-commit checks..."
+
+# Get list of staged files
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ts|tsx|js|jsx)$' || true)
+
+if [ -z "$STAGED_FILES" ]; then
+  echo "✅ No TypeScript/JavaScript files staged for commit"
+  exit 0
+fi
+
+echo "📁 Staged files:"
+echo "$STAGED_FILES"
+
+# Run TypeScript check
+echo "🔧 Running TypeScript check..."
+npm run type-check || {
+  echo "❌ TypeScript check failed"
+  exit 1
+}
+
+# Run ESLint on staged files
+echo "🔍 Running ESLint on staged files..."
+echo "$STAGED_FILES" | xargs npx eslint --max-warnings 0 || {
+  echo "❌ ESLint check failed"
+  echo "💡 Try running: npm run lint -- --fix"
+  exit 1
+}
+
+# Run Prettier check on staged files
+echo "✨ Running Prettier check on staged files..."
+echo "$STAGED_FILES" | xargs npx prettier --check || {
+  echo "❌ Prettier check failed"
+  echo "💡 Try running: npm run format:fix"
+  exit 1
+}
+
+# Run tests for staged files (if test files exist)
+TEST_FILES=$(echo "$STAGED_FILES" | grep -E '\.(test|spec)\.(ts|tsx|js|jsx)$' || true)
+if [ -n "$TEST_FILES" ]; then
+  echo "🧪 Running tests for staged test files..."
+  npm run test || {
+    echo "❌ Tests failed"
+    exit 1
+  }
+else
+  # Check if there are corresponding test files for staged source files
+  for file in $STAGED_FILES; do
+    if [[ "$file" != *".test."* ]] && [[ "$file" != *".spec."* ]]; then
+      # Look for corresponding test file
+      base_name=$(basename "$file" | sed 's/\.[^.]*$//')
+      dir_name=$(dirname "$file")
+      
+      # Check various test file patterns
+      test_patterns=(
+        "$dir_name/$base_name.test.ts"
+        "$dir_name/$base_name.test.tsx"
+        "__tests__/**/$base_name.test.ts"
+        "__tests__/**/$base_name.test.tsx"
+        "$dir_name/__tests__/$base_name.test.ts"
+        "$dir_name/__tests__/$base_name.test.tsx"
+      )
+      
+      found_test=false
+      for pattern in "${test_patterns[@]}"; do
+        if find . -path "./node_modules" -prune -o -path "$pattern" -print | grep -q .; then
+          found_test=true
+          break
+        fi
+      done
+      
+      if [ "$found_test" = false ]; then
+        echo "⚠️  Warning: No test file found for $file"
+      fi
+    fi
+  done
+fi
+
+# Quick coverage check for critical files
+CRITICAL_FILES=$(echo "$STAGED_FILES" | grep -E '(api/|lib/|utils/|components/).*\.(ts|tsx)$' | grep -v test || true)
+if [ -n "$CRITICAL_FILES" ]; then
+  echo "📊 Running quick coverage check for critical files..."
+  npm run test:coverage > /dev/null 2>&1 || {
+    echo "⚠️  Warning: Coverage check failed, but allowing commit"
+  }
+fi
+
+echo "✅ Pre-commit checks passed!"
+exit 0

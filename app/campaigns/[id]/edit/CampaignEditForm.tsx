@@ -11,10 +11,11 @@ import AIStretchGoalSuggestions from '@/components/campaign/AIStretchGoalSuggest
 import TiptapEditor from '@/components/editor/TiptapEditor';
 import ImageLibrary from '@/components/images/ImageLibrary';
 import MediaSelectorModal from '@/components/shared/MediaSelectorModal';
-import MilestoneStretchGoalModal, { MilestoneFormData, StretchGoalFormData } from '@/components/campaigns/MilestoneStretchGoalModal';
-import PriceTierModal, { PriceTierFormData } from '@/components/campaigns/PriceTierModal';
-import GitHubModal from '@/components/campaigns/GitHubModal';
+import MilestoneStretchGoalModal, { MilestoneFormData, StretchGoalFormData } from '@/components/campaign/MilestoneStretchGoalModal';
+import PriceTierModal, { PriceTierFormData } from '@/components/campaign/PriceTierModal';
+import GitHubModal from '@/components/campaign/GitHubModal';
 import Modal from '@/components/shared/Modal';
+import { markdownToHtml } from '@/lib/markdownToHtml';
 
 interface Milestone {
   id?: string;
@@ -139,6 +140,15 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
   const [featureScan, setFeatureScan] = useState<any>(null);
   const [featureLoading, setFeatureLoading] = useState(false);
   const [featureError, setFeatureError] = useState<string | null>(null);
+  const [capabilities, setCapabilities] = useState<any>(null);
+  const [selectedScanners, setSelectedScanners] = useState<Record<string, boolean>>({});
+  const [loadingCaps, setLoadingCaps] = useState(false);
+  const [sowMarkdown, setSowMarkdown] = useState<string | null>(null);
+  const [research, setResearch] = useState<any>(null);
+  const [researchLoading, setResearchLoading] = useState(false);
+  const [researchError, setResearchError] = useState<string | null>(null);
+  const [storedAnalysis, setStoredAnalysis] = useState<any>(null);
+  const [loadingStored, setLoadingStored] = useState(false);
   const [planLoading, setPlanLoading] = useState(false);
   const [planError, setPlanError] = useState<string | null>(null);
   const [masterPlanState, setMasterPlanState] = useState<any>(null);
@@ -215,6 +225,76 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
     };
     fetchStatuses();
   }, []);
+
+  // Load analyzer capabilities and stored analysis
+  useEffect(() => {
+    // Load capabilities and stored analysis in parallel
+    const loadCapabilities = async () => {
+      try {
+        setLoadingCaps(true);
+        const res = await fetch('/api/analyzer/capabilities');
+        const data = await res.json();
+        if (res.ok) {
+          setCapabilities(data);
+          const defaults: Record<string, boolean> = {};
+          (data.scanners || []).forEach((s: any) => {
+            defaults[s.name] = !!s.available;
+          });
+          setSelectedScanners(defaults);
+        }
+      } catch (e: any) {
+        // ignore
+      } finally {
+        setLoadingCaps(false);
+      }
+    };
+
+    const loadStoredAnalysis = async () => {
+      try {
+        setLoadingStored(true);
+        console.log('Loading stored analysis for campaign:', campaign.id);
+        const res = await fetch(`/api/campaigns/${campaign.id}/analysis`);
+        console.log('Analysis response status:', res.status);
+        
+        if (res.ok) {
+          const analysis = await res.json();
+          console.log('Loaded analysis:', analysis);
+          setStoredAnalysis(analysis);
+          // Pre-populate data from stored analysis
+          if (analysis.masterPlan) {
+            console.log('Setting master plan from stored analysis');
+            setMasterPlanState(analysis.masterPlan);
+          }
+          if (analysis.gapAnalysis) {
+            console.log('Setting gap analysis from stored analysis');
+            setGapResult(analysis.gapAnalysis);
+          }
+          if (analysis.featureScan) {
+            console.log('Setting feature scan from stored analysis');
+            setFeatureScan(analysis.featureScan);
+          }
+          if (analysis.sowMarkdown) {
+            console.log('Setting SOW from stored analysis');
+            setSowMarkdown(analysis.sowMarkdown);
+          }
+          if (analysis.competitorResearch) {
+            console.log('Setting competitor research from stored analysis');
+            setResearch(analysis.competitorResearch);
+          }
+        } else {
+          const errorData = await res.json().catch(() => ({}));
+          console.log('Analysis API error:', errorData);
+        }
+      } catch (e: any) {
+        console.error('Failed to load stored analysis:', e);
+      } finally {
+        setLoadingStored(false);
+      }
+    };
+
+    // Run both loading operations in parallel
+    Promise.all([loadCapabilities(), loadStoredAnalysis()]);
+  }, [campaign.id]);
 
   // Smart autosave - only saves when data actually changes
   const autoSave = useCallback(async () => {
@@ -562,10 +642,10 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
 
   const tabs = [
     { id: 'campaign', label: 'Campaign', icon: '📝' },
+    { id: 'analysis', label: 'Gap Analysis', icon: '🔍' },
     { id: 'milestones', label: 'Milestones', icon: '🎯' },
     { id: 'price-tiers', label: 'Price Tiers', icon: '💰' },
     { id: 'stretch-goals', label: 'Stretch Goals', icon: '🚀' },
-    { id: 'analysis', label: 'Gap Analysis', icon: '🔍' },
     { id: 'media', label: 'Media', icon: '🎬' },
     { id: 'settings', label: 'Settings', icon: '⚙️' },
   ];
@@ -1410,19 +1490,47 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                Gap Analysis
+                Analysis Hub
               </h3>
               <p className="text-gray-600 dark:text-gray-400">
-                Plan, analyze, and generate milestones from automated scans
+                Plan, analyze, and generate milestones from automated scans and AI insights
               </p>
             </div>
-            <a
-              href={formData.repoUrl ? `/analyzer?repo=${encodeURIComponent(formData.repoUrl)}&campaignId=${encodeURIComponent(campaign.id)}` : '#'}
-              className={`px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand/90 transition-colors ${!formData.repoUrl ? 'opacity-50 pointer-events-none' : ''}`}
-            >
-              Open Full Analyzer
-            </a>
+   
           </div>
+
+          {/* Stored Analysis Section */}
+          {loadingStored && (
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                <span className="text-sm text-blue-700 dark:text-blue-300">Loading stored analysis...</span>
+              </div>
+            </div>
+          )}
+          
+          {storedAnalysis && (
+            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+              <h3 className="text-sm font-medium text-green-800 dark:text-green-200 mb-2">📊 Previous Analysis Available</h3>
+              <p className="text-sm text-green-700 dark:text-green-300 mb-3">
+                Analysis last updated: {new Date(storedAnalysis.lastAnalyzedAt).toLocaleDateString()} at {new Date(storedAnalysis.lastAnalyzedAt).toLocaleTimeString()}
+              </p>
+              <div className="flex flex-wrap gap-2 text-xs">
+                {storedAnalysis.masterPlan && (
+                  <span className="bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100 px-2 py-1 rounded">Master Plan ✓</span>
+                )}
+                {storedAnalysis.gapAnalysis && (
+                  <span className="bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100 px-2 py-1 rounded">Gap Analysis ✓</span>
+                )}
+                {storedAnalysis.featureScan && (
+                  <span className="bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100 px-2 py-1 rounded">Feature Scan ✓</span>
+                )}
+                {storedAnalysis.sowMarkdown && (
+                  <span className="bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100 px-2 py-1 rounded">SOW ✓</span>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Master Plan Section */}
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
@@ -1433,47 +1541,89 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
                   Generate a comprehensive product plan from campaign data and repository documentation
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={async () => {
-                  if (!formData.title || !formData.summary) return;
-                  setPlanError(null);
-                  setPlanLoading(true);
-                  setMasterPlanState(null);
-                  try {
-                    const res = await fetch('/api/analyzer/master-plan', {
-                      method: 'POST',
-                      headers: { 'content-type': 'application/json' },
-                      body: JSON.stringify({
-                        repo_url: formData.repoUrl,
-                        website_url: formData.websiteUrl || undefined,
-                        campaign: { title: formData.title, summary: formData.summary, description: formData.description },
-                      }),
-                    });
-                    const data = await res.json();
-                    if (!res.ok) throw new Error(data?.error || 'master_plan_failed');
-                    setMasterPlanState(data);
-                  } catch (e: any) {
-                    setPlanError(e?.message || 'master_plan_failed');
-                  } finally {
-                    setPlanLoading(false);
-                  }
-                }}
-                disabled={!formData.title || planLoading}
-                className={`px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
-              >
-                {planLoading ? (
-                  <div className="flex items-center space-x-2">
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span>Generating...</span>
-                  </div>
-                ) : 'Generate Master Plan'}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setResearchError(null);
+                    setResearchLoading(true);
+                    try {
+                      const res = await fetch('/api/analyzer/research', {
+                        method: 'POST',
+                        headers: { 'content-type': 'application/json' },
+                        body: JSON.stringify({ 
+                          description: `${formData.title}: ${formData.summary}`, 
+                          website_url: formData.websiteUrl || undefined,
+                          campaign_id: campaign.id
+                        }),
+                      });
+                      const data = await res.json();
+                      if (res.ok) setResearch(data);
+                    } catch (e: any) {
+                      setResearchError(e?.message || 'research_failed');
+                    } finally {
+                      setResearchLoading(false);
+                    }
+                  }}
+                  disabled={!formData.title || researchLoading}
+                  className={`px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
+                >
+                  {researchLoading ? (
+                    <div className="flex items-center space-x-2">
+                      <div className="w-4 h-4 border-2 border-gray-600 border-t-transparent rounded-full animate-spin"></div>
+                      <span>Research...</span>
+                    </div>
+                  ) : 'Competitor Research'}
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!formData.title || !formData.summary) return;
+                    setPlanError(null);
+                    setPlanLoading(true);
+                    setMasterPlanState(null);
+                    try {
+                      const res = await fetch('/api/analyzer/master-plan', {
+                        method: 'POST',
+                        headers: { 'content-type': 'application/json' },
+                        body: JSON.stringify({
+                          repo_url: formData.repoUrl,
+                          website_url: formData.websiteUrl || undefined,
+                          campaign: { title: formData.title, summary: formData.summary, description: formData.description },
+                          campaign_id: campaign.id,
+                        }),
+                      });
+                      const data = await res.json();
+                      if (!res.ok) throw new Error(data?.error || 'master_plan_failed');
+                      setMasterPlanState(data);
+                    } catch (e: any) {
+                      setPlanError(e?.message || 'master_plan_failed');
+                    } finally {
+                      setPlanLoading(false);
+                    }
+                  }}
+                  disabled={!formData.title || planLoading}
+                  className={`px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
+                >
+                  {planLoading ? (
+                    <div className="flex items-center space-x-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Generating...</span>
+                    </div>
+                  ) : (masterPlanState ? 'Regenerate Master Plan' : 'Generate Master Plan')}
+                </button>
+              </div>
             </div>
 
             {planError && (
               <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
                 <p className="text-sm text-red-600 dark:text-red-400">{planError}</p>
+              </div>
+            )}
+
+            {researchError && (
+              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <p className="text-sm text-red-600 dark:text-red-400">{researchError}</p>
               </div>
             )}
 
@@ -1506,6 +1656,69 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
                 )}
               </div>
             )}
+
+            {/* Competitor Research Section - Display after master plan */}
+            {(research && research.content) || researchError ? (
+              <div className="mt-6 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+                <h5 className="font-medium text-gray-900 dark:text-white mb-4">Competitor Research</h5>
+                
+                {researchError && (
+                  <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                    <p className="text-sm text-red-600 dark:text-red-400">{researchError}</p>
+                  </div>
+                )}
+                
+                {research && research.content && (
+                  <div 
+                    className="prose prose-sm max-w-none dark:prose-invert"
+                    dangerouslySetInnerHTML={{ 
+                      __html: markdownToHtml(research.content) 
+                    }}
+                  />
+                )}
+              </div>
+            ) : null}
+          </div>
+
+          {/* Scanner Configuration */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+            <div className="mb-4">
+              <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Scanner Configuration</h4>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Select which security and quality scanners to run on your repository
+              </p>
+            </div>
+            
+            {loadingCaps ? (
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4 border-2 border-brand border-t-transparent rounded-full animate-spin"></div>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Loading scanner capabilities...</span>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {(capabilities?.scanners || [
+                  { name: 'semgrep', available: true, description: 'Static analysis for security vulnerabilities' },
+                  { name: 'gitleaks', available: true, description: 'Scan for hardcoded secrets and credentials' },
+                  { name: 'sbom', available: true, description: 'Software bill of materials and vulnerability scan' },
+                ]).map((scanner: any) => (
+                  <label key={scanner.name} className={`flex items-center p-4 border border-gray-200 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 ${!scanner.available ? 'opacity-50' : ''}`}>
+                    <input
+                      type="checkbox"
+                      disabled={!scanner.available}
+                      checked={!!selectedScanners[scanner.name]}
+                      onChange={(e) => setSelectedScanners((prev) => ({ ...prev, [scanner.name]: e.target.checked }))}
+                      className="h-4 w-4 text-brand focus:ring-brand border-gray-300 rounded"
+                    />
+                    <div className="ml-3">
+                      <div className="text-sm font-medium text-gray-900 dark:text-white">{scanner.name}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        {scanner.description || `${scanner.name} security scanner`}
+                      </div>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Gap Analysis Section */}
@@ -1526,10 +1739,13 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
                   setGapResult(null);
                   setGapStatus(null);
                   try {
+                    const scanners = Object.entries(selectedScanners)
+                      .filter(([, v]) => v)
+                      .map(([k]) => k);
                     const startRes = await fetch('/api/analyzer/start', {
                       method: 'POST',
                       headers: { 'content-type': 'application/json' },
-                      body: JSON.stringify({ repo_url: formData.repoUrl }),
+                      body: JSON.stringify({ repo_url: formData.repoUrl, scanners }),
                     });
                     const startData = await startRes.json();
                     if (!startRes.ok) throw new Error(startData.error || 'start_failed');
@@ -1541,16 +1757,48 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
                         const st = await fetch(`/api/analyzer/jobs/${jid}`);
                         const sd = await st.json();
                         setGapStatus(sd);
+                        
+                        // Check if we have reports available and can run gap analysis (auto-trigger)
+                        if (sd.reports_present && sd.reports_present.length > 0 && !gapResult) {
+                          try {
+                            const gapRes = await fetch('/api/analyzer/gap', {
+                              method: 'POST',
+                              headers: { 'content-type': 'application/json' },
+                              body: JSON.stringify({ job_id: jid, repo_url: formData.repoUrl, campaign_id: campaign.id }),
+                            });
+                            const gapData = await gapRes.json();
+                            if (gapRes.ok) setGapResult(gapData);
+                          } catch (gapError) {
+                            console.error('Auto gap analysis failed:', gapError);
+                          }
+                        }
+                        
                         if (sd.status === 'succeeded') {
                           if (gapTimerRef.current) clearInterval(gapTimerRef.current);
-                          const gapRes = await fetch('/api/analyzer/gap', {
-                            method: 'POST',
-                            headers: { 'content-type': 'application/json' },
-                            body: JSON.stringify({ job_id: jid, repo_url: formData.repoUrl }),
-                          });
-                          const gapData = await gapRes.json();
-                          if (!gapRes.ok) throw new Error(gapData?.error || 'gap_failed');
-                          setGapResult(gapData);
+                          
+                          // Run gap analysis if not already done
+                          if (!gapResult) {
+                            const gapRes = await fetch('/api/analyzer/gap', {
+                              method: 'POST',
+                              headers: { 'content-type': 'application/json' },
+                              body: JSON.stringify({ job_id: jid, repo_url: formData.repoUrl, campaign_id: campaign.id }),
+                            });
+                            const gapData = await gapRes.json();
+                            if (!gapRes.ok) throw new Error(gapData?.error || 'gap_failed');
+                            setGapResult(gapData);
+                          }
+                          
+                          // Fetch SOW with campaign ID for storage
+                          try {
+                            const sowRes = await fetch(`/api/analyzer/jobs/${jid}/sow?campaign_id=${campaign.id}`);
+                            const sowData = await sowRes.json();
+                            if (sowRes.ok && sowData.sow_markdown) {
+                              setSowMarkdown(sowData.sow_markdown);
+                            }
+                          } catch (sowError) {
+                            console.error('Failed to fetch/store SOW:', sowError);
+                          }
+                          
                           setGapLoading(false);
                         } else if (sd.status === 'failed') {
                           if (gapTimerRef.current) clearInterval(gapTimerRef.current);
@@ -1576,7 +1824,7 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                     <span>Running Analysis...</span>
                   </div>
-                ) : 'Run Gap Analysis'}
+                ) : (gapResult ? 'Re-run Gap Analysis' : 'Run Gap Analysis')}
               </button>
             </div>
 
@@ -1681,7 +1929,7 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
                     const res = await fetch('/api/analyzer/features', {
                       method: 'POST',
                       headers: { 'content-type': 'application/json' },
-                      body: JSON.stringify({ repo_url: formData.repoUrl, features }),
+                      body: JSON.stringify({ repo_url: formData.repoUrl, features, campaign_id: campaign.id }),
                     });
                     const data = await res.json();
                     if (!res.ok) throw new Error(data?.error || 'features_failed');
@@ -1700,7 +1948,7 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                     <span>Scanning...</span>
                   </div>
-                ) : 'Scan Features'}
+                ) : (featureScan ? 'Re-scan Features' : 'Scan Features')}
               </button>
             </div>
 
@@ -1746,6 +1994,23 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
             )}
           </div>
 
+
+
+          {/* SOW Section */}
+          {sowMarkdown && (
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+              <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Statement of Work (Draft)</h4>
+              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+                <div 
+                  className="prose prose-sm max-w-none dark:prose-invert"
+                  dangerouslySetInnerHTML={{ 
+                    __html: markdownToHtml(sowMarkdown) 
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
           {/* Tips Section */}
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
             <h4 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">💡 Analysis Tips</h4>
@@ -1754,6 +2019,8 @@ export default function CampaignEditForm({ campaign, isAdmin }: CampaignEditForm
               <li>• Run gap analysis to identify security and quality issues</li>
               <li>• Use feature scanning to validate implementation progress</li>
               <li>• Results help create realistic milestones and acceptance criteria</li>
+              <li>• Competitor research displays after master plan with formatted insights and tables</li>
+              <li>• SOW documents display with full markdown formatting including tables and lists</li>
             </ul>
           </div>
         </div>

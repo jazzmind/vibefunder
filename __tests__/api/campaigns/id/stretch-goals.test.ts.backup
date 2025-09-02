@@ -1,5 +1,5 @@
 /**
- * Stretch Goal Integration Tests - FIXED VERSION
+ * Stretch Goal Integration Tests
  * 
  * Comprehensive testing for stretch goal functionality including:
  * - Stretch goal trigger validation
@@ -53,229 +53,77 @@ jest.mock('@/lib/auth', () => ({
 
 const API_BASE = process.env.API_TEST_URL || 'http://localhost:3101';
 
-// Mock API state management
-class MockAPIState {
-  private campaignTotals = new Map<string, number>();
-  private achievedGoals = new Map<string, Set<string>>();
-  private campaigns = new Map<string, any>();
-  private stretchGoals = new Map<string, any[]>();
-  private notifications: any[] = [];
+// Mock API responses
+const mockFetchResponses = new Map();
 
-  setCampaign(id: string, campaign: any) {
-    this.campaigns.set(id, campaign);
-    this.campaignTotals.set(id, campaign.totalRaisedDollars || 0);
-    this.achievedGoals.set(id, new Set());
-  }
-
-  setStretchGoals(campaignId: string, goals: any[]) {
-    this.stretchGoals.set(campaignId, goals);
-  }
-
-  addPledge(campaignId: string, amount: number): any {
-    const currentTotal = this.campaignTotals.get(campaignId) || 0;
-    const newTotal = currentTotal + amount;
-    this.campaignTotals.set(campaignId, newTotal);
-
-    // Check for achieved goals
-    const goals = this.stretchGoals.get(campaignId) || [];
-    const achieved = this.achievedGoals.get(campaignId) || new Set();
-    
-    for (const goal of goals) {
-      if (newTotal >= goal.targetAmountDollars && !achieved.has(goal.id)) {
-        achieved.add(goal.id);
-        this.notifications.push({
-          type: 'stretch_goal_achieved',
-          campaignId,
-          stretchGoalId: goal.id,
-          title: goal.title,
-          timestamp: new Date().toISOString()
-        });
-      }
-    }
-
-    return {
-      id: `pledge_${Date.now()}_${Math.random()}`,
-      campaignId,
-      amount,
-      status: 'completed'
-    };
-  }
-
-  cancelPledge(campaignId: string, amount: number) {
-    const currentTotal = this.campaignTotals.get(campaignId) || 0;
-    const newTotal = Math.max(0, currentTotal - amount);
-    this.campaignTotals.set(campaignId, newTotal);
-
-    // Check for unachieved goals
-    const goals = this.stretchGoals.get(campaignId) || [];
-    const achieved = this.achievedGoals.get(campaignId) || new Set();
-    
-    for (const goal of goals) {
-      if (newTotal < goal.targetAmountDollars && achieved.has(goal.id)) {
-        achieved.delete(goal.id);
-      }
-    }
-  }
-
-  getCampaign(id: string) {
-    const campaign = this.campaigns.get(id);
-    if (!campaign) return null;
-    
-    return {
-      ...campaign,
-      totalRaisedDollars: this.campaignTotals.get(id) || 0,
-      raisedDollars: this.campaignTotals.get(id) || 0
-    };
-  }
-
-  getStretchGoals(campaignId: string) {
-    const goals = this.stretchGoals.get(campaignId) || [];
-    const achieved = this.achievedGoals.get(campaignId) || new Set();
-    
-    return goals.map(goal => ({
-      ...goal,
-      isAchieved: achieved.has(goal.id),
-      achievedAt: achieved.has(goal.id) ? new Date().toISOString() : undefined
-    }));
-  }
-
-  getProgress(campaignId: string) {
-    const campaign = this.getCampaign(campaignId);
-    const goals = this.getStretchGoals(campaignId);
-    const currentAmount = this.campaignTotals.get(campaignId) || 0;
-
-    return {
-      currentAmount,
-      baseGoalProgress: campaign ? (currentAmount / campaign.fundingGoalDollars) * 100 : 0,
-      stretchGoalProgress: goals.map(sg => ({
-        id: sg.id,
-        title: sg.title,
-        targetAmountDollars: sg.targetAmountDollars,
-        progressPercentage: Math.min(100, (currentAmount / sg.targetAmountDollars) * 100),
-        amountRemaining: Math.max(0, sg.targetAmountDollars - currentAmount),
-        isAchieved: sg.isAchieved
-      }))
-    };
-  }
-
-  getNextGoal(campaignId: string) {
-    const goals = this.getStretchGoals(campaignId);
-    const currentAmount = this.campaignTotals.get(campaignId) || 0;
-    
-    return goals
-      .filter(sg => !sg.isAchieved && currentAmount < sg.targetAmountDollars)
-      .sort((a, b) => a.targetAmountDollars - b.targetAmountDollars)[0] || null;
-  }
-
-  getEvents(campaignId: string) {
-    return this.notifications.filter(n => n.campaignId === campaignId);
-  }
-
-  getAnalytics(campaignId: string) {
-    const goals = this.getStretchGoals(campaignId);
-    const achievedCount = goals.filter(g => g.isAchieved).length;
-    
-    return {
-      totalStretchGoals: goals.length,
-      achievedCount,
-      averageTimeToAchievement: achievedCount > 0 ? 24 : 0, // Mock 24 hours
-      goalEffectiveness: goals.length > 0 ? (achievedCount / goals.length) * 100 : 0
-    };
-  }
-
-  getConversionRates() {
-    return {
-      viewersToBackers: 0.15,
-      stretchGoalMotivation: 0.25,
-      pledgeIncreaseRate: 0.18
-    };
-  }
-
-  clearNotifications() {
-    this.notifications = [];
-  }
-
-  reset() {
-    this.campaignTotals.clear();
-    this.achievedGoals.clear();
-    this.campaigns.clear();
-    this.stretchGoals.clear();
-    this.notifications = [];
-  }
-}
-
-const mockAPIState = new MockAPIState();
-
-// Enhanced fetch mock
+// Enhanced fetch mock with response mapping
 const mockFetch = jest.fn().mockImplementation((url: string, options: any = {}) => {
   const method = options.method || 'GET';
-  const campaignIdMatch = url.match(/\/campaigns\/([^\/]+)/);
-  const campaignId = campaignIdMatch ? campaignIdMatch[1] : null;
-
-  // Stretch goals endpoints
+  const key = `${method} ${url}`;
+  
+  if (mockFetchResponses.has(key)) {
+    const response = mockFetchResponses.get(key);
+    return Promise.resolve({
+      ok: response.status < 400,
+      status: response.status,
+      json: () => Promise.resolve(response.data),
+      text: () => Promise.resolve(JSON.stringify(response.data))
+    });
+  }
+  
+  // Default responses for stretch goal endpoints
   if (url.includes('/stretch-goals')) {
     if (method === 'GET') {
       if (url.includes('/progress')) {
         return Promise.resolve({
           ok: true,
           status: 200,
-          json: () => Promise.resolve(mockAPIState.getProgress(campaignId!))
+          json: () => Promise.resolve({
+            currentAmount: 0,
+            baseGoalProgress: 0,
+            stretchGoalProgress: []
+          })
         });
       } else if (url.includes('/next')) {
-        const nextGoal = mockAPIState.getNextGoal(campaignId!);
         return Promise.resolve({
           ok: true,
           status: 200,
-          json: () => Promise.resolve(nextGoal ? {
-            ...nextGoal,
-            progressPercentage: (mockAPIState.getCampaign(campaignId!)?.totalRaisedDollars || 0) / nextGoal.targetAmountDollars * 100,
-            amountRemaining: Math.max(0, nextGoal.targetAmountDollars - (mockAPIState.getCampaign(campaignId!)?.totalRaisedDollars || 0))
-          } : null)
+          json: () => Promise.resolve(null)
         });
       } else if (url.includes('/events')) {
         return Promise.resolve({
           ok: true,
           status: 200,
-          json: () => Promise.resolve(mockAPIState.getEvents(campaignId!).map(event => ({
-            id: `event_${Date.now()}`,
-            campaignId: event.campaignId,
-            stretchGoalId: event.stretchGoalId,
-            eventType: event.type === 'stretch_goal_achieved' ? 'notification_sent' : 'progress',
-            triggeredAt: event.timestamp,
-            data: event
-          })))
+          json: () => Promise.resolve([])
         });
       } else if (url.includes('/analytics')) {
         return Promise.resolve({
           ok: true,
           status: 200,
-          json: () => Promise.resolve(mockAPIState.getAnalytics(campaignId!))
+          json: () => Promise.resolve({
+            totalStretchGoals: 0,
+            achievedCount: 0,
+            averageTimeToAchievement: 0,
+            goalEffectiveness: 0
+          })
         });
       } else if (url.includes('/conversion-rates')) {
         return Promise.resolve({
           ok: true,
           status: 200,
-          json: () => Promise.resolve(mockAPIState.getConversionRates())
-        });
-      } else if (url.match(/\/stretch-goals\/[^\/]+$/)) {
-        // Individual stretch goal
-        const goalId = url.split('/').pop();
-        const goals = mockAPIState.getStretchGoals(campaignId!);
-        const goal = goals.find(g => g.id === goalId);
-        
-        return Promise.resolve({
-          ok: !!goal,
-          status: goal ? 200 : 404,
-          json: () => Promise.resolve(goal || { error: 'Stretch goal not found' })
-        });
-      } else {
-        // List stretch goals
-        return Promise.resolve({
-          ok: true,
-          status: 200,
-          json: () => Promise.resolve(mockAPIState.getStretchGoals(campaignId!))
+          json: () => Promise.resolve({
+            viewersToBackers: 0,
+            stretchGoalMotivation: 0,
+            pledgeIncreaseRate: 0
+          })
         });
       }
+      // Default GET stretch goals
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve([])
+      });
     } else if (method === 'POST') {
       if (url.includes('/milestones')) {
         return Promise.resolve({
@@ -284,51 +132,17 @@ const mockFetch = jest.fn().mockImplementation((url: string, options: any = {}) 
           json: () => Promise.resolve({ message: 'Milestone notification sent' })
         });
       }
-      
-      // Validate stretch goal creation
-      const body = options.body ? JSON.parse(options.body) : {};
-      const campaign = mockAPIState.getCampaign(campaignId!);
-      
-      if (body.targetDollars && body.targetDollars <= (campaign?.fundingGoalDollars || 0)) {
-        return Promise.resolve({
-          ok: false,
-          status: 400,
-          json: () => Promise.resolve({ message: 'Stretch goal target must exceed campaign funding goal' })
-        });
-      }
-      
-      // Check for duplicate amounts
-      const existingGoals = mockAPIState.getStretchGoals(campaignId!);
-      if (body.targetDollars && existingGoals.some(g => g.targetAmountDollars === body.targetDollars)) {
-        return Promise.resolve({
-          ok: false,
-          status: 400,
-          json: () => Promise.resolve({ message: 'Stretch goal amount must be unique for this campaign' })
-        });
-      }
-      
-      // Validate required fields
-      if (!body.title || !body.description || !body.targetDollars) {
-        return Promise.resolve({
-          ok: false,
-          status: 400,
-          json: () => Promise.resolve({ message: 'Invalid input data: validation failed' })
-        });
-      }
-      
+      // Default POST stretch goals
       return Promise.resolve({
         ok: true,
         status: 201,
         json: () => Promise.resolve({
           id: `sg_${Date.now()}`,
-          campaignId: campaignId!,
-          title: body.title,
-          targetDollars: body.targetDollars,
-          targetAmountDollars: body.targetDollars,
-          description: body.description,
+          campaignId: 'test-campaign',
+          title: 'Test Goal',
+          targetDollars: 150000,
           isUnlocked: false,
-          isAchieved: false,
-          order: body.order || 1
+          order: 1
         })
       });
     }
@@ -336,44 +150,35 @@ const mockFetch = jest.fn().mockImplementation((url: string, options: any = {}) 
   
   // Pledge creation
   if (url.includes('/pledge') && method === 'POST') {
-    const body = options.body ? JSON.parse(options.body) : {};
-    const pledge = mockAPIState.addPledge(campaignId!, body.pledgeAmountDollars || 0);
-    
     return Promise.resolve({
       ok: true,
       status: 201,
-      json: () => Promise.resolve(pledge)
+      json: () => Promise.resolve({
+        id: `pledge_${Date.now()}`,
+        campaignId: 'test-campaign',
+        amount: 50000,
+        status: 'completed'
+      })
     });
   }
   
   // Campaign details
-  if (url.includes('/campaigns/') && !url.includes('/stretch-goals') && !url.includes('/pledge') && method === 'GET') {
-    const campaign = mockAPIState.getCampaign(campaignId!);
-    
+  if (url.includes('/campaigns/') && !url.includes('/stretch-goals') && method === 'GET') {
     return Promise.resolve({
-      ok: !!campaign,
-      status: campaign ? 200 : 404,
-      json: () => Promise.resolve(campaign || { error: 'Campaign not found' })
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({
+        id: 'test-campaign',
+        title: 'Test Campaign',
+        totalRaisedDollars: 0,
+        fundingGoalDollars: 100000,
+        status: 'published'
+      })
     });
   }
   
   // Pledge cancellation
   if (url.includes('/cancel') && method === 'POST') {
-    // Extract pledge amount from URL or body and cancel it
-    mockAPIState.cancelPledge(campaignId!, 25000); // Mock cancel $250 pledge
-    
-    return Promise.resolve({
-      ok: true,
-      status: 200,
-      json: () => Promise.resolve({ message: 'Pledge cancelled successfully' })
-    });
-  }
-  
-  // Pledge cancellation via pledges/[id]/cancel route
-  if (url.includes('/pledges/') && url.includes('/cancel') && method === 'POST') {
-    // Extract pledge amount from URL or body and cancel it
-    mockAPIState.cancelPledge(campaignId!, 25000); // Mock cancel $250 pledge
-    
     return Promise.resolve({
       ok: true,
       status: 200,
@@ -463,14 +268,11 @@ describe('Stretch Goals Integration', () => {
   let stretchGoals: StretchGoal[];
 
   beforeAll(async () => {
-    // Create test user with unique email
+    // Create test user
     testUser = await createTestUser({
-      email: `stretch-tester-${Date.now()}@example.com`,
+      email: 'stretch-tester@example.com',
       name: 'Stretch Goal Tester',
     });
-    
-    // Add JWT token for API calls
-    testUser.token = `jwt_${testUser.id}_${Date.now()}`;
 
     // Define stretch goals
     stretchGoals = [
@@ -513,14 +315,12 @@ describe('Stretch Goals Integration', () => {
       fundingGoalDollars: 100000, // $1,000 base goal
       status: 'published',
       endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      totalRaisedDollars: 0,
+      stretchGoals: stretchGoals,
     });
 
     // Update stretch goals with campaign ID
     stretchGoals = stretchGoals.map(sg => ({ ...sg, campaignId: testCampaign.id }));
-    
-    // Setup mock API state
-    mockAPIState.setCampaign(testCampaign.id, testCampaign);
-    mockAPIState.setStretchGoals(testCampaign.id, stretchGoals);
   });
 
   afterAll(async () => {
@@ -529,10 +329,6 @@ describe('Stretch Goals Integration', () => {
 
   beforeEach(() => {
     mockNotifications.clear();
-    mockFetch.mockClear();
-    mockAPIState.reset();
-    mockAPIState.setCampaign(testCampaign.id, testCampaign);
-    mockAPIState.setStretchGoals(testCampaign.id, stretchGoals);
   });
 
   describe('Stretch Goal Achievement', () => {
@@ -581,34 +377,21 @@ describe('Stretch Goals Integration', () => {
     });
 
     it('should trigger multiple stretch goals in sequence', async () => {
-      // First achieve the $1,500 goal
-      await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/pledge`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
-        body: JSON.stringify({
-          campaignId: testCampaign.id,
-          pledgeAmountDollars: 150000,
-          isAnonymous: false,
-          paymentMethodId: 'pm_test_sg1',
-        }),
-      });
-
       // Add more pledges to reach second stretch goal (total $2,000)
+      const additionalPledge = {
+        campaignId: testCampaign.id,
+        pledgeAmountDollars: 50000, // Additional $500 to reach $2,000 total
+        isAnonymous: false,
+        paymentMethodId: 'pm_test_sg2',
+      };
+
       const response = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/pledge`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${testUser.token}`,
         },
-        body: JSON.stringify({
-          campaignId: testCampaign.id,
-          pledgeAmountDollars: 50000, // Additional $500 to reach $2,000 total
-          isAnonymous: false,
-          paymentMethodId: 'pm_test_sg2',
-        }),
+        body: JSON.stringify(additionalPledge),
       });
 
       expect(response.status).toBe(201);
@@ -633,33 +416,30 @@ describe('Stretch Goals Integration', () => {
         fundingGoalDollars: 50000,
         status: 'published',
         endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        stretchGoals: [{
+          targetAmountDollars: 100000, // $1,000
+          title: 'High Threshold Goal',
+          description: 'Goal with high threshold',
+          isAchieved: false,
+          order: 1,
+        }],
       });
 
-      // Setup mock state for threshold campaign
-      mockAPIState.setCampaign(thresholdCampaign.id, thresholdCampaign);
-      mockAPIState.setStretchGoals(thresholdCampaign.id, [{
-        id: 'sg_threshold_123',
-        campaignId: thresholdCampaign.id,
-        targetAmountDollars: 100000,
-        title: 'High Threshold Goal',
-        description: 'Goal with high threshold',
-        isAchieved: false,
-        order: 1,
-      }]);
-
       // Create pledge below threshold
+      const belowThresholdPledge = {
+        campaignId: thresholdCampaign.id,
+        pledgeAmountDollars: 75000, // $750 - below $1,000 threshold
+        isAnonymous: false,
+        paymentMethodId: 'pm_test_below_threshold',
+      };
+
       const response = await fetch(`${API_BASE}/api/campaigns/${thresholdCampaign.id}/pledge`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${testUser.token}`,
         },
-        body: JSON.stringify({
-          campaignId: thresholdCampaign.id,
-          pledgeAmountDollars: 75000, // $750 - below $1,000 threshold
-          isAnonymous: false,
-          paymentMethodId: 'pm_test_below_threshold',
-        }),
+        body: JSON.stringify(belowThresholdPledge),
       });
 
       expect(response.status).toBe(201);
@@ -710,11 +490,8 @@ describe('Stretch Goals Integration', () => {
         fundingGoalDollars: 50000,
         status: 'published',
         endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        stretchGoals: [],
       });
-      
-      // Setup mock state for campaign with no stretch goals
-      mockAPIState.setCampaign(noStretchCampaign.id, noStretchCampaign);
-      mockAPIState.setStretchGoals(noStretchCampaign.id, []);
 
       const progressResponse = await fetch(`${API_BASE}/api/campaigns/${noStretchCampaign.id}/stretch-goals/progress`);
       expect(progressResponse.status).toBe(200);
@@ -733,33 +510,31 @@ describe('Stretch Goals Integration', () => {
         fundingGoalDollars: 50000,
         status: 'published',
         endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        stretchGoals: [{
+          targetAmountDollars: 75000, // $750
+          title: 'Notification Test Goal',
+          description: 'Goal for testing notifications',
+          isAchieved: false,
+          order: 1,
+          enableNotifications: true,
+        }],
       });
 
-      // Setup mock state
-      mockAPIState.setCampaign(notificationCampaign.id, notificationCampaign);
-      mockAPIState.setStretchGoals(notificationCampaign.id, [{
-        id: 'sg_notification_123',
-        campaignId: notificationCampaign.id,
-        targetAmountDollars: 75000,
-        title: 'Notification Test Goal',
-        description: 'Goal for testing notifications',
-        isAchieved: false,
-        order: 1,
-      }]);
-
       // Create pledge that achieves the stretch goal
+      const achievingPledge = {
+        campaignId: notificationCampaign.id,
+        pledgeAmountDollars: 75000, // Exactly hits the stretch goal
+        isAnonymous: false,
+        paymentMethodId: 'pm_test_notification',
+      };
+
       const response = await fetch(`${API_BASE}/api/campaigns/${notificationCampaign.id}/pledge`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${testUser.token}`,
         },
-        body: JSON.stringify({
-          campaignId: notificationCampaign.id,
-          pledgeAmountDollars: 75000, // Exactly hits the stretch goal
-          isAnonymous: false,
-          paymentMethodId: 'pm_test_notification',
-        }),
+        body: JSON.stringify(achievingPledge),
       });
 
       expect(response.status).toBe(201);
@@ -776,6 +551,7 @@ describe('Stretch Goals Integration', () => {
     });
 
     it('should send progress milestone notifications', async () => {
+      // Test 75% progress notifications
       const milestoneResponse = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/stretch-goals/milestones`, {
         method: 'POST',
         headers: {
@@ -793,73 +569,126 @@ describe('Stretch Goals Integration', () => {
   });
 
   describe('Business Rule Enforcement', () => {
+    it('should enforce stretch goal ordering', async () => {
+      const orderTestCampaign = await createTestCampaign({
+        title: 'Order Test Campaign',
+        summary: 'Testing stretch goal order enforcement',
+        fundingGoalDollars: 25000,
+        status: 'published',
+        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        stretchGoals: [
+          {
+            targetAmountDollars: 50000, // $500
+            title: 'First Goal',
+            description: 'Should be achieved first',
+            isAchieved: false,
+            order: 1,
+          },
+          {
+            targetAmountDollars: 30000, // $300 - Lower amount but higher order
+            title: 'Second Goal',
+            description: 'Should not be achieved until first goal is met',
+            isAchieved: false,
+            order: 2,
+          },
+        ],
+      });
+
+      // Create pledge that hits the second goal amount but not first
+      const orderPledge = {
+        campaignId: orderTestCampaign.id,
+        pledgeAmountDollars: 40000, // $400 - between second and first goal amounts
+        isAnonymous: false,
+        paymentMethodId: 'pm_test_order',
+      };
+
+      const response = await fetch(`${API_BASE}/api/campaigns/${orderTestCampaign.id}/pledge`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${testUser.token}`,
+        },
+        body: JSON.stringify(orderPledge),
+      });
+
+      expect(response.status).toBe(201);
+
+      // Check that neither goal is achieved (order enforcement)
+      const stretchGoalsResponse = await fetch(`${API_BASE}/api/campaigns/${orderTestCampaign.id}/stretch-goals`);
+      const achievements = await stretchGoalsResponse.json();
+
+      achievements.forEach((sg: StretchGoal) => {
+        expect(sg.isAchieved).toBe(false);
+      });
+    });
+
     it('should validate stretch goal amounts exceed base goal', async () => {
+      const invalidGoalData = {
+        campaignId: testCampaign.id,
+        targetAmountDollars: 50000, // $500 - less than base goal of $1,000
+        title: 'Invalid Goal',
+        description: 'Goal amount less than base funding goal',
+        order: 99,
+      };
+
       const response = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/stretch-goals`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${testUser.token}`,
         },
-        body: JSON.stringify({
-          campaignId: testCampaign.id,
-          targetDollars: 50000, // $500 - less than base goal of $1,000
-          title: 'Invalid Goal',
-          description: 'Goal amount less than base funding goal',
-          order: 99,
-        }),
+        body: JSON.stringify(invalidGoalData),
       });
 
       expect(response.status).toBe(400);
       
       const error = await response.json();
-      expect(error.message).toContain('Stretch goal target must exceed campaign funding goal');
+      expect(error.message).toContain('stretch goal amount must exceed base funding goal');
     });
 
     it('should prevent duplicate stretch goal amounts', async () => {
+      const duplicateGoalData = {
+        campaignId: testCampaign.id,
+        targetAmountDollars: 150000, // Same as existing first stretch goal
+        title: 'Duplicate Amount Goal',
+        description: 'Goal with duplicate target amount',
+        order: 99,
+      };
+
       const response = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/stretch-goals`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${testUser.token}`,
         },
-        body: JSON.stringify({
-          campaignId: testCampaign.id,
-          targetDollars: 150000, // Same as existing first stretch goal
-          title: 'Duplicate Amount Goal',
-          description: 'Goal with duplicate target amount',
-          order: 99,
-        }),
+        body: JSON.stringify(duplicateGoalData),
       });
 
       expect(response.status).toBe(400);
       
       const error = await response.json();
-      expect(error.message).toEqual('Stretch goal amount must be unique for this campaign');
+      expect(error.message).toContain('stretch goal amount must be unique');
     });
   });
 
   describe('Cancellation Impact on Stretch Goals', () => {
     it('should unachieve stretch goals when pledges are cancelled', async () => {
-      // Create campaign with cancellation enabled
+      // Create campaign with achieved stretch goal
       const cancellationCampaign = await createTestCampaign({
         title: 'Cancellation Impact Campaign',
         summary: 'Testing stretch goal cancellation impact',
         fundingGoalDollars: 50000,
         status: 'published',
         endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        allowCancellations: true,
+        stretchGoals: [{
+          targetAmountDollars: 75000, // $750
+          title: 'Fragile Goal',
+          description: 'Goal that can be unachieved',
+          isAchieved: false,
+          order: 1,
+        }],
       });
-
-      // Setup mock state
-      mockAPIState.setCampaign(cancellationCampaign.id, cancellationCampaign);
-      mockAPIState.setStretchGoals(cancellationCampaign.id, [{
-        id: 'sg_cancel_123',
-        campaignId: cancellationCampaign.id,
-        targetAmountDollars: 75000,
-        title: 'Fragile Goal',
-        description: 'Goal that can be unachieved',
-        isAchieved: false,
-        order: 1,
-      }]);
 
       // Create pledges that achieve the goal
       const achievingPledges = [
@@ -906,7 +735,7 @@ describe('Stretch Goals Integration', () => {
         }),
       });
 
-      expect([200, 201]).toContain(cancellationResponse.status);
+      expect(cancellationResponse.status).toBe(200);
 
       // Verify goal is now unachieved
       stretchGoalsResponse = await fetch(`${API_BASE}/api/campaigns/${cancellationCampaign.id}/stretch-goals`);
@@ -922,28 +751,22 @@ describe('Stretch Goals Integration', () => {
         fundingGoalDollars: 50000,
         status: 'published',
         endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        allowCancellations: true,
+        stretchGoals: [
+          {
+            targetAmountDollars: 100000, // $1,000
+            title: 'First Cascade Goal',
+            isAchieved: false,
+            order: 1,
+          },
+          {
+            targetAmountDollars: 150000, // $1,500
+            title: 'Second Cascade Goal',
+            isAchieved: false,
+            order: 2,
+          },
+        ],
       });
-
-      // Setup mock state
-      mockAPIState.setCampaign(cascadeCampaign.id, cascadeCampaign);
-      mockAPIState.setStretchGoals(cascadeCampaign.id, [
-        {
-          id: 'sg_cascade_1',
-          campaignId: cascadeCampaign.id,
-          targetAmountDollars: 100000,
-          title: 'First Cascade Goal',
-          isAchieved: false,
-          order: 1,
-        },
-        {
-          id: 'sg_cascade_2',
-          campaignId: cascadeCampaign.id,
-          targetAmountDollars: 150000,
-          title: 'Second Cascade Goal',
-          isAchieved: false,
-          order: 2,
-        }
-      ]);
 
       // Create large pledge that achieves both goals
       const largePledgeResponse = await fetch(`${API_BASE}/api/campaigns/${cascadeCampaign.id}/pledge`, {
@@ -980,7 +803,7 @@ describe('Stretch Goals Integration', () => {
         }),
       });
 
-      expect([200, 201]).toContain(cancellationResponse.status);
+      expect(cancellationResponse.status).toBe(200);
 
       // Verify both goals are now unachieved
       stretchGoalsResponse = await fetch(`${API_BASE}/api/campaigns/${cascadeCampaign.id}/stretch-goals`);
@@ -1018,18 +841,13 @@ describe('Stretch Goals Integration', () => {
         fundingGoalDollars: 50000,
         status: 'published',
         endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        stretchGoals: [{
+          targetAmountDollars: 75000, // $750
+          title: 'Concurrent Goal',
+          isAchieved: false,
+          order: 1,
+        }],
       });
-
-      // Setup mock state
-      mockAPIState.setCampaign(concurrentCampaign.id, concurrentCampaign);
-      mockAPIState.setStretchGoals(concurrentCampaign.id, [{
-        id: 'sg_concurrent_123',
-        campaignId: concurrentCampaign.id,
-        targetAmountDollars: 75000,
-        title: 'Concurrent Goal',
-        isAchieved: false,
-        order: 1,
-      }]);
 
       // Create multiple concurrent pledges
       const concurrentPledges = [
@@ -1065,17 +883,19 @@ describe('Stretch Goals Integration', () => {
     });
 
     it('should handle malformed stretch goal data', async () => {
+      const malformedData = {
+        // Missing required fields
+        campaignId: testCampaign.id,
+        title: 'Malformed Goal',
+      };
+
       const response = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/stretch-goals`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${testUser.token}`,
         },
-        body: JSON.stringify({
-          // Missing required fields
-          campaignId: testCampaign.id,
-          title: 'Malformed Goal',
-        }),
+        body: JSON.stringify(malformedData),
       });
 
       expect(response.status).toBe(400);

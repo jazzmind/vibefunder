@@ -7,8 +7,8 @@ import { z } from 'zod';
 const updatePledgeSchema = z.object({
   pledgeAmountDollars: z.number().min(1, 'Pledge amount must be at least $1').optional(),
   amountDollars: z.number().min(1, 'Pledge amount must be at least $1').optional(),
-  pledgeTierId: z.string().optional(),
-  rewardTierId: z.string().optional(), // Legacy support
+  pledgeTierId: z.string().nullable().optional(),
+  rewardTierId: z.string().nullable().optional(), // Legacy support
   message: z.string().max(500).optional(),
   isAnonymous: z.boolean().optional(),
   shippingAddress: z.object({
@@ -18,7 +18,7 @@ const updatePledgeSchema = z.object({
     state: z.string(),
     postal_code: z.string(),
     country: z.string(),
-  }).optional(),
+  }).nullable().optional(),
   paymentMethodId: z.string().optional(),
 });
 
@@ -133,7 +133,7 @@ export async function PUT(
     if (updateData.pledgeAmountDollars && !updateData.amountDollars) {
       updateData.amountDollars = updateData.pledgeAmountDollars;
     }
-    if (updateData.rewardTierId && !updateData.pledgeTierId) {
+    if (updateData.rewardTierId !== undefined && updateData.pledgeTierId === undefined) {
       updateData.pledgeTierId = updateData.rewardTierId;
     }
 
@@ -186,6 +186,24 @@ export async function PUT(
         { success: false, error: 'Campaign has ended' },
         { status: 400 }
       );
+    }
+
+    // Auto-remove pledge tier if amount is too low for any tier
+    if (updateData.amountDollars && updateData.pledgeTierId === undefined) {
+      const availableTiers = await prisma.pledgeTier.findMany({
+        where: {
+          campaignId: campaignId,
+          isActive: true
+        },
+        orderBy: { amountDollars: 'asc' }
+      });
+      
+      const lowestTierAmount = availableTiers.length > 0 ? availableTiers[0].amountDollars : null;
+      
+      // If new amount is below the lowest tier, remove the tier
+      if (lowestTierAmount && updateData.amountDollars < lowestTierAmount) {
+        updateData.pledgeTierId = null;
+      }
     }
 
     // Validate pledge tier if being updated

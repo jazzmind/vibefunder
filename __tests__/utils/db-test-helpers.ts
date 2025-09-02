@@ -60,11 +60,10 @@ export async function createDbTestPledgeTier(
   data?: Partial<Prisma.PledgeTierCreateInput>
 ) {
   const tierData: Prisma.PledgeTierCreateInput = {
-    name: data?.name || 'Test Tier',
+    title: data?.title || data?.name || 'Test Tier',
     description: data?.description || 'Test tier description',
     amountDollars: data?.amountDollars || 100,
-    stockLimit: data?.stockLimit || 100,
-    stockClaimed: data?.stockClaimed || 0,
+    benefits: data?.benefits || [],
     campaign: {
       connect: { id: campaignId }
     },
@@ -111,6 +110,9 @@ export async function cleanupDbTestData() {
 
     // Delete pledge tiers
     await prisma.pledgeTier.deleteMany({});
+    
+    // Delete milestones
+    await prisma.milestone.deleteMany({});
 
     // Delete campaigns with test pattern
     await prisma.campaign.deleteMany({

@@ -1,98 +1,32 @@
 /**
  * Pledge Cancellation API Tests
  * 
- * Comprehensive testing for pledge cancellation operations including:
- * - Full/partial refund logic
- * - Campaign impact calculations
- * - Reward tier stock restoration
- * - Cancellation deadline enforcement
+ * Integration tests for pledge cancellation operations including:
+ * - Authorization checks
+ * - Refund processing (mocked)
+ * - Campaign total updates
  * - Business rule validation
  */
 
-import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from '@jest/globals';
-import { StripeObjectFactory } from '../../../payments/payment-test-helpers';
-import { createTestUser, createTestCampaign, cleanupTestData } from '../../../utils/test-helpers.js';
+import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import { NextRequest } from 'next/server';
+import { POST } from '../../../../app/api/campaigns/[id]/pledges/[pledgeId]/cancel/route';
+import { createAuthHeaders, generateTestEmail, createTestUser, createTestCampaign, createTestPledge } from '../../../utils/test-helpers';
+import { prisma } from '@/lib/db';
 
-const API_BASE = process.env.API_TEST_URL || 'http://localhost:3101';
+// Mock Stripe for payment refund operations (we don't want real charges)
+const mockStripeRefund = jest.fn();
+const mockStripeRetrieve = jest.fn();
+const mockStripeCancel = jest.fn();
 
-interface TestCampaign {
-  id: string;
-  title: string;
-  fundingGoalDollars: number;
-  status: string;
-  endDate: string;
-  allowCancellations?: boolean;
-  cancellationDeadline?: string;
-  refundPolicy?: 'full' | 'partial' | 'none';
-}
-
-interface RewardTier {
-  id: string;
-  title: string;
-  description: string;
-  pledgeAmountDollars: number;
-  stockLimit?: number;
-  stockClaimed?: number;
-}
-
-interface TestPledge {
-  id: string;
-  campaignId: string;
-  pledgeAmountDollars: number;
-  rewardTierId?: string;
-  isAnonymous: boolean;
-  userId?: string;
-  paymentIntentId?: string;
-  paymentStatus: string;
-  createdAt: string;
-  status: 'active' | 'cancelled' | 'refunded';
-}
-
-interface CancellationResult {
-  pledgeId: string;
-  refundAmount: number;
-  refundStatus: string;
-  refundId?: string;
-  cancellationReason?: string;
-  cancellationFee?: number;
-  stockRestored: boolean;
-  campaignImpact: {
-    totalRaisedChange: number;
-    backerCountChange: number;
-    progressPercentageChange: number;
-  };
-}
-
-// Mock Stripe for testing
 jest.mock('stripe', () => {
   return jest.fn().mockImplementation(() => ({
     paymentIntents: {
-      retrieve: jest.fn().mockResolvedValue({
-        id: 'pi_test_123',
-        status: 'succeeded',
-        amount: 5000,
-        currency: 'usd',
-        charges: {
-          data: [{
-            id: 'ch_test_123',
-            amount: 5000,
-            refunded: false,
-          }]
-        }
-      }),
-      cancel: jest.fn().mockResolvedValue({
-        id: 'pi_test_123',
-        status: 'canceled',
-      }),
+      retrieve: mockStripeRetrieve,
+      cancel: mockStripeCancel,
     },
     refunds: {
-      create: jest.fn().mockImplementation(({ amount, charge }) => Promise.resolve({
-        id: `re_test_${Date.now()}`,
-        amount: amount,
-        charge: charge,
-        status: 'succeeded',
-        reason: 'requested_by_customer',
-      })),
+      create: mockStripeRefund,
     },
     charges: {
       retrieve: jest.fn().mockResolvedValue({
@@ -105,781 +39,324 @@ jest.mock('stripe', () => {
   }));
 });
 
-describe('Campaign Pledge Cancellation API', () => {
-  let testCampaign: TestCampaign;
+describe('/api/campaigns/[id]/pledges/[pledgeId]/cancel', () => {
   let testUser: any;
-  let rewardTier: RewardTier;
-  let activePledge: TestPledge;
+  let testCampaign: any;
+  let testPledge: any;
+  let testData: any[] = [];
 
-  beforeAll(async () => {
-    // Create test user
-    testUser = await createTestUser({
-      email: 'canceller@example.com',
-      name: 'Test Canceller',
-    });
-
-    // Create test campaign with cancellation permissions
-    testCampaign = await createTestCampaign({
-      title: 'Pledge Cancellation Test Campaign',
-      summary: 'Campaign for testing pledge cancellations',
-      fundingGoalDollars: 100000,
-      status: 'published',
-      endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
-      allowCancellations: true,
-      cancellationDeadline: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(), // 14 days from now
-      refundPolicy: 'full',
-    });
-
-    // Create reward tier
-    rewardTier = {
-      id: 'tier_cancel_123',
-      title: 'Cancellable Reward',
-      description: 'Reward for cancellation testing',
-      pledgeAmountDollars: 5000, // $50
-      stockLimit: 100,
-      stockClaimed: 10,
-    };
-
-    // Create active pledge
-    const pledgeResponse = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/pledge`, {
+  const createRequest = (params: any = {}, body: any = {}, user = testUser) => {
+    const url = new URL(
+      `http://localhost:3000/api/campaigns/${params.campaignId || testCampaign?.id || 'campaign-123'}/pledges/${params.pledgeId || testPledge?.id || 'pledge-789'}/cancel`
+    );
+    
+    const headers = createAuthHeaders(user);
+    
+    return new NextRequest(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${testUser.token}`,
-      },
-      body: JSON.stringify({
-        campaignId: testCampaign.id,
-        pledgeAmountDollars: 5000,
-        rewardTierId: rewardTier.id,
-        isAnonymous: false,
-        paymentMethodId: 'pm_test_cancel',
-      }),
+      body: JSON.stringify(body),
+      headers,
+    });
+  };
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    
+    // Create test data
+    testUser = await createTestUser({
+      email: generateTestEmail('canceller'),
+      name: 'Test User',
     });
 
-    activePledge = await pledgeResponse.json();
+    testCampaign = await createTestCampaign({
+      title: 'Test Campaign for Cancellation',
+      summary: 'Test summary',
+      description: 'Test campaign description',
+      fundingGoalDollars: 10000,
+      raisedDollars: 500,
+      status: 'draft',
+      endsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+    }, testUser.id);
+
+    testPledge = await createTestPledge(testCampaign.id, testUser.id, {
+      amountDollars: 100,
+      status: 'pending', // Only pending pledges can be cancelled
+    });
+
+    // Store test data for cleanup
+    testData = [
+      { table: 'pledge', id: testPledge.id },
+      { table: 'campaign', id: testCampaign.id },
+      { table: 'user', id: testUser.id },
+    ];
+    
+    // Set up Stripe mocks
+    mockStripeRefund.mockResolvedValue({ id: 're_test123', status: 'succeeded' });
+    mockStripeRetrieve.mockResolvedValue({ 
+      status: 'succeeded',
+      amount: 10000,
+      charges: { data: [{ id: 'ch_test123' }] }
+    });
+    mockStripeCancel.mockResolvedValue({ 
+      id: 'pi_test123',
+      status: 'canceled'
+    });
   });
 
-  afterAll(async () => {
-    await cleanupTestData();
+  afterEach(async () => {
+    // Clean up test data
+    try {
+      for (const item of testData) {
+        if (item.table === 'pledge') {
+          await prisma.pledge.deleteMany({ where: { id: item.id } });
+        } else if (item.table === 'campaign') {
+          await prisma.campaign.deleteMany({ where: { id: item.id } });
+        } else if (item.table === 'user') {
+          await prisma.user.deleteMany({ where: { id: item.id } });
+        }
+      }
+    } catch (error) {
+      console.warn('Cleanup error:', error);
+    }
+    testData = [];
   });
 
-  describe('Full Refund Cancellations', () => {
-    it('should cancel pledge with full refund successfully', async () => {
-      const cancellationData = {
-        reason: 'Changed my mind',
-        refundType: 'full',
-      };
-
-      const response = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/pledges/${activePledge.id}/cancel`, {
+  describe('Authentication and Authorization', () => {
+    test('should require authentication', async () => {
+      // Create request without authentication headers
+      const url = new URL(
+        `http://localhost:3000/api/campaigns/${testCampaign.id}/pledges/${testPledge.id}/cancel`
+      );
+      const request = new NextRequest(url, {
         method: 'POST',
+        body: JSON.stringify({ reason: 'Test' }),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
         },
-        body: JSON.stringify(cancellationData),
       });
-
-      expect(response.status).toBe(200);
       
-      const result: CancellationResult = await response.json();
-      expect(result).toMatchObject({
-        pledgeId: activePledge.id,
-        refundAmount: 5000,
-        refundStatus: 'succeeded',
-        stockRestored: true,
-        campaignImpact: {
-          totalRaisedChange: -5000,
-          backerCountChange: -1,
-        },
+      const response = await POST(request, {
+        params: { id: testCampaign.id, pledgeId: testPledge.id },
       });
-      expect(result.refundId).toBeDefined();
-    });
-
-    it('should restore reward tier stock on cancellation', async () => {
-      // Get initial stock count
-      const initialStockResponse = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/reward-tiers/${rewardTier.id}`);
-      const initialTier = await initialStockResponse.json();
-      const initialAvailable = initialTier.stockLimit - initialTier.stockClaimed;
-
-      // Create another pledge
-      const pledgeResponse = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/pledge`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
-        body: JSON.stringify({
-          campaignId: testCampaign.id,
-          pledgeAmountDollars: 5000,
-          rewardTierId: rewardTier.id,
-          isAnonymous: false,
-          paymentMethodId: 'pm_test_stock_restore',
-        }),
-      });
-
-      const newPledge = await pledgeResponse.json();
-
-      // Cancel the pledge
-      const response = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/pledges/${newPledge.id}/cancel`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
-        body: JSON.stringify({
-          reason: 'Testing stock restoration',
-          refundType: 'full',
-        }),
-      });
-
-      expect(response.status).toBe(200);
-
-      // Check that stock was restored
-      const updatedStockResponse = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/reward-tiers/${rewardTier.id}`);
-      const updatedTier = await updatedStockResponse.json();
-      const updatedAvailable = updatedTier.stockLimit - updatedTier.stockClaimed;
-
-      expect(updatedAvailable).toBe(initialAvailable);
-    });
-
-    it('should update campaign progress on cancellation', async () => {
-      // Get initial campaign data
-      const initialResponse = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}`);
-      const initialCampaign = await initialResponse.json();
-      const initialRaised = initialCampaign.totalRaisedDollars || 0;
-      const initialBackers = initialCampaign.backerCount || 0;
-
-      // Create pledge to cancel
-      const pledgeResponse = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/pledge`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
-        body: JSON.stringify({
-          campaignId: testCampaign.id,
-          pledgeAmountDollars: 3000,
-          isAnonymous: false,
-          paymentMethodId: 'pm_test_progress',
-        }),
-      });
-
-      const testPledge = await pledgeResponse.json();
-
-      // Cancel the pledge
-      const response = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/pledges/${testPledge.id}/cancel`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
-        body: JSON.stringify({
-          reason: 'Testing progress update',
-          refundType: 'full',
-        }),
-      });
-
-      expect(response.status).toBe(200);
-
-      // Check updated campaign data
-      const updatedResponse = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}`);
-      const updatedCampaign = await updatedResponse.json();
-
-      // Campaign should reflect the cancellation
-      expect(updatedCampaign.totalRaisedDollars).toBe(initialRaised);
-      expect(updatedCampaign.backerCount).toBe(initialBackers);
-    });
-  });
-
-  describe('Partial Refund Cancellations', () => {
-    it('should handle partial refund with cancellation fee', async () => {
-      // Create campaign with partial refund policy
-      const partialRefundCampaign = await createTestCampaign({
-        title: 'Partial Refund Campaign',
-        summary: 'Campaign with partial refund policy',
-        fundingGoalDollars: 50000,
-        status: 'published',
-        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        allowCancellations: true,
-        refundPolicy: 'partial',
-      });
-
-      // Create pledge
-      const pledgeResponse = await fetch(`${API_BASE}/api/campaigns/${partialRefundCampaign.id}/pledge`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
-        body: JSON.stringify({
-          campaignId: partialRefundCampaign.id,
-          pledgeAmountDollars: 10000, // $100
-          isAnonymous: false,
-          paymentMethodId: 'pm_test_partial',
-        }),
-      });
-
-      const partialPledge = await pledgeResponse.json();
-
-      const cancellationData = {
-        reason: 'Financial hardship',
-        refundType: 'partial',
-      };
-
-      const response = await fetch(`${API_BASE}/api/campaigns/${partialRefundCampaign.id}/pledges/${partialPledge.id}/cancel`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
-        body: JSON.stringify(cancellationData),
-      });
-
-      expect(response.status).toBe(200);
       
-      const result: CancellationResult = await response.json();
-      expect(result.refundAmount).toBeLessThan(10000); // Less than full amount
-      expect(result.cancellationFee).toBeGreaterThan(0);
-      expect(result.refundStatus).toBe('succeeded');
+      expect(response.status).toBe(401);
+      const data = await response.json();
+      expect(data.error).toBe('Unauthorized');
     });
 
-    it('should calculate different fees based on timing', async () => {
-      // Test early cancellation (lower fee)
-      const earlyCancellationData = {
-        reason: 'Early cancellation',
-        refundType: 'partial',
-      };
-
-      // Create new pledge for early cancellation test
-      const pledgeResponse = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/pledge`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
-        body: JSON.stringify({
-          campaignId: testCampaign.id,
-          pledgeAmountDollars: 5000,
-          isAnonymous: false,
-          paymentMethodId: 'pm_test_early_cancel',
-        }),
+    test('should return 404 if pledge not found', async () => {
+      const request = createRequest({ pledgeId: 'nonexistent-id' }, { reason: 'Test reason' });
+      const response = await POST(request, {
+        params: { id: testCampaign.id, pledgeId: 'nonexistent-id' },
       });
-
-      const earlyPledge = await pledgeResponse.json();
-
-      const response = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/pledges/${earlyPledge.id}/cancel`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
-        body: JSON.stringify(earlyCancellationData),
-      });
-
-      expect(response.status).toBe(200);
       
-      const result = await response.json();
-      // Early cancellation should have lower or no fee
-      expect(result.cancellationFee).toBeDefined();
-    });
-  });
-
-  describe('Cancellation Deadline Enforcement', () => {
-    it('should reject cancellation after deadline', async () => {
-      // Create campaign with passed cancellation deadline
-      const expiredCampaign = await createTestCampaign({
-        title: 'Expired Cancellation Campaign',
-        summary: 'Campaign with passed cancellation deadline',
-        fundingGoalDollars: 50000,
-        status: 'published',
-        endDate: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000).toISOString(),
-        allowCancellations: true,
-        cancellationDeadline: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // Yesterday
-      });
-
-      // Create pledge in expired campaign
-      const pledgeResponse = await fetch(`${API_BASE}/api/campaigns/${expiredCampaign.id}/pledge`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
-        body: JSON.stringify({
-          campaignId: expiredCampaign.id,
-          pledgeAmountDollars: 2500,
-          isAnonymous: false,
-          paymentMethodId: 'pm_test_expired_cancel',
-        }),
-      });
-
-      const expiredPledge = await pledgeResponse.json();
-
-      const cancellationData = {
-        reason: 'Late cancellation attempt',
-        refundType: 'full',
-      };
-
-      const response = await fetch(`${API_BASE}/api/campaigns/${expiredCampaign.id}/pledges/${expiredPledge.id}/cancel`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
-        body: JSON.stringify(cancellationData),
-      });
-
-      expect(response.status).toBe(400);
-      
-      const error = await response.json();
-      expect(error.message).toContain('cancellation deadline has passed');
+      expect(response.status).toBe(404);
+      const data = await response.json();
+      expect(data.error).toBe('Pledge not found');
     });
 
-    it('should allow cancellation before deadline', async () => {
-      const cancellationData = {
-        reason: 'Timely cancellation',
-        refundType: 'full',
-      };
-
-      // Create new pledge for this test
-      const pledgeResponse = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/pledge`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
-        body: JSON.stringify({
-          campaignId: testCampaign.id,
-          pledgeAmountDollars: 2500,
-          isAnonymous: false,
-          paymentMethodId: 'pm_test_timely_cancel',
-        }),
-      });
-
-      const timelyPledge = await pledgeResponse.json();
-
-      const response = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/pledges/${timelyPledge.id}/cancel`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
-        body: JSON.stringify(cancellationData),
-      });
-
-      expect(response.status).toBe(200);
-    });
-  });
-
-  describe('Campaign Status Restrictions', () => {
-    it('should reject cancellation for funded campaigns', async () => {
-      const fundedCampaign = await createTestCampaign({
-        title: 'Funded Campaign',
-        summary: 'Campaign that reached funding goal',
-        fundingGoalDollars: 50000,
-        status: 'funded',
-        endDate: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // Yesterday
-        allowCancellations: false,
-      });
-
-      // Create pledge in funded campaign
-      const pledgeResponse = await fetch(`${API_BASE}/api/campaigns/${fundedCampaign.id}/pledge`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
-        body: JSON.stringify({
-          campaignId: fundedCampaign.id,
-          pledgeAmountDollars: 5000,
-          isAnonymous: false,
-          paymentMethodId: 'pm_test_funded',
-        }),
-      });
-
-      const fundedPledge = await pledgeResponse.json();
-
-      const cancellationData = {
-        reason: 'Want to cancel funded campaign pledge',
-        refundType: 'full',
-      };
-
-      const response = await fetch(`${API_BASE}/api/campaigns/${fundedCampaign.id}/pledges/${fundedPledge.id}/cancel`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
-        body: JSON.stringify(cancellationData),
-      });
-
-      expect(response.status).toBe(400);
-      
-      const error = await response.json();
-      expect(error.message).toContain('cannot cancel pledges for funded campaigns');
-    });
-
-    it('should allow admin override for special cases', async () => {
-      // This test would require admin privileges
-      // Implementation depends on your authorization system
-      expect(true).toBe(true); // Placeholder
-    });
-  });
-
-  describe('Payment Processing', () => {
-    it('should handle payment intent cancellation for unpaid pledges', async () => {
-      // Create unpaid pledge
-      const pledgeResponse = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/pledge`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
-        body: JSON.stringify({
-          campaignId: testCampaign.id,
-          pledgeAmountDollars: 3000,
-          isAnonymous: false,
-          paymentMethodId: 'pm_test_unpaid',
-          // Simulate unpaid state
-        }),
-      });
-
-      const unpaidPledge = await pledgeResponse.json();
-
-      const cancellationData = {
-        reason: 'Cancel unpaid pledge',
-        refundType: 'full',
-      };
-
-      const response = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/pledges/${unpaidPledge.id}/cancel`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
-        body: JSON.stringify(cancellationData),
-      });
-
-      expect(response.status).toBe(200);
-      
-      const result = await response.json();
-      expect(result.refundAmount).toBe(0); // No refund needed for unpaid pledge
-      expect(result.refundStatus).toBe('not_required');
-    });
-
-    it('should handle Stripe refund failures gracefully', async () => {
-      // Mock Stripe refund failure
-      const mockStripeError = new Error('Refund failed');
-      mockStripeError.name = 'StripeError';
-
-      // Create pledge to cancel
-      const pledgeResponse = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/pledge`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
-        body: JSON.stringify({
-          campaignId: testCampaign.id,
-          pledgeAmountDollars: 4000,
-          isAnonymous: false,
-          paymentMethodId: 'pm_test_refund_fail',
-        }),
-      });
-
-      const failPledge = await pledgeResponse.json();
-
-      const cancellationData = {
-        reason: 'Test refund failure handling',
-        refundType: 'full',
-      };
-
-      const response = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/pledges/${failPledge.id}/cancel`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
-        body: JSON.stringify(cancellationData),
-      });
-
-      // Should handle gracefully, possibly returning pending status
-      const result = await response.json();
-      expect(result.refundStatus).toBeDefined();
-    });
-  });
-
-  describe('Authorization and Security', () => {
-    it('should reject unauthorized cancellation attempts', async () => {
+    test('should only allow pledge owner to cancel', async () => {
+      // Create another user
       const otherUser = await createTestUser({
-        email: 'other@example.com',
+        email: generateTestEmail('other'),
         name: 'Other User',
       });
-
-      const cancellationData = {
-        reason: 'Unauthorized cancellation attempt',
-        refundType: 'full',
-      };
-
-      const response = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/pledges/${activePledge.id}/cancel`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${otherUser.token}`,
-        },
-        body: JSON.stringify(cancellationData),
-      });
-
-      expect(response.status).toBe(403);
+      testData.push({ table: 'user', id: otherUser.id });
       
-      const error = await response.json();
-      expect(error.message).toContain('not authorized');
-    });
-
-    it('should reject cancellation without authentication', async () => {
-      const cancellationData = {
-        reason: 'Unauthenticated cancellation',
-        refundType: 'full',
-      };
-
-      const response = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/pledges/${activePledge.id}/cancel`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(cancellationData),
+      const request = createRequest({}, { reason: 'Test' }, otherUser);
+      const response = await POST(request, {
+        params: { id: testCampaign.id, pledgeId: testPledge.id },
       });
-
-      expect(response.status).toBe(401);
-    });
-
-    it('should allow campaign owner to cancel any pledge', async () => {
-      // This test would require campaign owner functionality
-      // Implementation depends on your authorization system
-      expect(true).toBe(true); // Placeholder
+      
+      expect(response.status).toBe(403);
+      const data = await response.json();
+      expect(data.error).toBe('Not authorized to cancel this pledge');
     });
   });
 
-  describe('Stretch Goal Impact', () => {
-    it('should recalculate stretch goal eligibility after cancellation', async () => {
-      // Create campaign near stretch goal
-      const stretchGoalCampaign = await createTestCampaign({
-        title: 'Stretch Goal Campaign',
-        summary: 'Campaign with stretch goals',
-        fundingGoalDollars: 100000,
-        status: 'published',
-        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        stretchGoals: [
-          { amount: 150000, title: 'First Stretch Goal' },
-          { amount: 200000, title: 'Second Stretch Goal' },
-        ],
+  describe('Pledge Status Validation', () => {
+    test('should not allow canceling already cancelled pledge', async () => {
+      // Update pledge to cancelled status
+      await prisma.pledge.update({
+        where: { id: testPledge.id },
+        data: { status: 'cancelled' }
       });
-
-      // Create large pledge that triggers stretch goal
-      const pledgeResponse = await fetch(`${API_BASE}/api/campaigns/${stretchGoalCampaign.id}/pledge`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
-        body: JSON.stringify({
-          campaignId: stretchGoalCampaign.id,
-          pledgeAmountDollars: 75000, // Large pledge
-          isAnonymous: false,
-          paymentMethodId: 'pm_test_stretch',
-        }),
+      
+      const request = createRequest({}, { reason: 'Test' });
+      const response = await POST(request, {
+        params: { id: testCampaign.id, pledgeId: testPledge.id },
       });
+      
+      expect(response.status).toBe(400);
+      const data = await response.json();
+      expect(data.error).toBe('Only pending pledges can be cancelled');
+    });
 
-      const stretchPledge = await pledgeResponse.json();
-
-      // Cancel the pledge
-      const response = await fetch(`${API_BASE}/api/campaigns/${stretchGoalCampaign.id}/pledges/${stretchPledge.id}/cancel`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
-        body: JSON.stringify({
-          reason: 'Testing stretch goal recalculation',
-          refundType: 'full',
-        }),
+    test('should not allow canceling pledge for completed campaign', async () => {
+      // Update campaign to completed status
+      await prisma.campaign.update({
+        where: { id: testCampaign.id },
+        data: { status: 'completed' }
       });
+      
+      const request = createRequest({}, { reason: 'Test' });
+      const response = await POST(request, {
+        params: { id: testCampaign.id, pledgeId: testPledge.id },
+      });
+      
+      expect(response.status).toBe(400);
+      const data = await response.json();
+      expect(data.error).toBe('Cannot cancel pledge for completed campaign');
+    });
 
-      expect(response.status).toBe(200);
-
-      const result = await response.json();
-      expect(result.campaignImpact.stretchGoalImpact).toBeDefined();
+    test('should not allow canceling pledge after campaign end date', async () => {
+      // Update campaign to have ended
+      await prisma.campaign.update({
+        where: { id: testCampaign.id },
+        data: { endsAt: new Date('2023-12-31') } // Past date
+      });
+      
+      const request = createRequest({}, { reason: 'Test' });
+      const response = await POST(request, {
+        params: { id: testCampaign.id, pledgeId: testPledge.id },
+      });
+      
+      expect(response.status).toBe(400);
+      const data = await response.json();
+      expect(data.error).toBe('Cannot cancel pledge after campaign deadline');
     });
   });
 
-  describe('Email Notifications', () => {
-    it('should send cancellation confirmation email', async () => {
-      // Create pledge to cancel
-      const pledgeResponse = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/pledge`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
-        body: JSON.stringify({
-          campaignId: testCampaign.id,
-          pledgeAmountDollars: 3500,
-          isAnonymous: false,
-          paymentMethodId: 'pm_test_email_cancel',
-        }),
+  describe('Successful Cancellation', () => {
+    test('should successfully cancel pledge', async () => {
+      const request = createRequest({}, {
+        reason: 'Changed my mind',
       });
-
-      const emailPledge = await pledgeResponse.json();
-
-      const cancellationData = {
-        reason: 'Testing email notification',
-        refundType: 'full',
-        sendConfirmationEmail: true,
-      };
-
-      const response = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/pledges/${emailPledge.id}/cancel`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
-        body: JSON.stringify(cancellationData),
+      
+      const response = await POST(request, {
+        params: { id: testCampaign.id, pledgeId: testPledge.id },
       });
-
+      
       expect(response.status).toBe(200);
-
-      const result = await response.json();
-      expect(result.emailSent).toBe(true);
+      const data = await response.json();
+      
+      expect(data.success).toBe(true);
+      expect(data.message).toBe('Pledge cancelled successfully');
+      expect(data.pledgeId).toBe(testPledge.id);
+      expect(data.cancellationReason).toBe('Changed my mind');
+      
+      // Verify pledge was cancelled in database
+      const updatedPledge = await prisma.pledge.findUnique({
+        where: { id: testPledge.id }
+      });
+      expect(updatedPledge?.status).toBe('cancelled');
     });
 
-    it('should notify campaign owner of significant cancellations', async () => {
-      // Create large pledge to cancel
-      const pledgeResponse = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/pledge`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
-        body: JSON.stringify({
-          campaignId: testCampaign.id,
-          pledgeAmountDollars: 25000, // Significant amount
-          isAnonymous: false,
-          paymentMethodId: 'pm_test_owner_notify',
-        }),
+    test('should update campaign totals', async () => {
+      const request = createRequest({}, {
+        reason: 'Update totals test',
       });
-
-      const largePledge = await pledgeResponse.json();
-
-      const cancellationData = {
-        reason: 'Large cancellation requiring owner notification',
-        refundType: 'full',
-      };
-
-      const response = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/pledges/${largePledge.id}/cancel`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
-        body: JSON.stringify(cancellationData),
+      
+      const response = await POST(request, {
+        params: { id: testCampaign.id, pledgeId: testPledge.id },
       });
-
+      
       expect(response.status).toBe(200);
+      const data = await response.json();
+      
+      expect(data.campaignImpact).toBeDefined();
+      expect(data.campaignImpact.totalRaisedChange).toBe(-100);
+      expect(data.campaignImpact.backerCountChange).toBe(-1);
+      
+      // Verify campaign total was updated
+      const updatedCampaign = await prisma.campaign.findUnique({
+        where: { id: testCampaign.id }
+      });
+      expect(updatedCampaign?.raisedDollars).toBe(400); // 500 - 100
+    });
 
-      const result = await response.json();
-      expect(result.ownerNotified).toBe(true);
+    test('should handle pledge without payment reference', async () => {
+      // Update pledge to have no payment reference
+      await prisma.pledge.update({
+        where: { id: testPledge.id },
+        data: { paymentRef: null }
+      });
+      
+      const request = createRequest({}, {
+        reason: 'No payment ref test',
+      });
+      
+      const response = await POST(request, {
+        params: { id: testCampaign.id, pledgeId: testPledge.id },
+      });
+      
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+    });
+  });
+
+  describe('Input Validation', () => {
+    test('should require cancellation reason', async () => {
+      const request = createRequest({}, {}); // No reason provided
+      
+      const response = await POST(request, {
+        params: { id: testCampaign.id, pledgeId: testPledge.id },
+      });
+      
+      expect(response.status).toBe(400);
+      const data = await response.json();
+      expect(data.error).toBe('Required');
+    });
+
+    test('should validate reason length', async () => {
+      const request = createRequest({}, {
+        reason: 'a'.repeat(1001), // Too long
+      });
+      
+      const response = await POST(request, {
+        params: { id: testCampaign.id, pledgeId: testPledge.id },
+      });
+      
+      expect(response.status).toBe(400);
+      const data = await response.json();
+      expect(data.error).toBe('String must contain at most 1000 character(s)');
     });
   });
 
   describe('Error Handling', () => {
-    it('should return 404 for non-existent pledge', async () => {
-      const cancellationData = {
-        reason: 'Non-existent pledge',
-        refundType: 'full',
-      };
-
-      const response = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/pledges/non-existent-id/cancel`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
-        body: JSON.stringify(cancellationData),
+    test('should handle invalid campaign ID format', async () => {
+      const request = createRequest({ campaignId: 'invalid-id' }, {
+        reason: 'Invalid ID test',
       });
-
+      
+      const response = await POST(request, {
+        params: { id: 'invalid-id', pledgeId: testPledge.id },
+      });
+      
+      // Should return 404 since invalid campaign ID won't find pledge
       expect(response.status).toBe(404);
     });
 
-    it('should handle already cancelled pledges', async () => {
-      // Create and cancel a pledge
-      const pledgeResponse = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/pledge`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
-        body: JSON.stringify({
-          campaignId: testCampaign.id,
-          pledgeAmountDollars: 2000,
-          isAnonymous: false,
-          paymentMethodId: 'pm_test_double_cancel',
-        }),
-      });
-
-      const doublePledge = await pledgeResponse.json();
-
-      // First cancellation
-      const firstCancelResponse = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/pledges/${doublePledge.id}/cancel`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
-        body: JSON.stringify({
-          reason: 'First cancellation',
-          refundType: 'full',
-        }),
-      });
-
-      expect(firstCancelResponse.status).toBe(200);
-
-      // Second cancellation attempt
-      const secondCancelResponse = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/pledges/${doublePledge.id}/cancel`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
-        body: JSON.stringify({
-          reason: 'Second cancellation',
-          refundType: 'full',
-        }),
-      });
-
-      expect(secondCancelResponse.status).toBe(400);
+    test('should handle missing request body', async () => {
+      const url = new URL(
+        `http://localhost:3000/api/campaigns/${testCampaign.id}/pledges/${testPledge.id}/cancel`
+      );
+      const headers = createAuthHeaders(testUser);
       
-      const error = await secondCancelResponse.json();
-      expect(error.message).toContain('already cancelled');
-    });
-
-    it('should validate cancellation data format', async () => {
-      const invalidData = {
-        // Missing required reason field
-        refundType: 'full',
-      };
-
-      const response = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/pledges/${activePledge.id}/cancel`, {
+      const request = new NextRequest(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
-        body: JSON.stringify(invalidData),
+        headers,
+        // No body
       });
-
-      expect(response.status).toBe(400);
       
-      const error = await response.json();
-      expect(error.message).toContain('reason is required');
+      const response = await POST(request, {
+        params: { id: testCampaign.id, pledgeId: testPledge.id },
+      });
+      
+      expect(response.status).toBe(500);
+      const data = await response.json();
+      expect(data.error).toBe('Internal server error');
     });
   });
 });

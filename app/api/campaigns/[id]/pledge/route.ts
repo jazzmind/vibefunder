@@ -89,11 +89,11 @@ export async function POST(
         );
       }
 
-      if (amountDollars < pledgeTier.minAmountDollars) {
+      if (amountDollars < pledgeTier.amountDollars) {
         return NextResponse.json(
           { 
             success: false, 
-            error: `Minimum pledge for this tier is $${pledgeTier.minAmountDollars}` 
+            error: `Minimum pledge for this tier is $${pledgeTier.amountDollars}` 
           },
           { status: 400 }
         );

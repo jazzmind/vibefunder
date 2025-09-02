@@ -8,7 +8,8 @@ const createJestConfig = nextJest({
 // Add any custom config to be passed to Jest
 const customJestConfig = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
-  testEnvironment: 'node',
+  // Use node environment for database tests, jsdom for frontend tests
+  testEnvironment: 'node', 
   preset: 'ts-jest',
   
   // Optimized parallel testing - auto-detect CPU cores
@@ -18,10 +19,75 @@ const customJestConfig = {
   cache: true,
   cacheDirectory: '<rootDir>/node_modules/.cache/jest',
   
-  // Test patterns - exclude helper files
+  // Test patterns - include all test directories
   testMatch: [
     '<rootDir>/__tests__/**/*.test.{js,jsx,ts,tsx}',
     '<rootDir>/**/*.test.{js,jsx,ts,tsx}'
+  ],
+
+  // Environment detection based on test path
+  testEnvironment: 'node', // Default for API and database tests
+  projects: [
+    {
+      displayName: 'Database Tests',
+      testEnvironment: 'node',
+      testMatch: [
+        '<rootDir>/__tests__/api/**/*.test.{js,jsx,ts,tsx}',
+        '<rootDir>/__tests__/services/**/*.test.{js,jsx,ts,tsx}',
+        '<rootDir>/__tests__/utils/**/*.test.{js,jsx,ts,tsx}',
+        '<rootDir>/__tests__/integration/**/*.test.{js,jsx,ts,tsx}',
+        '<rootDir>/__tests__/security/**/*.test.{js,jsx,ts,tsx}',
+        '<rootDir>/__tests__/payments/**/*.test.{js,jsx,ts,tsx}',
+        '<rootDir>/__tests__/infrastructure/**/*.test.{js,jsx,ts,tsx}'
+      ],
+      setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+      preset: 'ts-jest',
+      // Database tests need same module resolution as main config
+      moduleNameMapper: {
+        '^@/(.*)$': '<rootDir>/$1',
+        '^@/lib/(.*)$': '<rootDir>/lib/$1',
+        '^@/app/(.*)$': '<rootDir>/app/$1',
+        '^@lib/(.*)$': '<rootDir>/lib/$1',
+        '^@app/(.*)$': '<rootDir>/app/$1',
+        '^@components/(.*)$': '<rootDir>/app/components/$1',
+        '^@utils/(.*)$': '<rootDir>/lib/utils/$1'
+      }
+    },
+    {
+      displayName: 'Frontend Tests', 
+      testEnvironment: 'jsdom',
+      testMatch: [
+        '<rootDir>/__tests__/components/**/*.test.{js,jsx,ts,tsx}',
+        '<rootDir>/__tests__/pages/**/*.test.{js,jsx,ts,tsx}',
+        '<rootDir>/__tests__/ui/**/*.test.{js,jsx,ts,tsx}'
+      ],
+      setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+      testEnvironmentOptions: {
+        url: 'http://localhost:3900'
+      },
+      // Frontend tests need same module resolution plus CSS mocks
+      moduleNameMapper: {
+        '^@/(.*)$': '<rootDir>/$1',
+        '^@/lib/(.*)$': '<rootDir>/lib/$1',
+        '^@/app/(.*)$': '<rootDir>/app/$1',
+        '^@lib/(.*)$': '<rootDir>/lib/$1',
+        '^@app/(.*)$': '<rootDir>/app/$1',
+        '^@components/(.*)$': '<rootDir>/app/components/$1',
+        '^@utils/(.*)$': '<rootDir>/lib/utils/$1',
+        '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
+        '\\.(jpg|jpeg|png|gif|svg)$': '<rootDir>/__mocks__/fileMock.js'
+      },
+      transform: {
+        '^.+\\.(js|jsx|ts|tsx)$': ['ts-jest', {
+          isolatedModules: true,
+          tsconfig: {
+            jsx: 'react-jsx',
+            module: 'commonjs',
+            target: 'es2020'
+          },
+        }],
+      },
+    }
   ],
   
   // Skip tests in these patterns to speed up execution
@@ -31,13 +97,21 @@ const customJestConfig = {
     '<rootDir>/coverage/'
   ],
   
-  // Module resolution
+  // Module resolution - fixed path aliases
   moduleNameMapper: {
+    // Primary path aliases - match tsconfig.json exactly
     '^@/(.*)$': '<rootDir>/$1',
+    // Specific lib aliases
+    '^@/lib/(.*)$': '<rootDir>/lib/$1',
+    '^@/app/(.*)$': '<rootDir>/app/$1', 
+    // Legacy aliases for backward compatibility
     '^@lib/(.*)$': '<rootDir>/lib/$1',
     '^@app/(.*)$': '<rootDir>/app/$1',
     '^@components/(.*)$': '<rootDir>/app/components/$1',
     '^@utils/(.*)$': '<rootDir>/lib/utils/$1',
+    // CSS and style mocks
+    '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
+    '\\.(jpg|jpeg|png|gif|svg)$': '<rootDir>/__mocks__/fileMock.js'
   },
   
   // Coverage configuration
@@ -73,7 +147,9 @@ const customJestConfig = {
   
   // Test environment setup
   testEnvironmentOptions: {
-    url: 'http://localhost:3900'
+    url: 'http://localhost:3900',
+    // Enable Web API polyfills in jsdom
+    customExportConditions: ['node', 'node-addons'],
   },
   
   // Test timeout - increased for database operations
@@ -95,9 +171,9 @@ const customJestConfig = {
     }],
   },
   
-  // Handle ESM modules like @faker-js/faker and other ES modules
+  // Handle ESM modules like @faker-js/faker, jose and other ES modules
   transformIgnorePatterns: [
-    'node_modules/(?!(@faker-js|uuid|@testing-library)/)',
+    'node_modules/(?!(@faker-js|uuid|@testing-library|jose)/)',
   ],
   
   // Module file extensions
@@ -107,8 +183,11 @@ const customJestConfig = {
   globalSetup: '<rootDir>/__tests__/setup/global.setup.js',
   globalTeardown: '<rootDir>/__tests__/setup/global.teardown.js',
   
-  // Setup files
-  setupFiles: ['<rootDir>/__tests__/setup/env.setup.js'],
+  // Setup files - run before Jest setup
+  setupFiles: [
+    '<rootDir>/__tests__/setup/env.setup.js',
+    '<rootDir>/__tests__/setup/polyfills.js'
+  ],
   
   // Reporters for CI/CD
   reporters: process.env.CI ? [

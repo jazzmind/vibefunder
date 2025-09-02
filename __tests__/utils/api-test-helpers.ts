@@ -2,9 +2,26 @@
  * API Test Helpers for Next.js App Router
  * 
  * Provides utilities for testing Next.js App Router API routes
+ * with proper Web API polyfills for test environment
  */
 
 import { NextRequest } from 'next/server';
+
+// Ensure Web APIs are available in test environment
+if (typeof global.Request === 'undefined') {
+  const { Request } = require('undici');
+  global.Request = Request;
+}
+
+if (typeof global.Headers === 'undefined') {
+  const { Headers } = require('undici');
+  global.Headers = Headers;
+}
+
+if (typeof global.FormData === 'undefined') {
+  const { FormData } = require('undici');
+  global.FormData = FormData;
+}
 
 /**
  * Creates a NextRequest for testing API routes
@@ -22,27 +39,45 @@ export function createTestRequest(
 ): NextRequest {
   const { method = 'GET', headers = {}, body } = options;
   
-  // Create init options for Request
-  const init: RequestInit = {
-    method,
-    headers: new Headers(headers)
-  };
-  
-  // Add body if provided
-  if (body !== undefined && method !== 'GET' && method !== 'HEAD') {
-    if (typeof body === 'string') {
-      init.body = body;
-    } else {
-      init.body = JSON.stringify(body);
-      // Ensure content-type is set for JSON
-      if (!headers['content-type'] && !headers['Content-Type']) {
-        (init.headers as Headers).set('Content-Type', 'application/json');
+  try {
+    // Ensure we have a valid URL
+    const requestUrl = url.startsWith('http') ? url : `http://localhost:3000${url}`;
+    
+    // Create headers object using the global Headers constructor
+    const requestHeaders = new Headers();
+    
+    // Add provided headers
+    Object.entries(headers).forEach(([key, value]) => {
+      requestHeaders.set(key, value);
+    });
+    
+    // Create init options for Request
+    const init: RequestInit = {
+      method,
+      headers: requestHeaders
+    };
+    
+    // Add body if provided
+    if (body !== undefined && method !== 'GET' && method !== 'HEAD') {
+      if (typeof body === 'string') {
+        init.body = body;
+      } else {
+        init.body = JSON.stringify(body);
+        // Ensure content-type is set for JSON
+        if (!headers['content-type'] && !headers['Content-Type']) {
+          requestHeaders.set('Content-Type', 'application/json');
+        }
       }
     }
+    
+    // Create and return NextRequest
+    return new NextRequest(requestUrl, init);
+  } catch (error) {
+    console.error('Error creating test request:', error);
+    console.error('URL:', url);
+    console.error('Options:', options);
+    throw new Error(`Failed to create test request: ${error instanceof Error ? error.message : String(error)}`);
   }
-  
-  // Create and return NextRequest
-  return new NextRequest(url, init);
 }
 
 /**

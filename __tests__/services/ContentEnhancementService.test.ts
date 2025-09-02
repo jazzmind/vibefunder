@@ -350,6 +350,80 @@ We need $25,000 to complete development and launch this amazing tool.`,
       await expect(service.enhanceContent(mockInput))
         .rejects.toThrow('Rate limit exceeded');
     });
+
+    it('should handle network connectivity errors', async () => {
+      // Arrange
+      const networkError = createAIError(AIErrorType.NETWORK, 'Network connection failed', true);
+      mockCallAI.mockRejectedValue(networkError);
+
+      // Act & Assert
+      await expect(service.enhanceContent(mockInput))
+        .rejects.toThrow('Network connection failed');
+    });
+
+    it('should handle malformed AI responses', async () => {
+      // Arrange
+      mockCallAI.mockResolvedValue({ invalid: 'response structure' });
+
+      // Act & Assert
+      await expect(service.enhanceContent(mockInput))
+        .rejects.toThrow();
+    });
+
+    it('should handle AI response parsing errors', async () => {
+      // Arrange
+      const parsingError = createAIError(AIErrorType.PROCESSING, 'Failed to parse AI response');
+      mockCallAI.mockRejectedValue(parsingError);
+
+      // Act & Assert
+      await expect(service.enhanceContent(mockInput))
+        .rejects.toThrow('Failed to parse AI response');
+    });
+
+    it('should handle quota exceeded errors', async () => {
+      // Arrange
+      const quotaError = createAIError(AIErrorType.API_ERROR, 'API quota exceeded', false);
+      mockCallAI.mockRejectedValue(quotaError);
+
+      // Act & Assert
+      await expect(service.enhanceContent(mockInput))
+        .rejects.toThrow('API quota exceeded');
+    });
+
+    it('should handle authentication errors', async () => {
+      // Arrange
+      const authError = createAIError(AIErrorType.API_ERROR, 'Invalid API key', false);
+      mockCallAI.mockRejectedValue(authError);
+
+      // Act & Assert
+      await expect(service.enhanceContent(mockInput))
+        .rejects.toThrow('Invalid API key');
+    });
+
+    it('should handle retry logic with exponential backoff', async () => {
+      // Arrange
+      const retryableError = createAIError(AIErrorType.RATE_LIMIT, 'Rate limit hit', true);
+      mockCallAI
+        .mockRejectedValueOnce(retryableError)
+        .mockRejectedValueOnce(retryableError)
+        .mockResolvedValueOnce(mockContentSuggestions);
+
+      // Act
+      const result = await service.enhanceContent(mockInput);
+
+      // Assert
+      expect(result.data).toEqual(mockContentSuggestions);
+      expect(mockCallAI).toHaveBeenCalledTimes(3);
+    });
+
+    it('should handle empty AI responses gracefully', async () => {
+      // Arrange
+      mockCallAI.mockResolvedValue(null);
+
+      // Act & Assert
+      await expect(service.enhanceContent(mockInput))
+        .rejects.toThrow();
+    });
   });
 
   describe('content analysis scenarios', () => {

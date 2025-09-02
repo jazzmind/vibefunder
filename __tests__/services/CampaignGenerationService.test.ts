@@ -23,24 +23,7 @@ import {
   simulateRateLimit
 } from '../lib/serviceTestHelpers';
 
-// Mock the callAI method of AIService
-const mockCallAI = jest.fn();
-
-// Mock the AIService class
-jest.mock('@/lib/ai/aiService', () => {
-  const actual = jest.requireActual('@/lib/ai/aiService');
-  
-  class MockAIService extends actual.AIService {
-    callAI = mockCallAI;
-    log = jest.fn();
-  }
-  
-  return {
-    ...actual,
-    AIService: MockAIService,
-    default: MockAIService,
-  };
-});
+// AIService is mocked globally in jest.setup.js
 
 describe('CampaignGenerationService', () => {
   let service: CampaignGenerationService;

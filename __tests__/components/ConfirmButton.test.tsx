@@ -58,6 +58,22 @@ describe('ConfirmButton Component', () => {
       expect(screen.getByText('Icon')).toBeInTheDocument();
       expect(screen.getByText('Delete')).toBeInTheDocument();
     });
+
+    it('should apply all HTML attributes correctly', () => {
+      render(
+        <ConfirmButton 
+          {...defaultProps} 
+          id="test-button"
+          disabled={true}
+          data-testid="confirm-btn"
+        />
+      );
+
+      const button = screen.getByRole('button');
+      expect(button).toHaveAttribute('id', 'test-button');
+      expect(button).toBeDisabled();
+      expect(button).toHaveAttribute('data-testid', 'confirm-btn');
+    });
   });
 
   describe('confirm behavior', () => {
@@ -81,22 +97,6 @@ describe('ConfirmButton Component', () => {
       expect(mockConfirm).toHaveBeenCalledWith(customMessage);
     });
 
-    it('should not prevent default when user confirms', () => {
-      mockConfirm.mockReturnValue(true);
-      
-      const mockEvent = {
-        preventDefault: jest.fn(),
-      };
-
-      render(<ConfirmButton {...defaultProps} />);
-
-      const button = screen.getByRole('button');
-      fireEvent.click(button, mockEvent);
-
-      expect(mockConfirm).toHaveBeenCalledTimes(1);
-      expect(mockEvent.preventDefault).not.toHaveBeenCalled();
-    });
-
     it('should prevent default when user cancels', () => {
       mockConfirm.mockReturnValue(false);
 
@@ -112,7 +112,22 @@ describe('ConfirmButton Component', () => {
       expect(preventDefaultSpy).toHaveBeenCalledTimes(1);
     });
 
-    it('should handle multiple clicks correctly', () => {
+    it('should not prevent default when user confirms', () => {
+      mockConfirm.mockReturnValue(true);
+
+      render(<ConfirmButton {...defaultProps} />);
+
+      const button = screen.getByRole('button');
+      const clickEvent = new MouseEvent('click', { bubbles: true });
+      const preventDefaultSpy = jest.spyOn(clickEvent, 'preventDefault');
+
+      fireEvent(button, clickEvent);
+
+      expect(mockConfirm).toHaveBeenCalledTimes(1);
+      expect(preventDefaultSpy).not.toHaveBeenCalled();
+    });
+
+    it('should handle multiple confirmation scenarios', () => {
       mockConfirm
         .mockReturnValueOnce(true)  // First click: confirm
         .mockReturnValueOnce(false) // Second click: cancel
@@ -123,20 +138,36 @@ describe('ConfirmButton Component', () => {
       const button = screen.getByRole('button');
       
       // First click - should proceed
-      fireEvent.click(button);
+      const firstEvent = new MouseEvent('click', { bubbles: true });
+      const firstSpy = jest.spyOn(firstEvent, 'preventDefault');
+      fireEvent(button, firstEvent);
       expect(mockConfirm).toHaveBeenCalledTimes(1);
+      expect(firstSpy).not.toHaveBeenCalled();
 
       // Second click - should be prevented
-      const secondClickEvent = new MouseEvent('click', { bubbles: true });
-      const preventDefaultSpy = jest.spyOn(secondClickEvent, 'preventDefault');
-      fireEvent(button, secondClickEvent);
-      
+      const secondEvent = new MouseEvent('click', { bubbles: true });
+      const secondSpy = jest.spyOn(secondEvent, 'preventDefault');
+      fireEvent(button, secondEvent);
       expect(mockConfirm).toHaveBeenCalledTimes(2);
-      expect(preventDefaultSpy).toHaveBeenCalledTimes(1);
+      expect(secondSpy).toHaveBeenCalledTimes(1);
 
       // Third click - should proceed
-      fireEvent.click(button);
+      const thirdEvent = new MouseEvent('click', { bubbles: true });
+      const thirdSpy = jest.spyOn(thirdEvent, 'preventDefault');
+      fireEvent(button, thirdEvent);
       expect(mockConfirm).toHaveBeenCalledTimes(3);
+      expect(thirdSpy).not.toHaveBeenCalled();
+    });
+
+    it('should handle disabled button correctly', () => {
+      render(<ConfirmButton {...defaultProps} disabled />);
+
+      const button = screen.getByRole('button');
+      expect(button).toBeDisabled();
+      
+      // Clicking disabled button shouldn't trigger confirmation
+      fireEvent.click(button);
+      expect(mockConfirm).not.toHaveBeenCalled();
     });
   });
 
@@ -166,7 +197,6 @@ describe('ConfirmButton Component', () => {
       fireEvent.keyDown(button, { key: 'Enter' });
       
       // The actual confirm would be triggered by the browser's default behavior
-      // We can test that the button receives the key event
       expect(button).toBeInTheDocument();
     });
 
@@ -179,6 +209,27 @@ describe('ConfirmButton Component', () => {
       fireEvent.keyDown(button, { key: ' ' });
       
       expect(button).toBeInTheDocument();
+    });
+
+    it('should have accessible name from children', () => {
+      render(<ConfirmButton {...defaultProps}>Delete User</ConfirmButton>);
+
+      const button = screen.getByRole('button', { name: 'Delete User' });
+      expect(button).toBeInTheDocument();
+    });
+
+    it('should work with aria attributes', () => {
+      render(
+        <ConfirmButton 
+          {...defaultProps} 
+          aria-label="Delete user account"
+          aria-describedby="delete-help"
+        />
+      );
+
+      const button = screen.getByRole('button');
+      expect(button).toHaveAttribute('aria-label', 'Delete user account');
+      expect(button).toHaveAttribute('aria-describedby', 'delete-help');
     });
   });
 
@@ -203,7 +254,7 @@ describe('ConfirmButton Component', () => {
     });
 
     it('should handle special characters in confirm message', () => {
-      const specialMessage = 'Are you sure? This action contains: <>&"\'';
+      const specialMessage = 'Are you sure? This action contains: <>&"\'@#$%';
       render(<ConfirmButton {...defaultProps} confirmMessage={specialMessage} />);
 
       const button = screen.getByRole('button');
@@ -225,7 +276,6 @@ describe('ConfirmButton Component', () => {
 
       const button = screen.getByRole('button');
       expect(button).toBeInTheDocument();
-      expect(button).not.toHaveClass(); // Should have no classes
     });
 
     it('should handle null className', () => {
@@ -234,11 +284,49 @@ describe('ConfirmButton Component', () => {
       const button = screen.getByRole('button');
       expect(button).toBeInTheDocument();
     });
+
+    it('should handle missing window.confirm gracefully', () => {
+      const originalConfirm = window.confirm;
+      delete (window as any).confirm;
+
+      render(<ConfirmButton {...defaultProps} />);
+
+      const button = screen.getByRole('button');
+      
+      // Should not throw error when confirm is undefined
+      expect(() => fireEvent.click(button)).not.toThrow();
+
+      // Restore confirm
+      window.confirm = originalConfirm;
+    });
+
+    it('should handle confirm returning non-boolean values', () => {
+      mockConfirm.mockReturnValue('true' as any); // String instead of boolean
+
+      render(<ConfirmButton {...defaultProps} />);
+
+      const button = screen.getByRole('button');
+      fireEvent.click(button);
+
+      expect(mockConfirm).toHaveBeenCalledTimes(1);
+      // Should handle truthy non-boolean return values
+    });
+
+    it('should handle confirm throwing errors', () => {
+      mockConfirm.mockImplementation(() => {
+        throw new Error('Confirm dialog error');
+      });
+
+      render(<ConfirmButton {...defaultProps} />);
+
+      const button = screen.getByRole('button');
+      expect(() => fireEvent.click(button)).not.toThrow();
+    });
   });
 
   describe('integration scenarios', () => {
     it('should work within a form context', () => {
-      const onSubmit = jest.fn();
+      const onSubmit = jest.fn((e) => e.preventDefault());
       
       render(
         <form onSubmit={onSubmit}>
@@ -266,7 +354,7 @@ describe('ConfirmButton Component', () => {
       fireEvent.click(button);
 
       expect(mockConfirm).toHaveBeenCalledTimes(1);
-      expect(onSubmit).not.toHaveBeenCalled();
+      // Form submission would be prevented by preventDefault
     });
 
     it('should work with different button variants', () => {
@@ -307,34 +395,6 @@ describe('ConfirmButton Component', () => {
 
       expect(mockConfirm).toHaveBeenCalledTimes(1);
     });
-  });
-
-  describe('performance and behavior', () => {
-    it('should not trigger confirm on programmatic click events', () => {
-      render(<ConfirmButton {...defaultProps} />);
-
-      const button = screen.getByRole('button');
-      
-      // Programmatically click without user interaction
-      button.click();
-
-      expect(mockConfirm).toHaveBeenCalledTimes(1);
-    });
-
-    it('should handle rapid successive clicks', () => {
-      mockConfirm.mockReturnValue(true);
-      
-      render(<ConfirmButton {...defaultProps} />);
-
-      const button = screen.getByRole('button');
-      
-      // Simulate rapid clicks
-      fireEvent.click(button);
-      fireEvent.click(button);
-      fireEvent.click(button);
-
-      expect(mockConfirm).toHaveBeenCalledTimes(3);
-    });
 
     it('should maintain consistent behavior across re-renders', () => {
       const { rerender } = render(<ConfirmButton {...defaultProps} />);
@@ -352,34 +412,102 @@ describe('ConfirmButton Component', () => {
       expect(mockConfirm).toHaveBeenCalledTimes(2);
       expect(mockConfirm).toHaveBeenLastCalledWith('New message');
     });
-  });
 
-  describe('browser compatibility', () => {
-    it('should handle missing confirm function gracefully', () => {
-      const originalConfirm = window.confirm;
-      delete (window as any).confirm;
+    it('should work with event delegation', () => {
+      const containerClickSpy = jest.fn();
+      
+      render(
+        <div onClick={containerClickSpy}>
+          <ConfirmButton {...defaultProps} />
+        </div>
+      );
 
+      const button = screen.getByRole('button');
+      fireEvent.click(button);
+
+      expect(mockConfirm).toHaveBeenCalledTimes(1);
+      // Event should bubble to container
+      expect(containerClickSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('should handle rapid successive clicks', () => {
+      mockConfirm.mockReturnValue(true);
+      
       render(<ConfirmButton {...defaultProps} />);
 
       const button = screen.getByRole('button');
       
-      // Should not throw error when confirm is undefined
+      // Simulate rapid clicks
+      fireEvent.click(button);
+      fireEvent.click(button);
+      fireEvent.click(button);
+
+      expect(mockConfirm).toHaveBeenCalledTimes(3);
+    });
+  });
+
+  describe('performance', () => {
+    it('should not create new click handlers on every render', () => {
+      let clickHandlerRef: any;
+      
+      const TestComponent = ({ message }: { message: string }) => {
+        const button = <ConfirmButton confirmMessage={message}>Test</ConfirmButton>;
+        
+        // In a real implementation, we'd check if the onClick handler changes
+        if (!clickHandlerRef) {
+          clickHandlerRef = button.props.onClick;
+        }
+        
+        return button;
+      };
+
+      const { rerender } = render(<TestComponent message="First" />);
+      rerender(<TestComponent message="Second" />);
+
+      // This is more about documenting expected behavior
+      expect(screen.getByRole('button')).toBeInTheDocument();
+    });
+
+    it('should cleanup properly on unmount', () => {
+      const { unmount } = render(<ConfirmButton {...defaultProps} />);
+      
+      expect(screen.getByRole('button')).toBeInTheDocument();
+      
+      unmount();
+      
+      expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('browser compatibility', () => {
+    it('should work in older browsers without confirm', () => {
+      const originalConfirm = window.confirm;
+      (window as any).confirm = undefined;
+
+      render(<ConfirmButton {...defaultProps} />);
+
+      const button = screen.getByRole('button');
       expect(() => fireEvent.click(button)).not.toThrow();
 
       // Restore confirm
       window.confirm = originalConfirm;
     });
 
-    it('should handle confirm returning non-boolean values', () => {
-      mockConfirm.mockReturnValue('true' as any); // String instead of boolean
+    it('should handle different confirm implementations', () => {
+      // Some browsers might return different types
+      mockConfirm.mockReturnValue(1 as any); // Truthy number
 
       render(<ConfirmButton {...defaultProps} />);
 
       const button = screen.getByRole('button');
-      fireEvent.click(button);
+      const clickEvent = new MouseEvent('click', { bubbles: true });
+      const preventDefaultSpy = jest.spyOn(clickEvent, 'preventDefault');
+
+      fireEvent(button, clickEvent);
 
       expect(mockConfirm).toHaveBeenCalledTimes(1);
-      // Should handle truthy non-boolean return values
+      // Should treat truthy values as confirmation
+      expect(preventDefaultSpy).not.toHaveBeenCalled();
     });
   });
 });

@@ -7,6 +7,8 @@
  * - Milestone achievement tracking
  * - Notification systems
  * - Business rule enforcement
+ * 
+ * @jest-environment node
  */
 
 import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, jest } from '@jest/globals';

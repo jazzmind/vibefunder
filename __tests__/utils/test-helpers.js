@@ -15,6 +15,11 @@ let globalClient = null;
  * @returns {PrismaClient} Prisma client instance
  */
 function getPrismaClient(options = {}) {
+  // Force Node.js environment for Prisma in tests
+  if (typeof window !== 'undefined') {
+    console.warn('⚠️  Detected browser environment, but database tests require Node.js environment');
+  }
+  
   // Use global test client if available and no specific options
   if (!options.url && global.testPrisma && Object.keys(options).length === 0) {
     return global.testPrisma;
@@ -32,7 +37,13 @@ function getPrismaClient(options = {}) {
     return connections.get(connectionKey);
   }
 
-  // Create new client
+  // Ensure we're in Node.js environment
+  const isNode = typeof process !== 'undefined' && process.versions && process.versions.node;
+  if (!isNode) {
+    throw new Error('Prisma client can only be used in Node.js environment for database tests');
+  }
+
+  // Create new client with explicit Node.js configuration
   const client = new PrismaClient({
     datasources: {
       db: {

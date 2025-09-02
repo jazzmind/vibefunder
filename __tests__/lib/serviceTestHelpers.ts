@@ -19,6 +19,11 @@ export const mockAIClient = {
 };
 
 /**
+ * Mock callAI function for service testing
+ */
+export const mockCallAI = jest.fn();
+
+/**
  * Helper to create mock AI responses
  */
 export function createMockAIResponse<T>(data: T, metadata?: any) {

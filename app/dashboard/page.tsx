@@ -16,6 +16,7 @@ export default async function Dashboard({
   
   if (!session) {
     redirect('/signin');
+    return; // Ensure we don't continue execution
   }
 
   // Fetch user's campaigns

@@ -23,14 +23,11 @@ const databaseJestConfig = {
     '<rootDir>/__tests__/infrastructure/**/*.test.{js,jsx,ts,tsx}'
   ],
   
-  // Skip tests in these patterns to speed up execution
+  // Skip ONLY build artifacts and dependencies - DO NOT exclude test directories
   testPathIgnorePatterns: [
     '<rootDir>/.next/',
     '<rootDir>/node_modules/',
-    '<rootDir>/coverage/',
-    '<rootDir>/__tests__/components/',
-    '<rootDir>/__tests__/pages/',
-    '<rootDir>/__tests__/ui/'
+    '<rootDir>/coverage/'
   ],
   
   // Module resolution - comprehensive path alias mapping

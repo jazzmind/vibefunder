@@ -8,8 +8,10 @@ const createJestConfig = nextJest({
 // Add any custom config to be passed to Jest
 const customJestConfig = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
-  // Use node environment for database tests, jsdom for frontend tests
-  testEnvironment: 'node', 
+  
+  // UNIFIED CONFIG - NO PROJECT SPLITTING TO ENSURE ALL TESTS ARE DISCOVERED
+  // Use single test environment with dynamic switching based on file path
+  testEnvironment: '<rootDir>/__tests__/setup/conditional-test-environment.js',
   preset: 'ts-jest',
   
   // Optimized parallel testing - auto-detect CPU cores
@@ -19,85 +21,20 @@ const customJestConfig = {
   cache: true,
   cacheDirectory: '<rootDir>/node_modules/.cache/jest',
   
-  // Test patterns - include all test directories
+  // CRITICAL: Include ALL test directories - comprehensive test discovery
   testMatch: [
     '<rootDir>/__tests__/**/*.test.{js,jsx,ts,tsx}',
     '<rootDir>/**/*.test.{js,jsx,ts,tsx}'
   ],
-
-  // Environment detection based on test path
-  testEnvironment: 'node', // Default for API and database tests
-  projects: [
-    {
-      displayName: 'Database Tests',
-      testEnvironment: 'node',
-      testMatch: [
-        '<rootDir>/__tests__/api/**/*.test.{js,jsx,ts,tsx}',
-        '<rootDir>/__tests__/services/**/*.test.{js,jsx,ts,tsx}',
-        '<rootDir>/__tests__/utils/**/*.test.{js,jsx,ts,tsx}',
-        '<rootDir>/__tests__/integration/**/*.test.{js,jsx,ts,tsx}',
-        '<rootDir>/__tests__/security/**/*.test.{js,jsx,ts,tsx}',
-        '<rootDir>/__tests__/payments/**/*.test.{js,jsx,ts,tsx}',
-        '<rootDir>/__tests__/infrastructure/**/*.test.{js,jsx,ts,tsx}'
-      ],
-      setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
-      preset: 'ts-jest',
-      // Database tests need same module resolution as main config
-      moduleNameMapper: {
-        '^@/(.*)$': '<rootDir>/$1',
-        '^@/lib/(.*)$': '<rootDir>/lib/$1',
-        '^@/app/(.*)$': '<rootDir>/app/$1',
-        '^@lib/(.*)$': '<rootDir>/lib/$1',
-        '^@app/(.*)$': '<rootDir>/app/$1',
-        '^@components/(.*)$': '<rootDir>/app/components/$1',
-        '^@utils/(.*)$': '<rootDir>/lib/utils/$1'
-      }
-    },
-    {
-      displayName: 'Frontend Tests', 
-      testEnvironment: 'jsdom',
-      testMatch: [
-        '<rootDir>/__tests__/components/**/*.test.{js,jsx,ts,tsx}',
-        '<rootDir>/__tests__/pages/**/*.test.{js,jsx,ts,tsx}',
-        '<rootDir>/__tests__/ui/**/*.test.{js,jsx,ts,tsx}'
-      ],
-      setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
-      testEnvironmentOptions: {
-        url: 'http://localhost:3900'
-      },
-      // Frontend tests need same module resolution plus CSS mocks
-      moduleNameMapper: {
-        '^@/(.*)$': '<rootDir>/$1',
-        '^@/lib/(.*)$': '<rootDir>/lib/$1',
-        '^@/app/(.*)$': '<rootDir>/app/$1',
-        '^@lib/(.*)$': '<rootDir>/lib/$1',
-        '^@app/(.*)$': '<rootDir>/app/$1',
-        '^@components/(.*)$': '<rootDir>/app/components/$1',
-        '^@utils/(.*)$': '<rootDir>/lib/utils/$1',
-        '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
-        '\\.(jpg|jpeg|png|gif|svg)$': '<rootDir>/__mocks__/fileMock.js'
-      },
-      transform: {
-        '^.+\\.(js|jsx|ts|tsx)$': ['ts-jest', {
-          isolatedModules: true,
-          tsconfig: {
-            jsx: 'react-jsx',
-            module: 'commonjs',
-            target: 'es2020'
-          },
-        }],
-      },
-    }
-  ],
   
-  // Skip tests in these patterns to speed up execution
+  // Skip ONLY build artifacts and dependencies - DO NOT exclude any test directories
   testPathIgnorePatterns: [
     '<rootDir>/.next/',
     '<rootDir>/node_modules/',
     '<rootDir>/coverage/'
   ],
   
-  // Module resolution - fixed path aliases
+  // UNIFIED module resolution - handles both frontend and backend imports
   moduleNameMapper: {
     // Primary path aliases - match tsconfig.json exactly
     '^@/(.*)$': '<rootDir>/$1',
@@ -109,7 +46,7 @@ const customJestConfig = {
     '^@app/(.*)$': '<rootDir>/app/$1',
     '^@components/(.*)$': '<rootDir>/app/components/$1',
     '^@utils/(.*)$': '<rootDir>/lib/utils/$1',
-    // CSS and style mocks
+    // CSS and style mocks for frontend tests
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
     '\\.(jpg|jpeg|png|gif|svg)$': '<rootDir>/__mocks__/fileMock.js'
   },

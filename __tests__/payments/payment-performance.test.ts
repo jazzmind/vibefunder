@@ -1,12 +1,7 @@
-import { describe, expect, test, beforeEach, afterEach } from '@jest/globals';
+import { describe, expect, test, beforeEach, afterEach, jest } from '@jest/globals';
 import { NextRequest } from 'next/server';
-import { POST as checkoutHandler } from '@/app/api/payments/checkout-session/route';
-import { POST as webhookHandler } from '@/app/api/payments/stripe/webhook/route';
-import {
-  PaymentPerformanceHelpers,
-  PaymentTestData,
-  StripeObjectFactory
-} from './payment-test-helpers';
+
+// Import and setup mocks BEFORE importing modules that use them
 import {
   prismaMock,
   authMock,
@@ -15,12 +10,26 @@ import {
   setupDefaultMocks
 } from './setup-payment-mocks';
 
+// Create aliases for consistent variable naming in tests
+const mockPrisma = prismaMock;
+const mockStripe = stripeMock;
+
+// NOW import the API handlers after mocks are set up
+import { POST as checkoutHandler } from '@/app/api/payments/checkout-session/route';
+import { POST as webhookHandler } from '@/app/api/payments/stripe/webhook/route';
+import {
+  PaymentPerformanceHelpers,
+  PaymentTestData,
+  StripeObjectFactory
+} from './payment-test-helpers';
+
 describe('Payment Performance Tests', () => {
   const mockCampaign = PaymentTestData.generateCampaign();
   const mockUser = PaymentTestData.generateUser();
 
   beforeEach(() => {
     jest.clearAllMocks();
+    resetAllMocks();
     
     // Set test environment variables
     process.env.STRIPE_SECRET_KEY = 'sk_test_123';
@@ -33,8 +42,28 @@ describe('Payment Performance Tests', () => {
     // Setup default mocks using new mock utilities
     const defaults = setupDefaultMocks({
       user: mockUser,
-      campaign: mockCampaign
+      campaign: {
+        ...mockCampaign,
+        status: 'published', // Ensure campaign is published
+        pledgeTiers: [{
+          id: 'tier-123',
+          title: 'Basic Tier',
+          description: 'Basic support level',
+          amountDollars: 100,
+          isActive: true
+        }]
+      }
     });
+
+    // Ensure mockPrisma returns the correct campaign data
+    mockPrisma.campaign.findUnique.mockResolvedValue({
+      ...mockCampaign,
+      status: 'published',
+      pledgeTiers: mockCampaign.pledgeTiers // Use generated pledge tiers
+    } as any);
+
+    // Mock auth to return null (no authenticated user)
+    authMock.mockResolvedValue(null);
   });
 
   afterEach(() => {
@@ -45,11 +74,21 @@ describe('Payment Performance Tests', () => {
     test('should create checkout session within acceptable time', async () => {
       // Arrange
       const requestData = PaymentTestData.generateCheckoutRequest({
-        campaignId: mockCampaign.id
+        campaignId: mockCampaign.id,
+        pledgeTierId: mockCampaign.pledgeTiers[0].id, // Use existing tier ID
+        backerEmail: 'test@example.com' // Ensure email is provided
       });
 
       const mockCheckoutSession = StripeObjectFactory.createCheckoutSession();
       mockStripe.checkout.sessions.create.mockResolvedValue(mockCheckoutSession);
+
+      // Ensure the campaign mock is set up correctly for this specific test
+      mockPrisma.campaign.findUnique.mockResolvedValue({
+        id: mockCampaign.id,
+        title: mockCampaign.title,
+        status: 'published',
+        pledgeTiers: mockCampaign.pledgeTiers // Use the tiers from the generated campaign
+      } as any);
 
       const createCheckoutSession = async () => {
         const request = new NextRequest('http://localhost:3000/api/payments/checkout-session', {
@@ -66,6 +105,7 @@ describe('Payment Performance Tests', () => {
         createCheckoutSession
       );
 
+
       // Assert
       expect(result.status).toBe(200);
       expect(duration).toBeLessThan(1000); // Should complete within 1 second
@@ -78,6 +118,7 @@ describe('Payment Performance Tests', () => {
       const createConcurrentCheckout = async () => {
         const requestData = PaymentTestData.generateCheckoutRequest({
           campaignId: mockCampaign.id,
+          pledgeTierId: mockCampaign.pledgeTiers[0].id, // Use existing tier ID
           backerEmail: `test-${Math.random()}@example.com`
         });
 
@@ -109,13 +150,19 @@ describe('Payment Performance Tests', () => {
     test('should maintain performance under database load', async () => {
       // Arrange
       const requestData = PaymentTestData.generateCheckoutRequest({
-        campaignId: mockCampaign.id
+        campaignId: mockCampaign.id,
+        pledgeTierId: mockCampaign.pledgeTiers[0].id,
+        backerEmail: 'test@example.com'
       });
 
       // Simulate database response times
       mockPrisma.campaign.findUnique.mockImplementation(async () => {
         await new Promise(resolve => setTimeout(resolve, 100)); // 100ms database delay
-        return mockCampaign;
+        return {
+          ...mockCampaign,
+          status: 'published',
+          pledgeTiers: mockCampaign.pledgeTiers
+        };
       });
 
       mockPrisma.user.upsert.mockImplementation(async () => {
@@ -149,7 +196,9 @@ describe('Payment Performance Tests', () => {
     test('should handle Stripe API delays gracefully', async () => {
       // Arrange
       const requestData = PaymentTestData.generateCheckoutRequest({
-        campaignId: mockCampaign.id
+        campaignId: mockCampaign.id,
+        pledgeTierId: mockCampaign.pledgeTiers[0].id,
+        backerEmail: 'test@example.com'
       });
 
       // Simulate slow Stripe API response
@@ -187,7 +236,9 @@ describe('Payment Performance Tests', () => {
         testAmounts.map(async (amount) => {
           const requestData = PaymentTestData.generateCheckoutRequest({
             campaignId: mockCampaign.id,
-            pledgeAmount: amount
+            pledgeTierId: mockCampaign.pledgeTiers[0].id,
+            pledgeAmount: amount,
+            backerEmail: 'test@example.com'
           });
 
           const mockCheckoutSession = StripeObjectFactory.createCheckoutSession({
@@ -236,9 +287,11 @@ describe('Payment Performance Tests', () => {
 
       mockStripe.webhooks.constructEvent.mockReturnValue(event);
       mockPrisma.pledge.updateMany.mockResolvedValue({ count: 1 });
-      mockPrisma.pledge.findFirst.mockResolvedValue(
-        PaymentTestData.generatePledge()
-      );
+      mockPrisma.pledge.findFirst.mockResolvedValue({
+        ...PaymentTestData.generatePledge(),
+        backer: mockUser,
+        campaign: mockCampaign
+      } as any);
 
       const processWebhook = async () => {
         const request = new NextRequest('http://localhost:3000/api/payments/stripe/webhook', {
@@ -420,6 +473,7 @@ describe('Payment Performance Tests', () => {
       const processPayments = async () => {
         const requestData = PaymentTestData.generateCheckoutRequest({
           campaignId: mockCampaign.id,
+          pledgeTierId: mockCampaign.pledgeTiers[0].id,
           backerEmail: `test-${Math.random()}@example.com`
         });
 
@@ -462,6 +516,7 @@ describe('Payment Performance Tests', () => {
 
       const requestData = {
         campaignId: mockCampaign.id,
+        pledgeTierId: mockCampaign.pledgeTiers[0].id,
         pledgeAmount: 100,
         backerEmail: 'test@example.com',
         ...largeMetadata // Add large metadata
@@ -565,7 +620,9 @@ describe('Payment Performance Tests', () => {
     test('should handle Stripe API errors without delay', async () => {
       // Arrange
       const requestData = PaymentTestData.generateCheckoutRequest({
-        campaignId: mockCampaign.id
+        campaignId: mockCampaign.id,
+        pledgeTierId: mockCampaign.pledgeTiers[0].id,
+        backerEmail: 'test@example.com'
       });
 
       mockStripe.checkout.sessions.create.mockRejectedValue(
@@ -595,7 +652,9 @@ describe('Payment Performance Tests', () => {
     test('should handle database connection failures efficiently', async () => {
       // Arrange
       const requestData = PaymentTestData.generateCheckoutRequest({
-        campaignId: mockCampaign.id
+        campaignId: mockCampaign.id,
+        pledgeTierId: mockCampaign.pledgeTiers[0].id,
+        backerEmail: 'test@example.com'
       });
 
       mockPrisma.campaign.findUnique.mockRejectedValue(

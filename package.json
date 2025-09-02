@@ -20,7 +20,7 @@
     "test:ai": "jest __tests__/ai/",
     "test:api": "jest __tests__/api/",
     "test:security": "jest __tests__/security/",
-    "test:payments": "jest __tests__/payments/ --config=jest.config.mjs",
+    "test:payments": "jest __tests__/payments/ --config=jest.config.js",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:coverage:html": "jest --coverage --coverageReporters=html",

@@ -584,6 +584,22 @@ export class PaymentErrorScenarios {
   };
 
   /**
+   * Verify database connection before tests
+   */
+  static async verifyDatabaseConnection(): Promise<boolean> {
+    try {
+      const { prisma } = await import('../../lib/db');
+      await prisma.$connect();
+      await prisma.$queryRaw`SELECT 1`;
+      await prisma.$disconnect();
+      return true;
+    } catch (error) {
+      console.error('Database connection verification failed:', error);
+      return false;
+    }
+  }
+
+  /**
    * Authentication error scenarios
    */
   static readonly AUTH_ERRORS = {

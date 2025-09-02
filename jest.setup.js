@@ -4,7 +4,15 @@ import '@testing-library/jest-dom';
 // Mock environment variables for tests
 process.env.NODE_ENV = 'test';
 process.env.NEXTAUTH_SECRET = 'test-secret-key-for-testing-only';
-process.env.DATABASE_URL = process.env.TEST_DATABASE_URL || 'postgresql://test:test@localhost:5432/vibefunder_test';
+
+// Ensure TEST_DATABASE_URL is properly set before any database operations
+if (process.env.TEST_DATABASE_URL) {
+  process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
+  console.log('🔄 Jest Setup: Using TEST_DATABASE_URL for all database operations');
+} else {
+  process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/vibefunder_test';
+  console.warn('⚠️ Jest Setup: TEST_DATABASE_URL not set, using fallback database URL');
+}
 
 // Mock Next.js router
 jest.mock('next/navigation', () => ({

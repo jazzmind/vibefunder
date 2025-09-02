@@ -267,13 +267,16 @@ export function setupDefaultMocks(overrides = {}) {
   stripeMock.webhooks.constructEvent.mockImplementation((body, signature, secret) => {
     // Basic signature validation mock
     if (!signature) {
-      throw new Error('Missing signature');
+      throw new Error('No signatures found matching the expected signature for payload');
     }
     if (signature === 'invalid_signature') {
       throw new Error('Invalid signature');
     }
     if (signature.includes('expired')) {
       throw new Error('Timestamp outside the tolerance zone');
+    }
+    if (!signature.includes('t=') && !signature.includes('v1=')) {
+      throw new Error('Unable to extract timestamp and signatures from header');
     }
     
     // Parse the body and return it as the event

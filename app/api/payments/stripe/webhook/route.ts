@@ -32,6 +32,12 @@ export async function POST(req: NextRequest) {
     return new NextResponse(`Webhook Error: ${err.message}`, { status: 400 });
   }
   
+  // Handle malformed or missing webhook data gracefully
+  if (!event || !event.type) {
+    console.log('Received webhook event with missing type, ignoring');
+    return NextResponse.json({ received: true });
+  }
+  
   try {
     switch (event.type) {
       case "checkout.session.completed":
@@ -42,6 +48,9 @@ export async function POST(req: NextRequest) {
         break;
       case "payment_intent.payment_failed":
         await handlePaymentIntentFailed(event);
+        break;
+      case "payment_intent.canceled":
+        await handlePaymentIntentCanceled(event);
         break;
       default:
         console.log(`Unhandled event type: ${event.type}`);
@@ -54,9 +63,75 @@ export async function POST(req: NextRequest) {
   }
 }
 
+// Utility function to sanitize and validate metadata
+function sanitizeMetadata(metadata: any): { [key: string]: string } | null {
+  if (!metadata || typeof metadata !== 'object') {
+    return null;
+  }
+  
+  const sanitized: { [key: string]: string } = {};
+  const allowedKeys = ['campaignId', 'pledgeTierId', 'backerId', 'source', 'utmCampaign', 'referrer'];
+  
+  for (const key of allowedKeys) {
+    if (metadata[key] && typeof metadata[key] === 'string') {
+      // Basic sanitization - remove potentially dangerous characters
+      const value = metadata[key].toString().trim();
+      
+      // Check for clearly malicious patterns - be more specific to avoid false positives
+      const maliciousPatterns = [
+        /<script[^>]*>/i,          // Script tags
+        /javascript:/i,            // JavaScript protocols
+        /on\w+\s*=/i,             // Event handlers
+        /'.*drop.*table.*'/i,      // SQL drop table
+        /['"];.*drop/i,            // SQL injection attempts
+        /\$\{.*process\.env/i,     // Template injection with env vars
+        /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g  // Control characters (excluding tab, newline, carriage return)
+      ];
+      
+      let isMalicious = false;
+      for (const pattern of maliciousPatterns) {
+        if (pattern.test(value)) {
+          console.warn(`Blocked potentially malicious metadata: ${key}=${value}`);
+          isMalicious = true;
+          break;
+        }
+      }
+      
+      // Check for overly long values (increase limit to 200 for better compatibility)
+      if (!isMalicious && value.length <= 200) {
+        sanitized[key] = value;
+      } else if (value.length > 200) {
+        console.warn(`Metadata value too long for key ${key}: ${value.length} characters`);
+      }
+    }
+  }
+  
+  return sanitized;
+}
+
 async function handleCheckoutSessionCompleted(event: any) {
+  // Handle missing or malformed event data
+  if (!event?.data?.object) {
+    console.error('Malformed checkout session event: missing data.object');
+    return;
+  }
+  
   const session = event.data.object;
-  const { campaignId, pledgeTierId, backerId } = session.metadata || {};
+  
+  // Handle missing required session fields
+  if (!session.amount_total || !session.currency || !session.id) {
+    console.error('Missing required fields in checkout session');
+    return;
+  }
+  
+  const sanitizedMetadata = sanitizeMetadata(session.metadata);
+  
+  if (!sanitizedMetadata) {
+    console.error('No valid metadata found in checkout session');
+    return;
+  }
+  
+  const { campaignId, pledgeTierId, backerId } = sanitizedMetadata;
   
   if (!campaignId || !backerId) {
     console.error('Missing required metadata in checkout session');
@@ -101,8 +176,13 @@ async function handleCheckoutSessionCompleted(event: any) {
 }
 
 async function handlePaymentIntentSucceeded(event: any) {
+  // Handle missing or malformed event data
+  if (!event?.data?.object?.id) {
+    console.error('Malformed payment intent event: missing data.object.id');
+    return;
+  }
+  
   const paymentIntent = event.data.object;
-  const { campaignId, backerId } = paymentIntent.metadata || {};
   
   // Update pledge status to captured
   const pledge = await prisma.pledge.updateMany({
@@ -127,17 +207,22 @@ async function handlePaymentIntentSucceeded(event: any) {
     });
     
     if (updatedPledge) {
-      try {
-        await sendPledgeConfirmationEmail(updatedPledge.backer.email, {
-          campaignTitle: updatedPledge.campaign.title,
-          campaignId: updatedPledge.campaign.id,
-          pledgeAmount: updatedPledge.amountDollars,
-          backerName: updatedPledge.backer.name || undefined,
-          // pledgeTierTitle: updatedPledge.pledgeTier?.title // TODO: Add after pledgeTier relation exists
-        });
-        console.log(`✓ Sent pledge confirmation email to ${updatedPledge.backer.email}`);
-      } catch (error) {
-        console.error('Failed to send pledge confirmation email:', error);
+      // Handle missing email addresses gracefully
+      if (updatedPledge.backer.email) {
+        try {
+          await sendPledgeConfirmationEmail(updatedPledge.backer.email, {
+            campaignTitle: updatedPledge.campaign.title,
+            campaignId: updatedPledge.campaign.id,
+            pledgeAmount: updatedPledge.amountDollars,
+            backerName: updatedPledge.backer.name || undefined,
+            // pledgeTierTitle: updatedPledge.pledgeTier?.title // TODO: Add after pledgeTier relation exists
+          });
+          console.log(`✓ Sent pledge confirmation email to ${updatedPledge.backer.email}`);
+        } catch (error) {
+          console.error('Failed to send pledge confirmation email:', error);
+        }
+      } else {
+        console.warn(`⚠ No email address found for backer ${updatedPledge.backer.id}, skipping confirmation email`);
       }
     }
     
@@ -146,6 +231,12 @@ async function handlePaymentIntentSucceeded(event: any) {
 }
 
 async function handlePaymentIntentFailed(event: any) {
+  // Handle missing or malformed event data
+  if (!event?.data?.object?.id) {
+    console.error('Malformed payment intent event: missing data.object.id');
+    return;
+  }
+  
   const paymentIntent = event.data.object;
   
   // Update pledge status to failed
@@ -161,5 +252,30 @@ async function handlePaymentIntentFailed(event: any) {
   
   if (pledge.count > 0) {
     console.log(`✓ Updated pledge status to failed for payment ${paymentIntent.id}`);
+  }
+}
+
+async function handlePaymentIntentCanceled(event: any) {
+  // Handle missing or malformed event data
+  if (!event?.data?.object?.id) {
+    console.error('Malformed payment intent event: missing data.object.id');
+    return;
+  }
+  
+  const paymentIntent = event.data.object;
+  
+  // Update pledge status to failed for canceled payments
+  const pledge = await prisma.pledge.updateMany({
+    where: {
+      paymentRef: paymentIntent.id,
+      status: 'pending'
+    },
+    data: {
+      status: 'failed'
+    }
+  });
+  
+  if (pledge.count > 0) {
+    console.log(`✓ Updated pledge status to failed for canceled payment ${paymentIntent.id}`);
   }
 }

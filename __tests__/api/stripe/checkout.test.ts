@@ -175,6 +175,8 @@ describe('/api/payments/checkout-session - Comprehensive Test Suite', () => {
       });
 
       it('should create checkout session for anonymous user with provided email', async () => {
+        resetAllMocks();
+        setupDefaultMocks();
         mockAuth.mockResolvedValue(null); // No authenticated user
         
         // Setup campaign
@@ -189,7 +191,8 @@ describe('/api/payments/checkout-session - Comprehensive Test Suite', () => {
         const testData = PaymentTestData.generateCheckoutRequest({
           pledgeAmount: 500,
           backerEmail: 'anonymous.backer@example.com',
-          campaignId: campaign.id
+          campaignId: campaign.id,
+          pledgeTierId: campaign.pledgeTiers[0].id
         });
 
         const mockSession = StripeObjectFactory.createCheckoutSession({
@@ -218,9 +221,17 @@ describe('/api/payments/checkout-session - Comprehensive Test Suite', () => {
       });
 
       it('should require email when no user is authenticated and no email provided', async () => {
+        resetAllMocks();
+        setupDefaultMocks();
         mockAuth.mockResolvedValue(null); // No authenticated user
 
-        const testData = PaymentTestData.generateCheckoutRequest();
+        const campaign = PaymentTestData.generateCampaign({ status: 'published' });
+        prismaMock.campaign.findUnique.mockResolvedValue(campaign as any);
+
+        const testData = PaymentTestData.generateCheckoutRequest({
+          campaignId: campaign.id,
+          pledgeTierId: campaign.pledgeTiers[0].id
+        });
         delete testData.backerEmail; // No email provided
 
         const request = new NextRequest('http://localhost:3000/api/payments/checkout-session', {
@@ -240,8 +251,16 @@ describe('/api/payments/checkout-session - Comprehensive Test Suite', () => {
 
     describe('💰 Payment Amount Validation', () => {
       it('should handle minimum payment amount ($100)', async () => {
+        resetAllMocks();
+        setupDefaultMocks();
+        
+        const campaign = PaymentTestData.generateCampaign({ status: 'published' });
+        prismaMock.campaign.findUnique.mockResolvedValue(campaign as any);
+        
         const testData = PaymentTestData.generateCheckoutRequest({
-          pledgeAmount: 100 // Exactly minimum
+          pledgeAmount: 100, // Exactly minimum
+          campaignId: campaign.id,
+          pledgeTierId: campaign.pledgeTiers[0].id
         });
 
         const mockSession = StripeObjectFactory.createCheckoutSession({
@@ -276,8 +295,16 @@ describe('/api/payments/checkout-session - Comprehensive Test Suite', () => {
       });
 
       it('should handle large payment amounts correctly ($50,000)', async () => {
+        resetAllMocks();
+        setupDefaultMocks();
+        
+        const campaign = PaymentTestData.generateCampaign({ status: 'published' });
+        prismaMock.campaign.findUnique.mockResolvedValue(campaign as any);
+        
         const testData = PaymentTestData.generateCheckoutRequest({
-          pledgeAmount: 50000 // $50,000 - large amount
+          pledgeAmount: 50000, // $50,000 - large amount
+          campaignId: campaign.id,
+          pledgeTierId: campaign.pledgeTiers[0].id
         });
 
         const mockSession = StripeObjectFactory.createCheckoutSession({
@@ -338,18 +365,23 @@ describe('/api/payments/checkout-session - Comprehensive Test Suite', () => {
     describe('🎯 Currency Conversion and Fee Calculations', () => {
       it('should calculate application fees correctly (5% of amount)', async () => {
         const testCases = [
-          { amount: 100, expectedFee: 500 },   // $100 -> $5 fee
-          { amount: 1000, expectedFee: 5000 }, // $1,000 -> $50 fee
-          { amount: 10000, expectedFee: 50000 } // $10,000 -> $500 fee
+          { amount: 100, expectedFee: 500 },   // $100 -> $5 fee = 500 cents
+          { amount: 1000, expectedFee: 5000 }, // $1,000 -> $50 fee = 5000 cents
+          { amount: 10000, expectedFee: 50000 } // $10,000 -> $500 fee = 50000 cents
         ];
 
         for (const testCase of testCases) {
           resetAllMocks();
           setupDefaultMocks();
+          
+          const campaign = PaymentTestData.generateCampaign({ status: 'published' });
+          prismaMock.campaign.findUnique.mockResolvedValue(campaign as any);
 
           const testData = PaymentTestData.generateCheckoutRequest({
-            pledgeAmount: testCase.amount
-          });
+            pledgeAmount: testCase.amount,
+          campaignId: campaign.id,
+          pledgeTierId: campaign.pledgeTiers[0].id
+        });
 
           const mockSession = StripeObjectFactory.createCheckoutSession({
             amount_total: testCase.amount * 100,
@@ -378,8 +410,16 @@ describe('/api/payments/checkout-session - Comprehensive Test Suite', () => {
       });
 
       it('should handle currency conversion properly (USD default)', async () => {
+        resetAllMocks();
+        setupDefaultMocks();
+        
+        const campaign = PaymentTestData.generateCampaign({ status: 'published' });
+        prismaMock.campaign.findUnique.mockResolvedValue(campaign as any);
+        
         const testData = PaymentTestData.generateCheckoutRequest({
-          pledgeAmount: 250
+          pledgeAmount: 250,
+          campaignId: campaign.id,
+          pledgeTierId: campaign.pledgeTiers[0].id
         });
 
         const mockSession = StripeObjectFactory.createCheckoutSession({
@@ -414,8 +454,16 @@ describe('/api/payments/checkout-session - Comprehensive Test Suite', () => {
       });
 
       it('should handle fractional cents correctly by rounding', async () => {
+        resetAllMocks();
+        setupDefaultMocks();
+        
+        const campaign = PaymentTestData.generateCampaign({ status: 'published' });
+        prismaMock.campaign.findUnique.mockResolvedValue(campaign as any);
+        
         const testData = PaymentTestData.generateCheckoutRequest({
-          pledgeAmount: 123.456 // Should round to 12346 cents
+          pledgeAmount: 123.456, // Should round to 12346 cents
+          campaignId: campaign.id,
+          pledgeTierId: campaign.pledgeTiers[0].id
         });
 
         const mockSession = StripeObjectFactory.createCheckoutSession();
@@ -518,13 +566,17 @@ describe('/api/payments/checkout-session - Comprehensive Test Suite', () => {
 
     describe('🔗 Success and Cancel URL Validation', () => {
       it('should use custom success and cancel URLs when provided', async () => {
+        resetAllMocks();
+        setupDefaultMocks();
+        
         const campaign = PaymentTestData.generateCampaign({ status: 'published' });
         prismaMock.campaign.findUnique.mockResolvedValue(campaign as any);
         
         const testData = PaymentTestData.generateCheckoutRequest({
           successUrl: 'https://custom-success.com/payment-complete?session_id={CHECKOUT_SESSION_ID}',
           cancelUrl: 'https://custom-cancel.com/payment-cancelled',
-          campaignId: campaign.id
+          campaignId: campaign.id,
+          pledgeTierId: campaign.pledgeTiers[0].id
         });
 
         const mockSession = StripeObjectFactory.createCheckoutSession({
@@ -551,11 +603,15 @@ describe('/api/payments/checkout-session - Comprehensive Test Suite', () => {
       });
 
       it('should generate default URLs when not provided', async () => {
+        resetAllMocks();
+        setupDefaultMocks();
+        
         const campaign = PaymentTestData.generateCampaign({ status: 'published' });
         prismaMock.campaign.findUnique.mockResolvedValue(campaign as any);
         
         const testData = PaymentTestData.generateCheckoutRequest({
-          campaignId: campaign.id
+          campaignId: campaign.id,
+          pledgeTierId: campaign.pledgeTiers[0].id
         });
         delete testData.successUrl;
         delete testData.cancelUrl;
@@ -630,7 +686,8 @@ describe('/api/payments/checkout-session - Comprehensive Test Suite', () => {
         prismaMock.campaign.findUnique.mockResolvedValue(campaign as any);
 
         const testData = PaymentTestData.generateCheckoutRequest({
-          campaignId: campaign.id
+          campaignId: campaign.id,
+          pledgeTierId: campaign.pledgeTiers[0].id
         });
 
         const request = new NextRequest('http://localhost:3000/api/payments/checkout-session', {
@@ -655,7 +712,8 @@ describe('/api/payments/checkout-session - Comprehensive Test Suite', () => {
         prismaMock.campaign.findUnique.mockResolvedValue(campaign as any);
 
         const testData = PaymentTestData.generateCheckoutRequest({
-          campaignId: campaign.id
+          campaignId: campaign.id,
+          pledgeTierId: campaign.pledgeTiers[0].id
         });
 
         const request = new NextRequest('http://localhost:3000/api/payments/checkout-session', {
@@ -770,8 +828,16 @@ describe('/api/payments/checkout-session - Comprehensive Test Suite', () => {
       });
 
       it('should handle maximum reasonable amount ($1,000,000)', async () => {
+        resetAllMocks();
+        setupDefaultMocks();
+        
+        const campaign = PaymentTestData.generateCampaign({ status: 'published' });
+        prismaMock.campaign.findUnique.mockResolvedValue(campaign as any);
+        
         const testData = PaymentTestData.generateCheckoutRequest({
-          pledgeAmount: 1000000 // $1 million
+          pledgeAmount: 1000000, // $1 million
+          campaignId: campaign.id,
+          pledgeTierId: campaign.pledgeTiers[0].id
         });
 
         const mockSession = StripeObjectFactory.createCheckoutSession({
@@ -805,11 +871,20 @@ describe('/api/payments/checkout-session - Comprehensive Test Suite', () => {
 
   describe('🔌 Stripe Integration Error Handling', () => {
     it('should handle Stripe API errors gracefully', async () => {
+      resetAllMocks();
+      setupDefaultMocks();
+      
+      const campaign = PaymentTestData.generateCampaign({ status: 'published' });
+      prismaMock.campaign.findUnique.mockResolvedValue(campaign as any);
+      
       stripeMock.checkout.sessions.create.mockRejectedValue(
         PaymentErrorScenarios.STRIPE_ERRORS.API_ERROR
       );
 
-      const testData = PaymentTestData.generateCheckoutRequest();
+      const testData = PaymentTestData.generateCheckoutRequest({
+          campaignId: campaign.id,
+          pledgeTierId: campaign.pledgeTiers[0].id
+        });
 
       const request = new NextRequest('http://localhost:3000/api/payments/checkout-session', {
           method: 'POST',
@@ -826,11 +901,20 @@ describe('/api/payments/checkout-session - Comprehensive Test Suite', () => {
     });
 
     it('should handle network timeouts', async () => {
+      resetAllMocks();
+      setupDefaultMocks();
+      
+      const campaign = PaymentTestData.generateCampaign({ status: 'published' });
+      prismaMock.campaign.findUnique.mockResolvedValue(campaign as any);
+      
       stripeMock.checkout.sessions.create.mockRejectedValue(
         PaymentErrorScenarios.STRIPE_ERRORS.NETWORK_ERROR
       );
 
-      const testData = PaymentTestData.generateCheckoutRequest();
+      const testData = PaymentTestData.generateCheckoutRequest({
+          campaignId: campaign.id,
+          pledgeTierId: campaign.pledgeTiers[0].id
+        });
 
       const request = new NextRequest('http://localhost:3000/api/payments/checkout-session', {
         method: 'POST',
@@ -847,11 +931,20 @@ describe('/api/payments/checkout-session - Comprehensive Test Suite', () => {
     });
 
     it('should handle card declined scenarios', async () => {
+      resetAllMocks();
+      setupDefaultMocks();
+      
+      const campaign = PaymentTestData.generateCampaign({ status: 'published' });
+      prismaMock.campaign.findUnique.mockResolvedValue(campaign as any);
+      
       stripeMock.checkout.sessions.create.mockRejectedValue(
         PaymentErrorScenarios.STRIPE_ERRORS.CARD_DECLINED
       );
 
-      const testData = PaymentTestData.generateCheckoutRequest();
+      const testData = PaymentTestData.generateCheckoutRequest({
+          campaignId: campaign.id,
+          pledgeTierId: campaign.pledgeTiers[0].id
+        });
 
       const request = new NextRequest('http://localhost:3000/api/payments/checkout-session', {
         method: 'POST',
@@ -891,11 +984,20 @@ describe('/api/payments/checkout-session - Comprehensive Test Suite', () => {
     });
 
     it('should handle user upsert failures', async () => {
+      resetAllMocks();
+      setupDefaultMocks();
+      
+      const campaign = PaymentTestData.generateCampaign({ status: 'published' });
+      prismaMock.campaign.findUnique.mockResolvedValue(campaign as any);
+      
       prismaMock.user.upsert.mockRejectedValue(
         PaymentErrorScenarios.DATABASE_ERRORS.UNIQUE_CONSTRAINT
       );
 
-      const testData = PaymentTestData.generateCheckoutRequest();
+      const testData = PaymentTestData.generateCheckoutRequest({
+          campaignId: campaign.id,
+          pledgeTierId: campaign.pledgeTiers[0].id
+        });
 
       const request = new NextRequest('http://localhost:3000/api/payments/checkout-session', {
         method: 'POST',
@@ -944,9 +1046,14 @@ describe('/api/payments/checkout-session - Comprehensive Test Suite', () => {
       for (const amount of maliciousAmounts.slice(0, 5)) { // Test first 5 to avoid timeout
         resetAllMocks();
         setupDefaultMocks();
+        
+        const campaign = PaymentTestData.generateCampaign({ status: 'published' });
+        prismaMock.campaign.findUnique.mockResolvedValue(campaign as any);
 
         const testData = PaymentTestData.generateCheckoutRequest({
-          pledgeAmount: amount as number
+          pledgeAmount: amount as number,
+          campaignId: campaign.id,
+          pledgeTierId: campaign.pledgeTiers[0].id
         });
 
         const request = new NextRequest('http://localhost:3000/api/payments/checkout-session', {
@@ -986,7 +1093,16 @@ describe('/api/payments/checkout-session - Comprehensive Test Suite', () => {
 
   describe('⚡ Performance Benchmarks', () => {
     it('should handle checkout session creation within reasonable time (< 1000ms)', async () => {
-      const testData = PaymentTestData.generateCheckoutRequest();
+      resetAllMocks();
+      setupDefaultMocks();
+      
+      const campaign = PaymentTestData.generateCampaign({ status: 'published' });
+      prismaMock.campaign.findUnique.mockResolvedValue(campaign as any);
+      
+      const testData = PaymentTestData.generateCheckoutRequest({
+          campaignId: campaign.id,
+          pledgeTierId: campaign.pledgeTiers[0].id
+        });
       const mockSession = StripeObjectFactory.createCheckoutSession();
       
       stripeMock.checkout.sessions.create.mockResolvedValue(mockSession);
@@ -1004,13 +1120,22 @@ describe('/api/payments/checkout-session - Comprehensive Test Suite', () => {
       expect(duration).toBeLessThan(1000); // Should complete within 1 second
 
       // Update performance tracking
-      this.updatePerformanceMetrics(duration);
+      updatePerformanceMetrics(duration);
       performanceMetrics.successfulCheckouts++;
     });
 
     it('should handle concurrent checkout requests efficiently', async () => {
+      resetAllMocks();
+      setupDefaultMocks();
+      
+      const campaign = PaymentTestData.generateCampaign({ status: 'published' });
+      prismaMock.campaign.findUnique.mockResolvedValue(campaign as any);
+      
       const concurrentRequests = 10;
-      const testData = PaymentTestData.generateCheckoutRequest();
+      const testData = PaymentTestData.generateCheckoutRequest({
+          campaignId: campaign.id,
+          pledgeTierId: campaign.pledgeTiers[0].id
+        });
       const mockSession = StripeObjectFactory.createCheckoutSession();
       
       stripeMock.checkout.sessions.create.mockResolvedValue(mockSession);
@@ -1037,12 +1162,20 @@ describe('/api/payments/checkout-session - Comprehensive Test Suite', () => {
     });
 
     it('should maintain performance under database load', async () => {
+      resetAllMocks();
+      setupDefaultMocks();
+      
+      const campaign = PaymentTestData.generateCampaign({ status: 'published' });
+      
       // Simulate database latency
       prismaMock.campaign.findUnique.mockImplementation(() =>
-        new Promise(resolve => setTimeout(() => resolve(PaymentTestData.generateCampaign() as any), 100))
+        new Promise(resolve => setTimeout(() => resolve(campaign as any), 100))
       );
       
-      const testData = PaymentTestData.generateCheckoutRequest();
+      const testData = PaymentTestData.generateCheckoutRequest({
+          campaignId: campaign.id,
+          pledgeTierId: campaign.pledgeTiers[0].id
+        });
       const mockSession = StripeObjectFactory.createCheckoutSession();
       stripeMock.checkout.sessions.create.mockResolvedValue(mockSession);
 
@@ -1117,7 +1250,16 @@ describe('/api/payments/checkout-session - Comprehensive Test Suite', () => {
     });
 
     it('should create session with proper transfer data for webhook processing', async () => {
-      const testData = PaymentTestData.generateCheckoutRequest();
+      resetAllMocks();
+      setupDefaultMocks();
+      
+      const campaign = PaymentTestData.generateCampaign({ status: 'published' });
+      prismaMock.campaign.findUnique.mockResolvedValue(campaign as any);
+      
+      const testData = PaymentTestData.generateCheckoutRequest({
+          campaignId: campaign.id,
+          pledgeTierId: campaign.pledgeTiers[0].id
+        });
       const mockSession = StripeObjectFactory.createCheckoutSession();
       
       stripeMock.checkout.sessions.create.mockResolvedValue(mockSession);
@@ -1156,6 +1298,8 @@ describe('/api/payments/checkout-session - Comprehensive Test Suite', () => {
       const response = await POST(request);
       
       expect(response.status).toBe(400);
+      const data = await response.json();
+      expect(data.error).toBe('Invalid JSON in request body');
 
       performanceMetrics.failedCheckouts++;
     });
@@ -1168,7 +1312,9 @@ describe('/api/payments/checkout-session - Comprehensive Test Suite', () => {
 
       const response = await POST(request);
       
-      expect(response.status).toBe(500);
+      expect(response.status).toBe(400);
+      const data = await response.json();
+      expect(data.error).toBe('Invalid JSON in request body');
 
       performanceMetrics.failedCheckouts++;
     });

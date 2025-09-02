@@ -13,7 +13,18 @@ import { z } from "zod";
 const checkoutSessionSchema = z.object({
   campaignId: z.string(),
   pledgeTierId: z.string().optional(),
-  pledgeAmount: z.number().min(100), // Minimum $100
+  pledgeAmount: z.number()
+    .min(100, "Minimum payment amount is $100") // Minimum $100
+    .max(1000000, "Maximum payment amount is $1,000,000") // Maximum $1,000,000
+    .finite("Payment amount must be a finite number") // Reject Infinity and NaN
+    .refine((val) => val > 0, "Payment amount must be positive")
+    .refine((val) => Number.isFinite(val), "Payment amount must be a valid number")
+    .refine((val) => {
+      // Allow reasonable precision (up to 3 decimal places for fractional cents)
+      const str = val.toString();
+      const decimalIndex = str.indexOf('.');
+      return decimalIndex === -1 || str.length - decimalIndex - 1 <= 3;
+    }, "Payment amount has too many decimal places"),
   backerEmail: z.string().email().optional(),
   successUrl: z.string().url().optional(),
   cancelUrl: z.string().url().optional()
@@ -22,7 +33,26 @@ const checkoutSessionSchema = z.object({
 export async function POST(req: NextRequest) {
   try {
     const session = await auth();
-    const body = await req.json();
+    
+    // Handle empty or invalid JSON bodies
+    let body;
+    try {
+      body = await req.json();
+      
+      // Check if body is empty or null
+      if (!body || typeof body !== 'object') {
+        return NextResponse.json({ 
+          error: 'Invalid JSON in request body' 
+        }, { status: 400 });
+      }
+    } catch (jsonError) {
+      // This catches both SyntaxError and other JSON parsing errors
+      console.error('JSON parsing error:', jsonError);
+      return NextResponse.json({ 
+        error: 'Invalid JSON in request body' 
+      }, { status: 400 });
+    }
+    
     const validatedData = checkoutSessionSchema.parse(body);
     
     const { campaignId, pledgeTierId, pledgeAmount, backerEmail, successUrl, cancelUrl } = validatedData;

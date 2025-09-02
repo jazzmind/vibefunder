@@ -28,6 +28,7 @@ import {
   setupDefaultMocks,
   emailMock
 } from '../../payments/setup-payment-mocks';
+import { createTestRequest, createAuthenticatedRequest } from '../../utils/api-test-helpers';
 
 // Mock Stripe webhook verification
 jest.mock('@/lib/stripe', () => ({

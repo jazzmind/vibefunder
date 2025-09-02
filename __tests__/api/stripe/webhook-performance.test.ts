@@ -15,6 +15,7 @@ import {
   setupDefaultMocks,
   emailMock
 } from '../../payments/setup-payment-mocks';
+import { createTestRequest, createAuthenticatedRequest } from '../../utils/api-test-helpers';
 
 jest.mock('@/lib/stripe', () => ({
   stripe: require('../../payments/setup-payment-mocks').stripeMock,

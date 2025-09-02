@@ -3,6 +3,7 @@ import { POST } from '@/app/api/auth/register/route';
 import { prisma } from '@/lib/db';
 import bcrypt from 'bcryptjs';
 import { SignJWT } from 'jose';
+import { createTestRequest } from '../../utils/api-test-helpers';
 
 // Mock external dependencies
 jest.mock('@/lib/db', () => ({
@@ -56,16 +57,15 @@ describe('POST /api/auth/register', () => {
     (prisma.user.create as jest.Mock).mockResolvedValue(newUser);
     (prisma.session.create as jest.Mock).mockResolvedValue(mockSession);
 
-    const request = new NextRequest('http://localhost:3000/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    const request = createTestRequest('http://localhost:3000/api/auth/register', {
+        method: 'POST',
+        body: {
         email: 'newuser@example.com',
         name: 'New User',
         password: 'password123',
         confirmPassword: 'password123'
-      })
-    });
+      }
+      });
 
     // Act
     const response = await POST(request);
@@ -94,15 +94,14 @@ describe('POST /api/auth/register', () => {
     
     (prisma.user.findUnique as jest.Mock).mockResolvedValue(existingUser);
 
-    const request = new NextRequest('http://localhost:3000/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    const request = createTestRequest('http://localhost:3000/api/auth/register', {
+        method: 'POST',
+        body: {
         email: 'existing@example.com',
         name: 'New User',
         password: 'password123'
-      })
-    });
+      }
+      });
 
     // Act
     const response = await POST(request);
@@ -117,15 +116,14 @@ describe('POST /api/auth/register', () => {
   });
 
   it('should validate password length', async () => {
-    const request = new NextRequest('http://localhost:3000/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    const request = createTestRequest('http://localhost:3000/api/auth/register', {
+        method: 'POST',
+        body: {
         email: 'test@example.com',
         name: 'Test User',
         password: '123' // Too short
-      })
-    });
+      }
+      });
 
     // Act
     const response = await POST(request);
@@ -140,15 +138,14 @@ describe('POST /api/auth/register', () => {
   });
 
   it('should validate email format', async () => {
-    const request = new NextRequest('http://localhost:3000/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    const request = createTestRequest('http://localhost:3000/api/auth/register', {
+        method: 'POST',
+        body: {
         email: 'invalid-email',
         name: 'Test User',
         password: 'password123'
-      })
-    });
+      }
+      });
 
     // Act
     const response = await POST(request);
@@ -163,15 +160,14 @@ describe('POST /api/auth/register', () => {
   });
 
   it('should require name', async () => {
-    const request = new NextRequest('http://localhost:3000/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    const request = createTestRequest('http://localhost:3000/api/auth/register', {
+        method: 'POST',
+        body: {
         email: 'test@example.com',
         password: 'password123'
         // Missing name
-      })
-    });
+      }
+      });
 
     // Act
     const response = await POST(request);
@@ -186,16 +182,15 @@ describe('POST /api/auth/register', () => {
   });
 
   it('should validate password confirmation', async () => {
-    const request = new NextRequest('http://localhost:3000/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    const request = createTestRequest('http://localhost:3000/api/auth/register', {
+        method: 'POST',
+        body: {
         email: 'test@example.com',
         name: 'Test User',
         password: 'password123',
         confirmPassword: 'different_password'
-      })
-    });
+      }
+      });
 
     // Act
     const response = await POST(request);

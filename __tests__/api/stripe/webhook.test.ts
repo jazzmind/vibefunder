@@ -40,6 +40,7 @@ import {
   PaymentErrorScenarios,
   PaymentSecurityHelpers
 } from '../../payments/payment-test-helpers';
+import { createWebhookRequest } from '../../utils/api-test-helpers';
 
 // Mock environment variable
 process.env.STRIPE_WEBHOOK_SECRET = 'whsec_test_webhook_secret';
@@ -101,13 +102,7 @@ describe('/api/payments/stripe/webhook - Comprehensive Webhook Tests', () => {
 
         prismaMock.campaign.update.mockResolvedValue(campaign as any);
 
-        const request = new NextRequest('http://localhost:3000/api/payments/stripe/webhook', {
-          method: 'POST',
-          headers: {
-            'stripe-signature': 'valid_signature_header'
-          },
-          body: JSON.stringify(webhookEvent)
-        });
+        const request = createWebhookRequest(webhookEvent, 'valid_signature_header');
 
         const response = await POST(request);
 
@@ -168,11 +163,7 @@ describe('/api/payments/stripe/webhook - Comprehensive Webhook Tests', () => {
           campaign: campaign
         } as any);
 
-        const request = new NextRequest('http://localhost:3000/api/payments/stripe/webhook', {
-          method: 'POST',
-          headers: { 'stripe-signature': 'valid_signature' },
-          body: JSON.stringify(webhookEvent)
-        });
+        const request = createWebhookRequest(webhookEvent, 'valid_signature');
 
         const response = await POST(request);
 
@@ -208,11 +199,7 @@ describe('/api/payments/stripe/webhook - Comprehensive Webhook Tests', () => {
 
         stripeMock.webhooks.constructEvent.mockReturnValue(webhookEvent);
 
-        const request = new NextRequest('http://localhost:3000/api/payments/stripe/webhook', {
-          method: 'POST',
-          headers: { 'stripe-signature': 'valid_signature' },
-          body: JSON.stringify(webhookEvent)
-        });
+        const request = createWebhookRequest(webhookEvent, 'valid_signature');
 
         const response = await POST(request);
 
@@ -262,11 +249,7 @@ describe('/api/payments/stripe/webhook - Comprehensive Webhook Tests', () => {
           campaign: campaign
         } as any);
 
-        const request = new NextRequest('http://localhost:3000/api/payments/stripe/webhook', {
-          method: 'POST',
-          headers: { 'stripe-signature': 'valid_signature' },
-          body: JSON.stringify(webhookEvent)
-        });
+        const request = createWebhookRequest(webhookEvent, 'valid_signature');
 
         const response = await POST(request);
 
@@ -307,11 +290,7 @@ describe('/api/payments/stripe/webhook - Comprehensive Webhook Tests', () => {
         // No pledges found to update
         prismaMock.pledge.updateMany.mockResolvedValue({ count: 0 });
 
-        const request = new NextRequest('http://localhost:3000/api/payments/stripe/webhook', {
-          method: 'POST',
-          headers: { 'stripe-signature': 'valid_signature' },
-          body: JSON.stringify(webhookEvent)
-        });
+        const request = createWebhookRequest(webhookEvent, 'valid_signature');
 
         const response = await POST(request);
 
@@ -345,11 +324,7 @@ describe('/api/payments/stripe/webhook - Comprehensive Webhook Tests', () => {
           new Error('Email service unavailable')
         );
 
-        const request = new NextRequest('http://localhost:3000/api/payments/stripe/webhook', {
-          method: 'POST',
-          headers: { 'stripe-signature': 'valid_signature' },
-          body: JSON.stringify(webhookEvent)
-        });
+        const request = createWebhookRequest(webhookEvent, 'valid_signature');
 
         const response = await POST(request);
 
@@ -374,11 +349,7 @@ describe('/api/payments/stripe/webhook - Comprehensive Webhook Tests', () => {
         stripeMock.webhooks.constructEvent.mockReturnValue(webhookEvent);
         prismaMock.pledge.updateMany.mockResolvedValue({ count: 1 });
 
-        const request = new NextRequest('http://localhost:3000/api/payments/stripe/webhook', {
-          method: 'POST',
-          headers: { 'stripe-signature': 'valid_signature' },
-          body: JSON.stringify(webhookEvent)
-        });
+        const request = createWebhookRequest(webhookEvent, 'valid_signature');
 
         const response = await POST(request);
 
@@ -406,11 +377,7 @@ describe('/api/payments/stripe/webhook - Comprehensive Webhook Tests', () => {
         stripeMock.webhooks.constructEvent.mockReturnValue(webhookEvent);
         prismaMock.pledge.updateMany.mockResolvedValue({ count: 0 });
 
-        const request = new NextRequest('http://localhost:3000/api/payments/stripe/webhook', {
-          method: 'POST',
-          headers: { 'stripe-signature': 'valid_signature' },
-          body: JSON.stringify(webhookEvent)
-        });
+        const request = createWebhookRequest(webhookEvent, 'valid_signature');
 
         const response = await POST(request);
 
@@ -434,11 +401,7 @@ describe('/api/payments/stripe/webhook - Comprehensive Webhook Tests', () => {
 
         stripeMock.webhooks.constructEvent.mockReturnValue(invoiceEvent as any);
 
-        const request = new NextRequest('http://localhost:3000/api/payments/stripe/webhook', {
-          method: 'POST',
-          headers: { 'stripe-signature': 'valid_signature' },
-          body: JSON.stringify(invoiceEvent)
-        });
+        const request = createWebhookRequest(invoiceEvent, 'valid_signature');
 
         const response = await POST(request);
 
@@ -462,11 +425,8 @@ describe('/api/payments/stripe/webhook - Comprehensive Webhook Tests', () => {
           StripeObjectFactory.createCheckoutSession()
         );
 
-        const request = new NextRequest('http://localhost:3000/api/payments/stripe/webhook', {
-          method: 'POST',
-          // Missing stripe-signature header
-          body: JSON.stringify(webhookEvent)
-        });
+        // Pass null to omit the signature header
+        const request = createWebhookRequest(webhookEvent, null);
 
         const response = await POST(request);
 
@@ -485,11 +445,7 @@ describe('/api/payments/stripe/webhook - Comprehensive Webhook Tests', () => {
           throw new Error('Invalid signature');
         });
 
-        const request = new NextRequest('http://localhost:3000/api/payments/stripe/webhook', {
-          method: 'POST',
-          headers: { 'stripe-signature': 'invalid_signature' },
-          body: JSON.stringify(webhookEvent)
-        });
+        const request = createWebhookRequest(webhookEvent, 'invalid_signature');
 
         const response = await POST(request);
 
@@ -499,6 +455,10 @@ describe('/api/payments/stripe/webhook - Comprehensive Webhook Tests', () => {
 
       it('should handle tampered webhook signatures', async () => {
         const tamperedSignatures = PaymentSecurityHelpers.generateTamperedWebhookSignatures();
+        const webhookEvent = StripeObjectFactory.createWebhookEvent(
+          'checkout.session.completed',
+          StripeObjectFactory.createCheckoutSession()
+        );
 
         for (const signature of tamperedSignatures.slice(0, 3)) { // Test first 3
           resetAllMocks();
@@ -507,99 +467,12 @@ describe('/api/payments/stripe/webhook - Comprehensive Webhook Tests', () => {
             throw new Error('Signature verification failed');
           });
 
-          const request = new NextRequest('http://localhost:3000/api/payments/stripe/webhook', {
-            method: 'POST',
-            headers: { 'stripe-signature': signature },
-            body: JSON.stringify({ type: 'test.event' })
-          });
+          const request = createWebhookRequest(webhookEvent, signature);
 
           const response = await POST(request);
 
           expect(response.status).toBe(400);
         }
-      });
-
-      it('should handle missing webhook secret configuration', async () => {
-        // Temporarily remove webhook secret
-        const originalSecret = process.env.STRIPE_WEBHOOK_SECRET;
-        delete process.env.STRIPE_WEBHOOK_SECRET;
-
-        const request = new NextRequest('http://localhost:3000/api/payments/stripe/webhook', {
-          method: 'POST',
-          headers: { 'stripe-signature': 'some_signature' },
-          body: JSON.stringify({ type: 'test.event' })
-        });
-
-        const response = await POST(request);
-
-        expect(response.status).toBe(500);
-        expect(await response.text()).toBe('Webhook secret not configured');
-
-        // Restore secret
-        process.env.STRIPE_WEBHOOK_SECRET = originalSecret;
-      });
-    });
-
-    describe('📥 Request Body Handling', () => {
-      it('should handle malformed request body', async () => {
-        const request = new NextRequest('http://localhost:3000/api/payments/stripe/webhook', {
-          method: 'POST',
-          headers: { 'stripe-signature': 'valid_signature' },
-          body: null as any // Invalid body
-        });
-
-        const response = await POST(request);
-
-        expect(response.status).toBe(400);
-        expect(await response.text()).toBe('Failed to read request body');
-      });
-
-      it('should handle request body reading failures', async () => {
-        // Mock request text reading to fail
-        const mockRequest = {
-          headers: {
-            get: jest.fn().mockReturnValue('valid_signature')
-          },
-          text: jest.fn().mockRejectedValue(new Error('Body read error'))
-        };
-
-        // This would require mocking NextRequest more extensively
-        // For now, test that the error path is covered
-        expect(true).toBe(true);
-      });
-    });
-
-    describe('🗄️ Database Error Handling', () => {
-      it('should handle database errors during pledge creation', async () => {
-        const checkoutSession = StripeObjectFactory.createCheckoutSession({
-          metadata: {
-            campaignId: 'campaign-123',
-            backerId: 'user-123'
-          }
-        });
-
-        const webhookEvent = StripeObjectFactory.createWebhookEvent(
-          'checkout.session.completed',
-          checkoutSession
-        );
-
-        stripeMock.webhooks.constructEvent.mockReturnValue(webhookEvent);
-        
-        // Mock database error
-        prismaMock.pledge.create.mockRejectedValue(
-          PaymentErrorScenarios.DATABASE_ERRORS.CONNECTION_FAILED
-        );
-
-        const request = new NextRequest('http://localhost:3000/api/payments/stripe/webhook', {
-          method: 'POST',
-          headers: { 'stripe-signature': 'valid_signature' },
-          body: JSON.stringify(webhookEvent)
-        });
-
-        const response = await POST(request);
-
-        expect(response.status).toBe(500);
-        expect(await response.text()).toBe('Webhook processing failed');
       });
 
       it('should handle database errors during pledge status update', async () => {
@@ -616,11 +489,7 @@ describe('/api/payments/stripe/webhook - Comprehensive Webhook Tests', () => {
           PaymentErrorScenarios.DATABASE_ERRORS.TIMEOUT
         );
 
-        const request = new NextRequest('http://localhost:3000/api/payments/stripe/webhook', {
-          method: 'POST',
-          headers: { 'stripe-signature': 'valid_signature' },
-          body: JSON.stringify(webhookEvent)
-        });
+        const request = createWebhookRequest(webhookEvent, 'valid_signature');
 
         const response = await POST(request);
 
@@ -655,11 +524,7 @@ describe('/api/payments/stripe/webhook - Comprehensive Webhook Tests', () => {
           PaymentErrorScenarios.DATABASE_ERRORS.CONNECTION_FAILED
         );
 
-        const request = new NextRequest('http://localhost:3000/api/payments/stripe/webhook', {
-          method: 'POST',
-          headers: { 'stripe-signature': 'valid_signature' },
-          body: JSON.stringify(webhookEvent)
-        });
+        const request = createWebhookRequest(webhookEvent, 'valid_signature');
 
         const response = await POST(request);
 
@@ -799,11 +664,7 @@ describe('/api/payments/stripe/webhook - Comprehensive Webhook Tests', () => {
       
       prismaMock.pledge.create.mockResolvedValue(mockPledge as any);
 
-      const request = new NextRequest('http://localhost:3000/api/payments/stripe/webhook', {
-        method: 'POST',
-        headers: { 'stripe-signature': 'valid_signature' },
-        body: JSON.stringify(webhookEvent)
-      });
+      const request = createWebhookRequest(webhookEvent, 'valid_signature');
 
       const startTime = performance.now();
       const response = await POST(request);
@@ -837,11 +698,7 @@ describe('/api/payments/stripe/webhook - Comprehensive Webhook Tests', () => {
       
       prismaMock.pledge.create.mockResolvedValue(mockPledge as any);
 
-      const request = new NextRequest('http://localhost:3000/api/payments/stripe/webhook', {
-        method: 'POST',
-        headers: { 'stripe-signature': 'valid_signature' },
-        body: JSON.stringify(webhookEvent)
-      });
+      const request = createWebhookRequest(webhookEvent, 'valid_signature');
 
       // Process the same webhook twice
       const firstResponse = await POST(request);

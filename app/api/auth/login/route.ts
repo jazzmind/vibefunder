@@ -5,7 +5,7 @@ import { SignJWT } from 'jose';
 import { z } from 'zod';
 
 const loginSchema = z.object({
-  email: z.string().email('Invalid email format'),
+  email: z.string().min(1, 'Email is required').email('Invalid email format'),
   password: z.string().min(1, 'Password is required'),
   rememberMe: z.boolean().optional(),
   invalidateOtherSessions: z.boolean().optional()
@@ -23,8 +23,17 @@ export async function POST(request: NextRequest) {
     const result = loginSchema.safeParse(body);
     if (!result.success) {
       const firstError = result.error.errors[0];
+      // Handle missing fields with custom messages
+      let errorMessage = firstError.message;
+      if (firstError.message === 'Required') {
+        if (firstError.path[0] === 'email') {
+          errorMessage = 'Email is required';
+        } else if (firstError.path[0] === 'password') {
+          errorMessage = 'Password is required';
+        }
+      }
       return NextResponse.json(
-        { success: false, error: firstError.message },
+        { success: false, error: errorMessage },
         { status: 400 }
       );
     }

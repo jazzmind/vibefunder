@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { jwtVerify } from 'jose';
+import { getUserFromRequest } from '@/lib/auth-helpers';
 import { z } from 'zod';
-
-const secret = new TextEncoder().encode(
-  process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || 'fallback-secret'
-);
 
 const pledgeSchema = z.object({
   amountDollars: z.number().min(1, 'Pledge amount must be at least $1'),
@@ -14,35 +10,12 @@ const pledgeSchema = z.object({
   isAnonymous: z.boolean().optional().default(false)
 });
 
-async function getUserFromToken(request: NextRequest) {
-  let token = request.headers.get('Authorization')?.replace('Bearer ', '');
-  
-  if (!token) {
-    const cookieToken = request.cookies.get('session')?.value;
-    if (cookieToken) {
-      token = cookieToken;
-    }
-  }
-
-  if (!token) {
-    return null;
-  }
-
-  try {
-    const { payload } = await jwtVerify(token, secret);
-    const userId = payload.sub as string;
-    return userId;
-  } catch {
-    return null;
-  }
-}
-
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const userId = await getUserFromToken(request);
+    const userId = await getUserFromRequest(request);
     
     if (!userId) {
       return NextResponse.json(
@@ -51,7 +24,7 @@ export async function POST(
       );
     }
 
-    const campaignId = params.id;
+    const { id: campaignId } = await params;
     const body = await request.json();
     
     // Validate input

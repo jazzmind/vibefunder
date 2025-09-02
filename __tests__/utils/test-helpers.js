@@ -263,14 +263,19 @@ async function createTestCampaign(campaignData = {}, userId = null) {
     creatorId = testUser.id;
   }
 
+  // Handle field mappings for test compatibility
+  const { endDate, ...cleanCampaignData } = campaignData;
+  
   const defaultCampaign = {
     title: `Test Campaign ${Date.now()}`,
     summary: `Test summary ${Date.now()}`,
     description: 'This is a test campaign',
     fundingGoalDollars: 10000,
     makerId: creatorId,
+    // Map endDate to endsAt if provided
+    ...(endDate && { endsAt: typeof endDate === 'string' ? new Date(endDate) : endDate }),
     // Don't set status - let database use its default
-    ...campaignData
+    ...cleanCampaignData
   };
 
   try {
@@ -479,6 +484,28 @@ function generateMockPaymentSession(overrides = {}) {
 }
 
 /**
+ * Create a JWT token for testing
+ * @param {object} user - User object
+ * @returns {string} JWT token
+ */
+function createTestJWT(user) {
+  // Simple test JWT - in real implementation use proper library
+  const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
+  const payload = Buffer.from(JSON.stringify({
+    sub: user.id,
+    email: user.email,
+    name: user.name,
+    iat: Math.floor(Date.now() / 1000),
+    exp: Math.floor(Date.now() / 1000) + (60 * 60), // 1 hour
+  })).toString('base64url');
+  
+  // For tests, we'll use a simple signature - in production this should be proper HMAC
+  const signature = Buffer.from(`test-signature-${user.id}`).toString('base64url');
+  
+  return `${header}.${payload}.${signature}`;
+}
+
+/**
  * Create authentication headers for test requests
  * @param {object} user - User object
  * @returns {object} Headers object with authentication
@@ -489,7 +516,11 @@ function createAuthHeaders(user = null) {
   };
   
   if (user) {
-    // Add test user authentication header
+    // Create proper JWT token for API authentication
+    const token = createTestJWT(user);
+    headers['Authorization'] = `Bearer ${token}`;
+    
+    // Also add fallback headers for compatibility
     headers['x-test-user-id'] = user.id || 'test-user-id';
     headers['x-test-user-email'] = user.email || 'test@example.com';
   }
@@ -722,5 +753,6 @@ module.exports = {
   generateOtpCode,
   generateMockStripeCustomer,
   generateMockPaymentSession,
+  createTestJWT,
   createAuthHeaders
 };

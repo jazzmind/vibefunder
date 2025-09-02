@@ -40,8 +40,10 @@ export const stripeMock = {
     constructEvent: jest.fn(),
   },
   paymentIntents: {
+    create: jest.fn(),
     retrieve: jest.fn(),
     update: jest.fn(),
+    confirm: jest.fn(),
     cancel: jest.fn(),
     capture: jest.fn(),
   },
@@ -76,12 +78,15 @@ export const stripeMock = {
     retrieve: jest.fn(),
     update: jest.fn(),
     cancel: jest.fn(),
+    list: jest.fn(),
   },
   invoices: {
     create: jest.fn(),
     retrieve: jest.fn(),
+    retrieveUpcoming: jest.fn(),
     pay: jest.fn(),
     sendInvoice: jest.fn(),
+    list: jest.fn(),
   },
   balanceTransactions: {
     retrieve: jest.fn(),
@@ -117,6 +122,10 @@ export const stripeMock = {
 jest.mock('@/lib/stripe', () => ({
   __esModule: true,
   stripe: stripeMock,
+  STRIPE_CURRENCY: 'usd',
+  STRIPE_PRICE_DOLLARS: 1,
+  STRIPE_APP_FEE_BPS: 500,
+  DEST_ACCOUNT: 'acct_test_destination',
 }));
 
 // Mock email module
@@ -286,6 +295,12 @@ export function setupDefaultMocks(overrides = {}) {
   return defaults;
 }
 
+// Export Stripe constants for tests
+export const STRIPE_CURRENCY = 'usd';
+export const STRIPE_PRICE_DOLLARS = 1;
+export const STRIPE_APP_FEE_BPS = 500;
+export const DEST_ACCOUNT = 'acct_test_destination';
+
 export default {
   prismaMock,
   authMock,
@@ -293,4 +308,8 @@ export default {
   emailMock,
   resetAllMocks,
   setupDefaultMocks,
+  STRIPE_CURRENCY,
+  STRIPE_PRICE_DOLLARS,
+  STRIPE_APP_FEE_BPS,
+  DEST_ACCOUNT,
 };

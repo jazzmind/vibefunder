@@ -4,6 +4,7 @@ import { POST as LogoutPOST } from '@/app/api/auth/logout/route';
 import { prisma } from '@/lib/db';
 import bcrypt from 'bcryptjs';
 import { SignJWT } from 'jose';
+import { createTestRequest } from '../../utils/api-test-helpers';
 
 // Mock external dependencies
 jest.mock('@/lib/db', () => ({
@@ -80,13 +81,12 @@ describe('POST /api/auth/login', () => {
       (prisma.session.create as jest.Mock).mockResolvedValue(mockSession);
       (prisma.loginAttempt.create as jest.Mock).mockResolvedValue({});
 
-      const request = new NextRequest('http://localhost:3000/api/auth/login', {
+      const request = createTestRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: {
           email: 'test@example.com',
           password: 'validPassword123',
-        })
+        }
       });
 
       // Act
@@ -109,13 +109,12 @@ describe('POST /api/auth/login', () => {
       // Arrange
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(null);
 
-      const request = new NextRequest('http://localhost:3000/api/auth/login', {
+      const request = createTestRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: {
           email: 'nonexistent@example.com',
           password: 'password123',
-        })
+        }
       });
 
       // Act
@@ -137,13 +136,12 @@ describe('POST /api/auth/login', () => {
       (prisma.loginAttempt.create as jest.Mock).mockResolvedValue({});
       (prisma.loginAttempt.count as jest.Mock).mockResolvedValue(1);
 
-      const request = new NextRequest('http://localhost:3000/api/auth/login', {
+      const request = createTestRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: {
           email: 'test@example.com',
           password: 'wrongPassword',
-        })
+        }
       });
 
       // Act
@@ -171,13 +169,12 @@ describe('POST /api/auth/login', () => {
       const unverifiedUser = { ...mockUser, isEmailVerified: false };
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(unverifiedUser);
 
-      const request = new NextRequest('http://localhost:3000/api/auth/login', {
+      const request = createTestRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: {
           email: 'test@example.com',
           password: 'validPassword123',
-        })
+        }
       });
 
       // Act
@@ -197,13 +194,12 @@ describe('POST /api/auth/login', () => {
       const inactiveUser = { ...mockUser, isActive: false };
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(inactiveUser);
 
-      const request = new NextRequest('http://localhost:3000/api/auth/login', {
+      const request = createTestRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: {
           email: 'test@example.com',
           password: 'validPassword123',
-        })
+        }
       });
 
       // Act
@@ -229,13 +225,12 @@ describe('POST /api/auth/login', () => {
       };
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(lockedUser);
 
-      const request = new NextRequest('http://localhost:3000/api/auth/login', {
+      const request = createTestRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: {
           email: 'test@example.com',
           password: 'validPassword123',
-        })
+        }
       });
 
       // Act
@@ -268,13 +263,12 @@ describe('POST /api/auth/login', () => {
       (prisma.session.create as jest.Mock).mockResolvedValue(mockSession);
       (prisma.loginAttempt.create as jest.Mock).mockResolvedValue({});
 
-      const request = new NextRequest('http://localhost:3000/api/auth/login', {
+      const request = createTestRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: {
           email: 'test@example.com',
           password: 'validPassword123',
-        })
+        }
       });
 
       // Act
@@ -301,13 +295,12 @@ describe('POST /api/auth/login', () => {
       (prisma.session.create as jest.Mock).mockResolvedValue(mockSession);
       (prisma.loginAttempt.create as jest.Mock).mockResolvedValue({});
 
-      const request = new NextRequest('http://localhost:3000/api/auth/login', {
+      const request = createTestRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: {
           email: 'test@example.com',
           password: 'validPassword123',
-        })
+        }
       });
 
       // Act
@@ -333,14 +326,13 @@ describe('POST /api/auth/login', () => {
       (prisma.session.create as jest.Mock).mockResolvedValue(mockSession);
       (prisma.loginAttempt.create as jest.Mock).mockResolvedValue({});
 
-      const request = new NextRequest('http://localhost:3000/api/auth/login', {
+      const request = createTestRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: {
           email: 'test@example.com',
           password: 'validPassword123',
           invalidateOtherSessions: true,
-        })
+        }
       });
 
       // Act
@@ -367,14 +359,13 @@ describe('POST /api/auth/login', () => {
       (prisma.session.create as jest.Mock).mockResolvedValue(longSession);
       (prisma.loginAttempt.create as jest.Mock).mockResolvedValue({});
 
-      const request = new NextRequest('http://localhost:3000/api/auth/login', {
+      const request = createTestRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: {
           email: 'test@example.com',
           password: 'validPassword123',
           rememberMe: true,
-        })
+        }
       });
 
       // Act
@@ -392,13 +383,12 @@ describe('POST /api/auth/login', () => {
 
   describe('Input Validation', () => {
     it('should validate email format', async () => {
-      const request = new NextRequest('http://localhost:3000/api/auth/login', {
+      const request = createTestRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: {
           email: 'invalid-email',
           password: 'password123',
-        })
+        }
       });
 
       // Act
@@ -414,12 +404,11 @@ describe('POST /api/auth/login', () => {
     });
 
     it('should require both email and password', async () => {
-      const request = new NextRequest('http://localhost:3000/api/auth/login', {
+      const request = createTestRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: {
           email: 'test@example.com',
-        })
+        }
       });
 
       // Act

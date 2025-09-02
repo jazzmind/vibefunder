@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { GET, PUT } from '@/app/api/users/profile/route';
 import { prisma } from '@/lib/db';
 import { jwtVerify } from 'jose';
+import { createTestRequest, createAuthenticatedRequest } from '../../utils/api-test-helpers';
 
 // Mock external dependencies
 jest.mock('@/lib/db', () => ({
@@ -44,6 +45,11 @@ describe('User Profile API', () => {
       (jwtVerify as jest.Mock).mockResolvedValue({
         payload: { sub: 'user123' }
       });
+      
+      const mockUserResponse = {
+        ...mockUser,
+        createdAt: mockUser.createdAt.toISOString() // Convert to string as API returns
+      };
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
 
       const request = new NextRequest('http://localhost:3000/api/users/profile', {
@@ -61,7 +67,17 @@ describe('User Profile API', () => {
       // Assert
       expect(response.status).toBe(200);
       expect(responseData).toHaveProperty('success', true);
-      expect(responseData.user).toEqual(mockUser);
+      expect(responseData.user).toMatchObject({
+        id: mockUser.id,
+        name: mockUser.name,
+        email: mockUser.email,
+        bio: mockUser.bio,
+        avatar: mockUser.avatar,
+        isPublic: mockUser.isPublic,
+        socialLinks: mockUser.socialLinks,
+        role: mockUser.role,
+        isEmailVerified: mockUser.isEmailVerified
+      });
     });
 
     it('should return 401 for unauthenticated user', async () => {
@@ -122,6 +138,7 @@ describe('User Profile API', () => {
         ...mockUser,
         name: 'Updated Name',
         bio: 'Updated bio',
+        isPublic: false, // This should match the updateData
         updatedAt: new Date()
       };
       
@@ -150,7 +167,12 @@ describe('User Profile API', () => {
       expect(response.status).toBe(200);
       expect(responseData).toHaveProperty('success', true);
       expect(responseData.message).toBe('Profile updated successfully');
-      expect(responseData.user).toEqual(updatedUser);
+      expect(responseData.user).toMatchObject({
+        id: updatedUser.id,
+        name: updatedUser.name,
+        bio: updatedUser.bio,
+        isPublic: updateData.isPublic
+      });
       
       expect(prisma.user.update).toHaveBeenCalledWith({
         where: { id: 'user123' },

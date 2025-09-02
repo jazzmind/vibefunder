@@ -11,8 +11,8 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from '@jest/globals';
-import { StripeObjectFactory } from '../../../payments/payment-test-helpers';
-import { createTestUser, createTestCampaign, cleanupTestData } from '../../../utils/test-helpers.js';
+import { createDbTestUser, createDbTestCampaign, createDbTestPledgeTier, cleanupDbTestData, createTestScenario } from '../../../utils/db-test-helpers';
+import { createAuthHeaders } from '../../../utils/test-helpers.js';
 
 const API_BASE = process.env.API_TEST_URL || 'http://localhost:3101';
 
@@ -25,11 +25,11 @@ interface TestCampaign {
   rewardTiers?: RewardTier[];
 }
 
-interface RewardTier {
+interface PledgeTier {
   id: string;
   title: string;
   description: string;
-  pledgeAmountDollars: number;
+  amountDollars: number;
   stockLimit?: number;
   stockClaimed?: number;
 }
@@ -37,8 +37,8 @@ interface RewardTier {
 interface TestPledge {
   id: string;
   campaignId: string;
-  pledgeAmountDollars: number;
-  rewardTierId?: string;
+  amountDollars: number;
+  pledgeTierId?: string;
   isAnonymous: boolean;
   userId?: string;
   shippingAddress?: any;
@@ -73,47 +73,46 @@ jest.mock('stripe', () => {
 });
 
 describe('Campaign Pledge Creation API', () => {
-  let testCampaign: TestCampaign;
+  let testCampaign: any;
   let testUser: any;
-  let rewardTier: RewardTier;
+  let pledgeTier: any;
 
   beforeAll(async () => {
-    // Create test user
-    testUser = await createTestUser({
-      email: 'pledger@example.com',
+    // Clean up any existing test data
+    await cleanupDbTestData();
+
+    // Create test user in database
+    testUser = await createDbTestUser({
+      email: `pledger-${Date.now()}@example.com`,
       name: 'Test Pledger',
     });
 
-    // Create test campaign with reward tiers
-    testCampaign = await createTestCampaign({
-      title: 'Pledge Test Campaign',
+    // Create test campaign in database
+    testCampaign = await createDbTestCampaign(testUser.id, {
+      title: `Pledge Test Campaign ${Date.now()}`,
       summary: 'Campaign for testing pledge operations',
       fundingGoalDollars: 100000,
       status: 'published',
-      endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
+      endsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
     });
 
-    // Create reward tier
-    rewardTier = {
-      id: 'tier_test_123',
-      title: 'Early Bird Special',
+    // Create pledge tier in database
+    pledgeTier = await createDbTestPledgeTier(testCampaign.id, {
+      name: 'Early Bird Special',
       description: 'Limited early bird reward',
-      pledgeAmountDollars: 5000, // $50
-      stockLimit: 100,
-      stockClaimed: 0,
-    };
+      amountDollars: 50, // $50
+    });
   });
 
   afterAll(async () => {
-    await cleanupTestData();
+    await cleanupDbTestData();
   });
 
   describe('Valid Pledge Creation', () => {
     it('should create a valid pledge with tier selection', async () => {
       const pledgeData = {
-        campaignId: testCampaign.id,
-        pledgeAmountDollars: 5000,
-        rewardTierId: rewardTier.id,
+        amountDollars: 50,
+        pledgeTierId: pledgeTier.id,
         isAnonymous: false,
         paymentMethodId: 'pm_test_123',
         shippingAddress: {
@@ -127,10 +126,7 @@ describe('Campaign Pledge Creation API', () => {
 
       const response = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/pledge`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
+        headers: createAuthHeaders(testUser),
         body: JSON.stringify(pledgeData),
       });
 
@@ -138,11 +134,10 @@ describe('Campaign Pledge Creation API', () => {
       
       const pledge: TestPledge = await response.json();
       expect(pledge).toMatchObject({
-        campaignId: testCampaign.id,
-        pledgeAmountDollars: 5000,
-        rewardTierId: rewardTier.id,
+        id: expect.any(String),
+        amountDollars: 50,
         isAnonymous: false,
-        userId: testUser.id,
+        createdAt: expect.any(String),
       });
       expect(pledge.id).toBeDefined();
       expect(pledge.createdAt).toBeDefined();
@@ -151,31 +146,28 @@ describe('Campaign Pledge Creation API', () => {
     it('should create a custom pledge amount above minimum tier', async () => {
       const pledgeData = {
         campaignId: testCampaign.id,
-        pledgeAmountDollars: 7500, // $75 - above the $50 tier
-        rewardTierId: rewardTier.id,
+        amountDollars: 75, // $75 - above the $50 tier
+        pledgeTierId: pledgeTier.id,
         isAnonymous: false,
         paymentMethodId: 'pm_test_456',
       };
 
       const response = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/pledge`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
+        headers: createAuthHeaders(testUser),
         body: JSON.stringify(pledgeData),
       });
 
       expect(response.status).toBe(201);
       
       const pledge: TestPledge = await response.json();
-      expect(pledge.pledgeAmountDollars).toBe(7500);
+      expect(pledge.amountDollars).toBe(7500);
     });
 
     it('should create an anonymous pledge', async () => {
       const pledgeData = {
         campaignId: testCampaign.id,
-        pledgeAmountDollars: 2500, // $25 - no reward tier
+        amountDollars: 25, // $25 - no reward tier
         isAnonymous: true,
         paymentMethodId: 'pm_test_anon',
         backerName: 'Anonymous Supporter',
@@ -193,8 +185,8 @@ describe('Campaign Pledge Creation API', () => {
       
       const pledge: TestPledge = await response.json();
       expect(pledge).toMatchObject({
-        campaignId: testCampaign.id,
-        pledgeAmountDollars: 2500,
+        id: expect.any(String),
+        amountDollars: 25,
         isAnonymous: true,
       });
       expect(pledge.userId).toBeUndefined();
@@ -205,17 +197,14 @@ describe('Campaign Pledge Creation API', () => {
     it('should reject pledge below minimum amount', async () => {
       const pledgeData = {
         campaignId: testCampaign.id,
-        pledgeAmountDollars: 50, // $0.50 - too low
+        amountDollars: 0.5, // $0.50 - too low
         isAnonymous: false,
         paymentMethodId: 'pm_test_low',
       };
 
       const response = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/pledge`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
+        headers: createAuthHeaders(testUser),
         body: JSON.stringify(pledgeData),
       });
 
@@ -228,17 +217,14 @@ describe('Campaign Pledge Creation API', () => {
     it('should reject pledge above maximum amount', async () => {
       const pledgeData = {
         campaignId: testCampaign.id,
-        pledgeAmountDollars: 10000000, // $100,000 - too high
+        amountDollars: 100000, // $100,000 - too high
         isAnonymous: false,
         paymentMethodId: 'pm_test_high',
       };
 
       const response = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/pledge`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
+        headers: createAuthHeaders(testUser),
         body: JSON.stringify(pledgeData),
       });
 
@@ -251,18 +237,15 @@ describe('Campaign Pledge Creation API', () => {
     it('should reject pledge with insufficient amount for selected tier', async () => {
       const pledgeData = {
         campaignId: testCampaign.id,
-        pledgeAmountDollars: 3000, // $30 - below $50 tier requirement
-        rewardTierId: rewardTier.id,
+        amountDollars: 30, // $30 - below $50 tier requirement
+        pledgeTierId: pledgeTier.id,
         isAnonymous: false,
         paymentMethodId: 'pm_test_insufficient',
       };
 
       const response = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/pledge`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
+        headers: createAuthHeaders(testUser),
         body: JSON.stringify(pledgeData),
       });
 
@@ -276,31 +259,28 @@ describe('Campaign Pledge Creation API', () => {
   describe('Reward Tier Stock Management', () => {
     it('should decrement available stock when pledge created', async () => {
       // First, get initial stock count
-      const initialStockResponse = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/reward-tiers/${rewardTier.id}`);
+      const initialStockResponse = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/reward-tiers/${pledgeTier.id}`);
       const initialTier = await initialStockResponse.json();
       const initialStock = initialTier.stockLimit - initialTier.stockClaimed;
 
       const pledgeData = {
         campaignId: testCampaign.id,
         pledgeAmountDollars: 5000,
-        rewardTierId: rewardTier.id,
+        pledgeTierId: pledgeTier.id,
         isAnonymous: false,
         paymentMethodId: 'pm_test_stock',
       };
 
       const response = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/pledge`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
+        headers: createAuthHeaders(testUser),
         body: JSON.stringify(pledgeData),
       });
 
       expect(response.status).toBe(201);
 
       // Check that stock was decremented
-      const updatedStockResponse = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/reward-tiers/${rewardTier.id}`);
+      const updatedStockResponse = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/reward-tiers/${pledgeTier.id}`);
       const updatedTier = await updatedStockResponse.json();
       const updatedStock = updatedTier.stockLimit - updatedTier.stockClaimed;
 
@@ -329,10 +309,7 @@ describe('Campaign Pledge Creation API', () => {
 
       const response = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/pledge`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
+        headers: createAuthHeaders(testUser),
         body: JSON.stringify(pledgeData),
       });
 
@@ -363,10 +340,7 @@ describe('Campaign Pledge Creation API', () => {
 
       const response = await fetch(`${API_BASE}/api/campaigns/${expiredCampaign.id}/pledge`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
+        headers: createAuthHeaders(testUser),
         body: JSON.stringify(pledgeData),
       });
 
@@ -386,10 +360,7 @@ describe('Campaign Pledge Creation API', () => {
 
       const response = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/pledge`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
+        headers: createAuthHeaders(testUser),
         body: JSON.stringify(pledgeData),
       });
 
@@ -416,10 +387,7 @@ describe('Campaign Pledge Creation API', () => {
 
       const response = await fetch(`${API_BASE}/api/campaigns/${draftCampaign.id}/pledge`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
+        headers: createAuthHeaders(testUser),
         body: JSON.stringify(pledgeData),
       });
 
@@ -447,10 +415,7 @@ describe('Campaign Pledge Creation API', () => {
 
       const response = await fetch(`${API_BASE}/api/campaigns/${cancelledCampaign.id}/pledge`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
+        headers: createAuthHeaders(testUser),
         body: JSON.stringify(pledgeData),
       });
 
@@ -472,10 +437,7 @@ describe('Campaign Pledge Creation API', () => {
 
       const response = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/pledge`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
+        headers: createAuthHeaders(testUser),
         body: JSON.stringify(pledgeData),
       });
 
@@ -496,10 +458,7 @@ describe('Campaign Pledge Creation API', () => {
 
       const response = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/pledge`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
+        headers: createAuthHeaders(testUser),
         body: JSON.stringify(pledgeData),
       });
 
@@ -527,10 +486,7 @@ describe('Campaign Pledge Creation API', () => {
 
       const response = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/pledge`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
+        headers: createAuthHeaders(testUser),
         body: JSON.stringify(pledgeData),
       });
 
@@ -588,10 +544,7 @@ describe('Campaign Pledge Creation API', () => {
 
       const response = await fetch(`${API_BASE}/api/campaigns/non-existent-id/pledge`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
+        headers: createAuthHeaders(testUser),
         body: JSON.stringify(pledgeData),
       });
 
@@ -605,10 +558,7 @@ describe('Campaign Pledge Creation API', () => {
 
       const response = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/pledge`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${testUser.token}`,
-        },
+        headers: createAuthHeaders(testUser),
         body: JSON.stringify(pledgeData),
       });
 

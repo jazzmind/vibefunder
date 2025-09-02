@@ -25,20 +25,30 @@ import {
   setupDefaultMocks,
   emailMock
 } from '../../payments/setup-payment-mocks';
+import { createTestRequest, createAuthenticatedRequest } from '../../utils/api-test-helpers';
 
 // Mock the Stripe constants after importing stripeMock
-jest.mock('@/lib/stripe', () => {
-  return {
-    stripe: stripeMock,
-    STRIPE_CURRENCY: 'usd',
-    STRIPE_PRICE_DOLLARS: 1,
-    STRIPE_APP_FEE_BPS: 500, // 5% app fee
-    DEST_ACCOUNT: 'acct_test_destination',
-  };
-});
+jest.mock('@/lib/stripe', () => ({
+  __esModule: true,
+  stripe: require('../../payments/setup-payment-mocks').stripeMock,
+  STRIPE_CURRENCY: 'usd',
+  STRIPE_PRICE_DOLLARS: 1,
+  STRIPE_APP_FEE_BPS: 500, // 5% app fee
+  DEST_ACCOUNT: 'acct_test_destination',
+}));
+
+// Mock auth
+jest.mock('@/lib/auth', () => ({
+  __esModule: true,
+  auth: jest.fn()
+}));
 
 import { NextRequest } from 'next/server';
 import { POST } from '@/app/api/payments/checkout-session/route';
+import { auth } from '@/lib/auth';
+
+// Mock the auth function explicitly
+const mockAuth = auth as jest.MockedFunction<typeof auth>;
 import { 
   PaymentTestData, 
   StripeObjectFactory, 
@@ -58,7 +68,7 @@ const performanceMetrics = {
   failedCheckouts: 0
 };
 
-describe.skip('/api/payments/checkout-session - Comprehensive Test Suite (SKIPPED - Infrastructure Issues)', () => {
+describe('/api/payments/checkout-session - Comprehensive Test Suite', () => {
   beforeEach(() => {
     resetAllMocks();
     setupDefaultMocks();
@@ -74,6 +84,14 @@ describe.skip('/api/payments/checkout-session - Comprehensive Test Suite (SKIPPE
       it('should create checkout session for authenticated user with minimum amount ($100)', async () => {
         const startTime = performance.now();
         
+        // Setup authenticated user
+        mockAuth.mockResolvedValue({
+          user: {
+            id: 'user-123',
+            email: 'test@example.com'
+          }
+        });
+        
         // Setup campaign with pledge tiers
         const campaign = PaymentTestData.generateCampaign({
           id: 'campaign-auth-123',
@@ -82,6 +100,14 @@ describe.skip('/api/payments/checkout-session - Comprehensive Test Suite (SKIPPE
         });
         
         prismaMock.campaign.findUnique.mockResolvedValue(campaign as any);
+        prismaMock.user.upsert.mockResolvedValue({
+          id: 'user-123',
+          email: 'test@example.com',
+          name: 'test',
+          roles: ['backer'],
+          createdAt: new Date(),
+          updatedAt: new Date()
+        } as any);
         
         const testData = PaymentTestData.generateCheckoutRequest({
           pledgeAmount: 100, // Minimum amount
@@ -102,9 +128,9 @@ describe.skip('/api/payments/checkout-session - Comprehensive Test Suite (SKIPPE
 
         stripeMock.checkout.sessions.create.mockResolvedValue(mockSession);
 
-        const request = new NextRequest('http://localhost:3000/api/payments/checkout-session', {
+        const request = createTestRequest('http://localhost:3000/api/payments/checkout-session', {
           method: 'POST',
-          body: JSON.stringify(testData)
+          body: testData
         });
 
         const response = await POST(request);
@@ -145,11 +171,11 @@ describe.skip('/api/payments/checkout-session - Comprehensive Test Suite (SKIPPE
 
         // Performance tracking
         performanceMetrics.successfulCheckouts++;
-        this.updatePerformanceMetrics(responseTime);
+        performanceMetrics.totalTests++;
       });
 
       it('should create checkout session for anonymous user with provided email', async () => {
-        authMock.mockResolvedValue(null); // No authenticated user
+        mockAuth.mockResolvedValue(null); // No authenticated user
         
         // Setup campaign
         const campaign = PaymentTestData.generateCampaign({
@@ -192,7 +218,7 @@ describe.skip('/api/payments/checkout-session - Comprehensive Test Suite (SKIPPE
       });
 
       it('should require email when no user is authenticated and no email provided', async () => {
-        authMock.mockResolvedValue(null); // No authenticated user
+        mockAuth.mockResolvedValue(null); // No authenticated user
 
         const testData = PaymentTestData.generateCheckoutRequest();
         delete testData.backerEmail; // No email provided
@@ -702,7 +728,7 @@ describe.skip('/api/payments/checkout-session - Comprehensive Test Suite (SKIPPE
 
     describe('📧 Email Validation', () => {
       it('should reject invalid email format', async () => {
-        authMock.mockResolvedValue(null); // No authenticated user
+        mockAuth.mockResolvedValue(null); // No authenticated user
 
         const testData = PaymentTestData.generateCheckoutRequest({
           backerEmail: 'invalid-email-format' // Invalid email format
@@ -1169,6 +1195,10 @@ describe.skip('/api/payments/checkout-session - Comprehensive Test Suite (SKIPPE
   });
 
   describe('📊 Test Summary and Metrics', () => {
+    it('should track performance metrics', () => {
+      expect(performanceMetrics.totalTests).toBeGreaterThanOrEqual(0);
+    });
+    
     afterAll(() => {
       console.log('\n🔍 Checkout API Test Performance Summary:');
       console.log(`📈 Total Tests: ${performanceMetrics.totalTests}`);

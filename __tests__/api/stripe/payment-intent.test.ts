@@ -25,13 +25,13 @@ import {
   resetAllMocks, 
   setupDefaultMocks,
   emailMock
-} from '../payments/setup-payment-mocks';
+} from '../../payments/setup-payment-mocks';
 
 import { jest } from '@jest/globals';
 
 // Mock Stripe constants and configuration
 jest.mock('@/lib/stripe', () => {
-  const originalModule = jest.requireActual('../payments/setup-payment-mocks');
+  const originalModule = jest.requireActual('../../payments/setup-payment-mocks');
   return {
     stripe: originalModule.stripeMock,
     STRIPE_CURRENCY: 'usd',
@@ -76,7 +76,7 @@ describe('Payment Intent API Tests', () => {
         }
       };
 
-      stripeMock.paymentIntents.create = jest.fn().mockResolvedValue({
+      stripeMock.paymentIntents.create.mockResolvedValue({
         id: 'pi_test_123',
         object: 'payment_intent',
         amount: 10000,
@@ -109,7 +109,7 @@ describe('Payment Intent API Tests', () => {
       const paymentIntentId = 'pi_test_123';
       const paymentMethodId = 'pm_test_card';
 
-      stripeMock.paymentIntents.confirm = jest.fn().mockResolvedValue({
+      stripeMock.paymentIntents.confirm.mockResolvedValue({
         id: 'pi_test_123',
         status: 'succeeded',
         payment_method: 'pm_test_card',
@@ -136,7 +136,7 @@ describe('Payment Intent API Tests', () => {
 
     test('should handle payment intent confirmation failure', async () => {
       // Arrange
-      stripeMock.paymentIntents.confirm = jest.fn().mockResolvedValue({
+      stripeMock.paymentIntents.confirm.mockResolvedValue({
         id: 'pi_test_123',
         status: 'requires_action',
         next_action: {
@@ -187,7 +187,7 @@ describe('Payment Intent API Tests', () => {
       const currencies = ['usd', 'eur', 'gbp', 'cad'];
       
       for (const currency of currencies) {
-        stripeMock.paymentIntents.create = jest.fn().mockResolvedValue({
+        stripeMock.paymentIntents.create.mockResolvedValue({
           id: `pi_${currency}_test`,
           currency: currency,
           amount: 10000
@@ -229,7 +229,7 @@ describe('Payment Intent API Tests', () => {
   describe('Payment Method Attachments', () => {
     test('should attach payment method to customer', async () => {
       // Arrange
-      stripeMock.paymentMethods.attach = jest.fn().mockResolvedValue({
+      stripeMock.paymentMethods.attach.mockResolvedValue({
         id: 'pm_test_card',
         customer: 'cus_test_123',
         type: 'card'
@@ -253,7 +253,7 @@ describe('Payment Intent API Tests', () => {
 
     test('should detach payment method from customer', async () => {
       // Arrange
-      stripeMock.paymentMethods.detach = jest.fn().mockResolvedValue({
+      stripeMock.paymentMethods.detach.mockResolvedValue({
         id: 'pm_test_card',
         customer: null,
         type: 'card'

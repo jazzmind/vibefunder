@@ -5,6 +5,7 @@
 
 import { NextRequest } from 'next/server';
 import { jest } from '@jest/globals';
+import { createTestRequest, createAuthenticatedRequest } from '../../utils/api-test-helpers';
 
 // Mock Stripe before importing the route
 const mockStripe = {

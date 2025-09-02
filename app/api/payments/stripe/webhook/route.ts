@@ -16,7 +16,9 @@ export async function POST(req: NextRequest) {
   
   let raw: string;
   try {
-    raw = await req.text();
+    // Clone the request to avoid body consumption issues in tests
+    const clonedRequest = req.clone();
+    raw = await clonedRequest.text();
   } catch (error) {
     console.error('Failed to read request body:', error);
     return new NextResponse('Failed to read request body', { status: 400 });

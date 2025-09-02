@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from '@jest/globals';
-import { StripeObjectFactory } from '../../../payments/payment-test-helpers';
+// import { StripeObjectFactory } from '../../../payments/payment-test-helpers';
 import { createTestUser, createTestCampaign, cleanupTestData } from '../../../utils/test-helpers.js';
 
 const API_BASE = process.env.API_TEST_URL || 'http://localhost:3101';
@@ -20,16 +20,16 @@ interface TestCampaign {
   title: string;
   fundingGoalDollars: number;
   status: string;
-  endDate: string;
+  endsAt: Date;
   allowPledgeUpdates?: boolean;
   pledgeUpdateDeadline?: string;
 }
 
-interface RewardTier {
+interface PledgeTier {
   id: string;
   title: string;
   description: string;
-  pledgeAmountDollars: number;
+  amountDollars: number;
   stockLimit?: number;
   stockClaimed?: number;
 }
@@ -37,8 +37,8 @@ interface RewardTier {
 interface TestPledge {
   id: string;
   campaignId: string;
-  pledgeAmountDollars: number;
-  rewardTierId?: string;
+  amountDollars: number;
+  pledgeTierId?: string;
   isAnonymous: boolean;
   userId?: string;
   shippingAddress?: any;

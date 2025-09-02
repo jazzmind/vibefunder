@@ -25,7 +25,17 @@ jest.mock('jose', () => ({
     setExpirationTime: jest.fn().mockReturnThis(),
     setIssuedAt: jest.fn().mockReturnThis(),
     sign: jest.fn().mockResolvedValue('mockJwtToken')
-  }))
+  })),
+  jwtVerify: jest.fn().mockResolvedValue({
+    payload: {
+      id: 'test-session',
+      userId: 'test-user-123',
+      email: 'test@example.com',
+      roles: ['user'],
+      iat: Date.now(),
+      exp: Date.now() + 7 * 24 * 60 * 60 * 1000
+    }
+  })
 }));
 
 describe('POST /api/auth/register', () => {

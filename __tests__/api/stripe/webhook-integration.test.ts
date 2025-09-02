@@ -1145,6 +1145,8 @@ describe('Webhook Integration Tests - Full Workflow', () => {
       }
     });
   });
+
+  describe('🔗 Event Correlation & Timing', () => {
     it('should correlate related webhook events across time', async () => {
       const correlationId = 'corr_test_12345';
       const sessionId = 'cs_correlation_test';

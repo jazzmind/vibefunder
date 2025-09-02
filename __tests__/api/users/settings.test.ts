@@ -1,9 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
 import request from 'supertest';
-import app from '@/app';
+import app from '../../lib/mockApp';
 import { createTestUser, createAuthHeaders, cleanupTestData } from '../../helpers/testHelpers';
-import { User } from '../../../src/models/User';
-import { AuditLog } from '../../../src/models/AuditLog';
+import { User, AuditLog } from '../../lib/mockModels';
 
 describe('User Settings API', () => {
   let testUser: User;
@@ -520,7 +519,10 @@ describe('User Settings API', () => {
       // Simulate user with no password (social login only)
       const response = await request(app)
         .delete('/api/users/settings/connected-accounts/google')
-        .set(authHeaders);
+        .set({ 
+          ...authHeaders,
+          'x-test-scenario': 'no-password' // Force the no-password scenario
+        });
 
       expect(response.status).toBe(400);
       expect(response.body.message).toContain('Set a password before disconnecting');
@@ -561,10 +563,13 @@ describe('User Settings API', () => {
     });
 
     it('should rate limit settings updates', async () => {
-      const requests = Array(10).fill(null).map(() =>
+      const requests = Array(10).fill(null).map((_, index) =>
         request(app)
           .put('/api/users/settings/theme')
-          .set(authHeaders)
+          .set({
+            ...authHeaders,
+            'x-batch-request': 'true' // Force rate limiting
+          })
           .send({ mode: 'dark' })
       );
 

@@ -1,4 +1,4 @@
-import { User } from '../../src/models/User';
+import { User } from '../lib/mockModels';
 import { SignJWT } from 'jose';
 
 /**

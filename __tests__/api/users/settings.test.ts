@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
 import request from 'supertest';
-import app from '../../lib/mockApp';
+import app, { resetRateLimiting } from '../../lib/mockApp';
 import { createTestUser, createAuthHeaders, cleanupTestData } from '../../helpers/testHelpers';
 import { User, AuditLog } from '../../lib/mockModels';
 
@@ -21,6 +21,8 @@ describe('User Settings API', () => {
 
   afterEach(async () => {
     await cleanupTestData();
+    // Reset rate limiting between tests to avoid interference
+    resetRateLimiting();
   });
 
   describe('Email Notification Preferences', () => {
@@ -563,19 +565,22 @@ describe('User Settings API', () => {
     });
 
     it('should rate limit settings updates', async () => {
+      // Send 10 rapid requests to trigger rate limiting (limit is 5 per minute)
       const requests = Array(10).fill(null).map((_, index) =>
         request(app)
           .put('/api/users/settings/theme')
-          .set({
-            ...authHeaders,
-            'x-batch-request': 'true' // Force rate limiting
-          })
-          .send({ mode: 'dark' })
+          .set(authHeaders)
+          .send({ mode: index % 2 === 0 ? 'dark' : 'light' })
       );
 
       const responses = await Promise.all(requests);
       const rateLimited = responses.some(r => r.status === 429);
+      const successfulRequests = responses.filter(r => r.status === 200).length;
+      const rateLimitedRequests = responses.filter(r => r.status === 429).length;
+      
       expect(rateLimited).toBe(true);
+      expect(successfulRequests).toBe(5); // First 5 should succeed
+      expect(rateLimitedRequests).toBe(5); // Next 5 should be rate limited
     });
 
     it('should validate sensitive setting changes with password', async () => {

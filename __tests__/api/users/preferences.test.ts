@@ -1,67 +1,41 @@
-import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
 import { NextRequest } from 'next/server';
-
-// Create the mock function first - this is key for Jest module hoisting
-const mockJwtVerify = jest.fn();
-
-// Mock external dependencies before any imports
-jest.mock('@/lib/db', () => ({
-  prisma: {
-    userPreferences: {
-      findUnique: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-      upsert: jest.fn(),
-    },
-  },
-}));
-
-// Mock jose with the suggested implementation
-jest.mock('jose', () => ({
-  jwtVerify: jest.fn(),
-  SignJWT: jest.fn(() => ({
-    setProtectedHeader: jest.fn().mockReturnThis(),
-    setIssuedAt: jest.fn().mockReturnThis(),
-    setExpirationTime: jest.fn().mockReturnThis(),
-    sign: jest.fn().mockResolvedValue('mocked-jwt-token')
-  }))
-}));
-
-// Import the libs after mocking
-import { prisma } from '@/lib/db';
+import { createAuthHeaders, generateTestEmail, createTestUser, cleanupTestData } from '../../utils/test-helpers';
 import { GET, PUT } from '@/app/api/users/preferences/campaign-interests/route';
 
-// Get the mocked jwtVerify from the mocked module
-const { jwtVerify: jwtVerifyMock } = require('jose') as {
-  jwtVerify: jest.MockedFunction<any>
-};
-
 describe('User Preferences API', () => {
-  const mockUser = {
-    id: 'user123',
-    email: 'test@example.com',
-    name: 'Test User',
-    role: 'USER',
+  let testUser: any;
+  let testData: any[] = [];
+
+  const createRequest = (method: string, body?: any, user = testUser) => {
+    const url = new URL('http://localhost:3000/api/users/preferences/campaign-interests');
+    const headers = createAuthHeaders(user);
+    
+    return new NextRequest(url, {
+      method,
+      body: body ? JSON.stringify(body) : undefined,
+      headers,
+    });
   };
 
-  beforeEach(() => {
-    jest.clearAllMocks();
+  beforeEach(async () => {
+    // Create test user in the database
+    testUser = await createTestUser({
+      email: generateTestEmail('preferences-user'),
+      name: 'Preferences Test User',
+    });
+    testData.push({ type: 'user', id: testUser.id });
+  });
+
+  afterEach(async () => {
+    await cleanupTestData(testData);
+    testData = [];
   });
 
   describe('Campaign Interest Categories', () => {
     it('should get campaign interest categories', async () => {
       // Arrange
-      jwtVerifyMock.mockResolvedValue({
-        payload: { sub: 'user123' }
-      });
-
-      const request = new NextRequest('http://localhost:3000/api/users/preferences/campaign-interests', {
-        method: 'GET',
-        headers: { 
-          'Authorization': 'Bearer mockToken',
-          'Content-Type': 'application/json' 
-        }
-      });
+      const request = createRequest('GET');
 
       // Act
       const response = await GET(request);
@@ -76,10 +50,6 @@ describe('User Preferences API', () => {
 
     it('should update campaign interest categories', async () => {
       // Arrange
-      jwtVerifyMock.mockResolvedValue({
-        payload: { sub: 'user123' }
-      });
-
       const interests = {
         categories: ['technology', 'environment', 'education', 'health'],
         subcategories: {
@@ -88,14 +58,7 @@ describe('User Preferences API', () => {
         }
       };
 
-      const request = new NextRequest('http://localhost:3000/api/users/preferences/campaign-interests', {
-        method: 'PUT',
-        headers: { 
-          'Authorization': 'Bearer mockToken',
-          'Content-Type': 'application/json' 
-        },
-        body: JSON.stringify(interests)
-      });
+      const request = createRequest('PUT', interests);
 
       // Act
       const response = await PUT(request);
@@ -109,10 +72,6 @@ describe('User Preferences API', () => {
 
     it('should validate campaign interest categories', async () => {
       // Arrange
-      jwtVerifyMock.mockResolvedValue({
-        payload: { sub: 'user123' }
-      });
-
       const invalidInterests = {
         categories: ['invalid-category', 'another-invalid'],
         subcategories: {
@@ -120,14 +79,7 @@ describe('User Preferences API', () => {
         }
       };
 
-      const request = new NextRequest('http://localhost:3000/api/users/preferences/campaign-interests', {
-        method: 'PUT',
-        headers: { 
-          'Authorization': 'Bearer mockToken',
-          'Content-Type': 'application/json' 
-        },
-        body: JSON.stringify(invalidInterests)
-      });
+      const request = createRequest('PUT', invalidInterests);
 
       // Act
       const response = await PUT(request);
@@ -142,10 +94,6 @@ describe('User Preferences API', () => {
 
     it('should validate subcategory parent categories', async () => {
       // Arrange
-      jwtVerifyMock.mockResolvedValue({
-        payload: { sub: 'user123' }
-      });
-
       // Test with valid categories but invalid subcategory parent
       const invalidSubcategories = {
         categories: ['technology', 'environment'],
@@ -154,14 +102,7 @@ describe('User Preferences API', () => {
         }
       };
 
-      const request = new NextRequest('http://localhost:3000/api/users/preferences/campaign-interests', {
-        method: 'PUT',
-        headers: { 
-          'Authorization': 'Bearer mockToken',
-          'Content-Type': 'application/json' 
-        },
-        body: JSON.stringify(invalidSubcategories)
-      });
+      const request = createRequest('PUT', invalidSubcategories);
 
       // Act
       const response = await PUT(request);
@@ -175,10 +116,8 @@ describe('User Preferences API', () => {
     });
 
     it('should return 401 for unauthenticated requests', async () => {
-      const request = new NextRequest('http://localhost:3000/api/users/preferences/campaign-interests', {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
-      });
+      // Create request without authentication headers
+      const request = createRequest('GET', undefined, null);
 
       const response = await GET(request);
       const responseData = await response.json();

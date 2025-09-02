@@ -1,43 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { jwtVerify } from 'jose';
 import { prisma } from '@/lib/db';
+import { getUserFromRequest } from '@/lib/auth-helpers';
 import { z } from 'zod';
-
-const secret = new TextEncoder().encode(
-  process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || 'fallback-secret'
-);
 
 const campaignInterestsSchema = z.object({
   categories: z.array(z.string()).optional(),
   subcategories: z.record(z.array(z.string())).optional(),
 });
 
-async function getUserFromToken(request: NextRequest) {
-  let token = request.headers.get('Authorization')?.replace('Bearer ', '');
-  
-  if (!token) {
-    const cookieToken = request.cookies.get('session')?.value;
-    if (cookieToken) {
-      token = cookieToken;
-    }
-  }
-
-  if (!token) {
-    return null;
-  }
-
-  try {
-    const { payload } = await jwtVerify(token, secret);
-    const userId = payload.sub as string;
-    return userId;
-  } catch {
-    return null;
-  }
-}
-
 export async function GET(request: NextRequest) {
   try {
-    const userId = await getUserFromToken(request);
+    const userId = await getUserFromRequest(request);
     
     if (!userId) {
       return NextResponse.json(
@@ -68,7 +41,7 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const userId = await getUserFromToken(request);
+    const userId = await getUserFromRequest(request);
     
     if (!userId) {
       return NextResponse.json(

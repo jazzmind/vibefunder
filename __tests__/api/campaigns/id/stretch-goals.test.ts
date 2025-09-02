@@ -59,6 +59,7 @@ class MockAPIState {
   private achievedGoals = new Map<string, Set<string>>();
   private campaigns = new Map<string, any>();
   private stretchGoals = new Map<string, any[]>();
+  private pledges = new Map<string, { id: string; campaignId: string; amount: number; status: string }>();
   private notifications: any[] = [];
 
   setCampaign(id: string, campaign: any) {
@@ -72,6 +73,17 @@ class MockAPIState {
   }
 
   addPledge(campaignId: string, amount: number): any {
+    const pledgeId = `pledge_${Date.now()}_${Math.random()}`;
+    const pledge = {
+      id: pledgeId,
+      campaignId,
+      amount,
+      status: 'completed'
+    };
+    
+    // Store the pledge for later reference
+    this.pledges.set(pledgeId, pledge);
+    
     const currentTotal = this.campaignTotals.get(campaignId) || 0;
     const newTotal = currentTotal + amount;
     this.campaignTotals.set(campaignId, newTotal);
@@ -93,28 +105,47 @@ class MockAPIState {
       }
     }
 
-    return {
-      id: `pledge_${Date.now()}_${Math.random()}`,
-      campaignId,
-      amount,
-      status: 'completed'
-    };
+    return pledge;
   }
 
-  cancelPledge(campaignId: string, amount: number) {
-    const currentTotal = this.campaignTotals.get(campaignId) || 0;
-    const newTotal = Math.max(0, currentTotal - amount);
-    this.campaignTotals.set(campaignId, newTotal);
+  cancelPledgeById(pledgeId: string): boolean {
+    const pledge = this.pledges.get(pledgeId);
+    
+    if (!pledge || pledge.status === 'cancelled') {
+      return false;
+    }
+
+    // Mark pledge as cancelled
+    pledge.status = 'cancelled';
+    this.pledges.set(pledgeId, pledge);
+
+    // Update campaign total
+    const currentTotal = this.campaignTotals.get(pledge.campaignId) || 0;
+    const newTotal = Math.max(0, currentTotal - pledge.amount);
+    this.campaignTotals.set(pledge.campaignId, newTotal);
 
     // Check for unachieved goals
-    const goals = this.stretchGoals.get(campaignId) || [];
-    const achieved = this.achievedGoals.get(campaignId) || new Set();
+    const goals = this.stretchGoals.get(pledge.campaignId) || [];
+    const achieved = this.achievedGoals.get(pledge.campaignId) || new Set();
     
     for (const goal of goals) {
       if (newTotal < goal.targetAmountDollars && achieved.has(goal.id)) {
         achieved.delete(goal.id);
       }
     }
+
+    return true;
+  }
+
+  cancelPledge(campaignId: string, amount: number) {
+    // Legacy method - find a pledge with the given amount and cancel it
+    const pledgeToCancel = Array.from(this.pledges.values())
+      .find(p => p.campaignId === campaignId && p.amount === amount && p.status !== 'cancelled');
+    
+    if (pledgeToCancel) {
+      return this.cancelPledgeById(pledgeToCancel.id);
+    }
+    return false;
   }
 
   getCampaign(id: string) {
@@ -200,6 +231,7 @@ class MockAPIState {
     this.achievedGoals.clear();
     this.campaigns.clear();
     this.stretchGoals.clear();
+    this.pledges.clear();
     this.notifications = [];
   }
 }
@@ -211,6 +243,33 @@ const mockFetch = jest.fn().mockImplementation((url: string, options: any = {}) 
   const method = options.method || 'GET';
   const campaignIdMatch = url.match(/\/campaigns\/([^\/]+)/);
   const campaignId = campaignIdMatch ? campaignIdMatch[1] : null;
+
+  // Pledge cancellation via pledges/[id]/cancel route - MUST BE FIRST to avoid conflicts
+  if (url.includes('/pledges/') && url.includes('/cancel') && method === 'POST') {
+    // Extract pledge ID from URL
+    const pledgeIdMatch = url.match(/\/pledges\/([^\/]+)\/cancel/);
+    const pledgeId = pledgeIdMatch ? pledgeIdMatch[1] : null;
+    
+    if (pledgeId) {
+      const success = mockAPIState.cancelPledgeById(pledgeId);
+      
+      return Promise.resolve({
+        ok: success,
+        status: success ? 200 : 404,
+        json: () => Promise.resolve(
+          success 
+            ? { message: 'Pledge cancelled successfully' }
+            : { error: 'Pledge not found or already cancelled' }
+        )
+      });
+    }
+    
+    return Promise.resolve({
+      ok: false,
+      status: 400,
+      json: () => Promise.resolve({ error: 'Invalid pledge ID' })
+    });
+  }
 
   // Stretch goals endpoints
   if (url.includes('/stretch-goals')) {
@@ -334,8 +393,8 @@ const mockFetch = jest.fn().mockImplementation((url: string, options: any = {}) 
     }
   }
   
-  // Pledge creation
-  if (url.includes('/pledge') && method === 'POST') {
+  // Pledge creation - must be exact match to avoid conflicts with /pledges/ routes
+  if (url.includes('/pledge') && !url.includes('/pledges/') && method === 'POST') {
     const body = options.body ? JSON.parse(options.body) : {};
     const pledge = mockAPIState.addPledge(campaignId!, body.pledgeAmountDollars || 0);
     
@@ -369,17 +428,6 @@ const mockFetch = jest.fn().mockImplementation((url: string, options: any = {}) 
     });
   }
   
-  // Pledge cancellation via pledges/[id]/cancel route
-  if (url.includes('/pledges/') && url.includes('/cancel') && method === 'POST') {
-    // Extract pledge amount from URL or body and cancel it
-    mockAPIState.cancelPledge(campaignId!, 25000); // Mock cancel $250 pledge
-    
-    return Promise.resolve({
-      ok: true,
-      status: 200,
-      json: () => Promise.resolve({ message: 'Pledge cancelled successfully' })
-    });
-  }
   
   // Default fallback
   return Promise.resolve({

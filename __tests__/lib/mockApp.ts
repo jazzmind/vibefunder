@@ -35,6 +35,42 @@ const mockUserSettings = {
   }
 };
 
+// Rate limiting storage - maps IP address to request counts and timestamps
+interface RateLimitEntry {
+  count: number;
+  resetTime: number;
+}
+
+const rateLimitStore = new Map<string, RateLimitEntry>();
+const RATE_LIMIT_WINDOW = 60000; // 1 minute window
+const RATE_LIMIT_MAX_REQUESTS = 5; // Max 5 requests per minute for settings updates
+
+// Helper function to check and update rate limit
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitStore.get(ip);
+  
+  // If no entry exists or the window has expired, create/reset it
+  if (!entry || now > entry.resetTime) {
+    rateLimitStore.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+    return false; // Not rate limited
+  }
+  
+  // If we've exceeded the limit, return true (rate limited)
+  if (entry.count >= RATE_LIMIT_MAX_REQUESTS) {
+    return true;
+  }
+  
+  // Increment the count
+  entry.count++;
+  return false; // Not rate limited
+}
+
+// Helper function to reset rate limiting for testing
+export function resetRateLimiting() {
+  rateLimitStore.clear();
+}
+
 // Create a simple function-based mock that supertest can work with
 const mockApp = (req: any, res: any) => {
   // Set headers
@@ -96,6 +132,33 @@ const mockApp = (req: any, res: any) => {
 
 function handleRequest(pathname: string, method: string, body: any, res: any, req: any) {
   try {
+    // Rate limiting check FIRST - before any route handling
+    const settingsUpdatePaths = [
+      '/api/users/settings/theme',
+      '/api/users/settings/privacy',
+      '/api/users/settings/notifications/email',
+      '/api/users/settings/localization',
+      '/api/users/settings/batch'
+    ];
+    
+    if (settingsUpdatePaths.includes(pathname) && (method === 'PUT' || method === 'POST')) {
+      // For testing, we'll use a consistent identifier since supertest doesn't provide real IP addresses
+      const clientIp = req.headers['x-forwarded-for'] || 
+                      req.connection?.remoteAddress || 
+                      req.socket?.remoteAddress ||
+                      'test-client-ip';
+      
+      const isRateLimited = checkRateLimit(clientIp);
+      
+      if (isRateLimited) {
+        res.statusCode = 429;
+        res.end(JSON.stringify({ 
+          message: 'Too Many Requests',
+          error: 'Rate limit exceeded. Please try again later.'
+        }));
+        return;
+      }
+    }
     // Email notifications
     if (pathname === '/api/users/settings/notifications/email') {
       if (method === 'GET') {
@@ -497,16 +560,6 @@ function handleRequest(pathname: string, method: string, body: any, res: any, re
       return;
     }
     
-    // Rate limiting simulation - force rate limiting for batch requests
-    if (pathname === '/api/users/settings/theme' && method === 'PUT') {
-      // Check if this is a batch of requests by looking at a special header
-      const isBatchRequest = req.headers['x-batch-request'];
-      if (isBatchRequest === 'true') {
-        res.statusCode = 429;
-        res.end(JSON.stringify({ message: 'Too Many Requests' }));
-        return;
-      }
-    }
     
     // Default 404
     res.statusCode = 404;

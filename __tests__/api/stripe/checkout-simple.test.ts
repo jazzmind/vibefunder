@@ -5,53 +5,54 @@
 
 import { NextRequest } from 'next/server';
 import { jest } from '@jest/globals';
-import { createTestRequest, createAuthenticatedRequest } from '../../utils/api-test-helpers';
 
-// Mock Stripe before importing the route
-const mockStripe = {
-  checkout: {
-    sessions: {
-      create: jest.fn(),
+// Create mock implementations
+const mockStripeCreate = jest.fn();
+const mockCampaignFindUnique = jest.fn();
+const mockUserUpsert = jest.fn();
+const mockAuth = jest.fn();
+
+// Mock all dependencies before any imports
+jest.mock('@/lib/stripe', () => ({
+  __esModule: true,
+  stripe: {
+    checkout: {
+      sessions: {
+        create: mockStripeCreate,
+      },
     },
   },
-};
-
-jest.mock('@/lib/stripe', () => ({
-  stripe: mockStripe,
   STRIPE_CURRENCY: 'usd',
   STRIPE_PRICE_DOLLARS: 1,
   STRIPE_APP_FEE_BPS: 500,
   DEST_ACCOUNT: 'acct_test_destination',
 }));
 
-// Mock Prisma
-const mockPrisma = {
-  campaign: {
-    findUnique: jest.fn(),
-  },
-  user: {
-    upsert: jest.fn(),
-  },
-};
-
 jest.mock('@/lib/db', () => ({
-  prisma: mockPrisma,
+  __esModule: true,
+  prisma: {
+    campaign: {
+      findUnique: mockCampaignFindUnique,
+    },
+    user: {
+      upsert: mockUserUpsert,
+    },
+  },
 }));
 
-// Mock auth
-const mockAuth = jest.fn();
 jest.mock('@/lib/auth', () => ({
+  __esModule: true,
   auth: mockAuth,
 }));
 
-// Import after mocks are set up
-import { POST } from '@/app/api/payments/checkout-session/route';
+// Import the route handler after mocks are set up
+const { POST } = require('@/app/api/payments/checkout-session/route');
 
 describe('Stripe Checkout Session - Simple Tests', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     
-    // Setup default successful responses
+    // Setup default successful responses for all tests
     mockAuth.mockResolvedValue({
       user: {
         id: 'user-123',
@@ -60,25 +61,27 @@ describe('Stripe Checkout Session - Simple Tests', () => {
       }
     });
 
-    mockPrisma.campaign.findUnique.mockResolvedValue({
+    // Default successful campaign
+    mockCampaignFindUnique.mockResolvedValue({
       id: 'campaign-123',
       title: 'Test Campaign',
       status: 'published',
       pledgeTiers: [{
         id: 'tier-123',
         title: 'Basic Tier',
+        description: 'Basic tier description',
         amountDollars: 100,
         isActive: true,
       }],
     });
 
-    mockPrisma.user.upsert.mockResolvedValue({
+    mockUserUpsert.mockResolvedValue({
       id: 'user-123',
       email: 'test@example.com',
       name: 'Test User',
     });
 
-    mockStripe.checkout.sessions.create.mockResolvedValue({
+    mockStripeCreate.mockResolvedValue({
       id: 'cs_test_123',
       url: 'https://checkout.stripe.com/pay/test_123',
     });
@@ -105,10 +108,17 @@ describe('Stripe Checkout Session - Simple Tests', () => {
     const data = await response.json();
     expect(data).toHaveProperty('checkoutUrl');
     expect(data).toHaveProperty('sessionId');
+    
+    // Verify mocks were called correctly
+    expect(mockCampaignFindUnique).toHaveBeenCalledWith({
+      where: { id: 'campaign-123' },
+      include: { pledgeTiers: true }
+    });
+    expect(mockStripeCreate).toHaveBeenCalled();
   });
 
   it('should return 404 for non-existent campaign', async () => {
-    mockPrisma.campaign.findUnique.mockResolvedValue(null);
+    mockCampaignFindUnique.mockResolvedValue(null);
 
     const requestData = {
       campaignId: 'non-existent',
@@ -131,7 +141,7 @@ describe('Stripe Checkout Session - Simple Tests', () => {
   });
 
   it('should return 400 for unpublished campaign', async () => {
-    mockPrisma.campaign.findUnique.mockResolvedValue({
+    mockCampaignFindUnique.mockResolvedValue({
       id: 'campaign-123',
       title: 'Test Campaign',
       status: 'draft', // Not published
@@ -187,7 +197,9 @@ describe('Stripe Checkout Session - Simple Tests', () => {
 
     const response = await POST(request);
     
-    expect(response.status).toBe(500); // JSON parsing error
+    expect(response.status).toBe(400); // JSON parsing error returns 400
+    const data = await response.json();
+    expect(data.error).toBe('Invalid JSON in request body');
   });
 
   it('should require email for anonymous users', async () => {

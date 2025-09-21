@@ -69,6 +69,23 @@ body {
     color: white;
   }
   
+  .btn-danger {
+    @apply inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-200;
+    background-color: #dc2626;
+    border: 1px solid #dc2626;
+    color: white;
+  }
+  
+  .btn-danger:hover {
+    background-color: white;
+    border-color: #dc2626;
+    color: #dc2626;
+  }
+  
+  .btn-danger:focus {
+    ring-color: #dc2626;
+  }
+  
   .text-brand {
     color: var(--brand);
   }

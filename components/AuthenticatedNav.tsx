@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/app/providers/AuthProvider';
+import { Badge, BadgeCheck } from 'lucide-react';
 
 export function AuthenticatedNav() {
   const { user, signOut, isAuthenticated } = useAuth();
@@ -49,20 +50,16 @@ export function AuthenticatedNav() {
 
   return (
     <nav className="hidden md:flex items-center space-x-8">
+      <Link href="/dashboard" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">
+        Dashboard
+      </Link>
       <Link href="/campaigns" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">
         Campaigns
       </Link>
       <Link href="/services" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">
         Services
       </Link>
-      <Link href="/dashboard" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">
-        Dashboard
-      </Link>
-      {user?.roles?.includes('admin') && (
-        <Link href="/admin" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">
-          Admin
-        </Link>
-      )}
+    
       
       {/* User Menu */}
       <div className="relative" ref={menuRef}>
@@ -84,6 +81,14 @@ export function AuthenticatedNav() {
             <div className="p-4 border-b border-gray-200 dark:border-gray-700">
               <p className="text-sm text-gray-600 dark:text-gray-400">Signed in as</p>
               <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{user?.email}</p>
+              {user?.roles && user.roles.length > 0 && (
+                <div className="mt-2">
+                  <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full">
+                    {user.roles.join(', ')}
+                  </span>
+                </div>
+              )}
+   
             </div>
             
             <div className="py-2">
@@ -125,8 +130,26 @@ export function AuthenticatedNav() {
                   <span>Security & Passkeys</span>
                 </div>
               </Link>
+      
             </div>
-            
+            <div className="border-t border-gray-200 dark:border-gray-700 py-2">
+            {user?.roles?.includes('admin') && (
+              
+              <Link
+                href="/admin"
+                className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <div className="flex items-center space-x-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  <span>Site Admin</span>
+                </div>
+              </Link>
+             )}
+            </div>
             <div className="border-t border-gray-200 dark:border-gray-700 py-2">
               <button
                 onClick={() => {

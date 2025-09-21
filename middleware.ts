@@ -14,13 +14,39 @@ export async function middleware(request: NextRequest) {
     }
   }
   const { pathname, search } = request.nextUrl;
+  // Debug logging
+  console.log(`[MIDDLEWARE] Request: ${request.method} ${pathname}, hasSession: ${request.cookies.has('session')}`);
+  
   // Always allow API and signin routes
   if (pathname.startsWith('/api/') || pathname.startsWith('/signin')) {
+    console.log(`[MIDDLEWARE] Allowing API/signin route: ${pathname}`);
     return NextResponse.next();
   }
+  
+  // Define public routes that don't require authentication
+  const publicRoutes = ['/', '/campaigns', '/services', '/waitlist'];
+  const isPublicRoute = publicRoutes.includes(pathname);
+  
+  // Allow static assets and public directories
+  const isStaticAsset = pathname.startsWith('/public/') || 
+                       pathname.startsWith('/images/') ||
+                       pathname.startsWith('/_next/') ||
+                       pathname.includes('.') // Files with extensions (images, css, js, etc.);
+  
+  if (isPublicRoute) {
+    console.log(`[MIDDLEWARE] Allowing public route: ${pathname}`);
+    return NextResponse.next();
+  }
+  
+  if (isStaticAsset) {
+    console.log(`[MIDDLEWARE] Allowing static asset: ${pathname}`);
+    return NextResponse.next();
+  }
+  
   // Require session cookie for all other routes
   const hasSession = request.cookies.has('session');
   if (!hasSession) {
+    console.log(`[MIDDLEWARE] Redirecting to signin for protected route: ${pathname}`);
     const redirectUrl = new URL('/signin', request.url);
     if (pathname && pathname !== '/signin') {
       // Preserve original target

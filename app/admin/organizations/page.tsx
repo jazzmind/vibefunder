@@ -30,7 +30,7 @@ export default function AdminOrganizationsPage() {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [filter, setFilter] = useState('pending');
+  const [filter, setFilter] = useState('all');
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
 
   useEffect(() => {
@@ -104,10 +104,10 @@ export default function AdminOrganizationsPage() {
         <div className="border-b border-gray-200 dark:border-gray-700">
           <nav className="-mb-px flex space-x-8">
             {[
+              { key: 'all', label: 'All' },
               { key: 'pending', label: 'Pending' },
               { key: 'approved', label: 'Approved' },
               { key: 'rejected', label: 'Rejected' },
-              { key: 'all', label: 'All' },
             ].map((tab) => (
               <button
                 key={tab.key}

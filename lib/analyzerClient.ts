@@ -6,6 +6,13 @@ const ANALYZER_DEBUG = process.env.ANALYZER_DEBUG === '1' || process.env.NODE_EN
 let CACHED_TOKEN: string | null = null;
 let TOKEN_EXPIRES_AT_MS = 0;
 
+// Function to clear cached token for debugging
+export function clearCachedToken() {
+  console.log('[AnalyzerClient] Clearing cached token');
+  CACHED_TOKEN = null;
+  TOKEN_EXPIRES_AT_MS = 0;
+}
+
 function debug(...args: any[]) {
   if (ANALYZER_DEBUG) {
     // eslint-disable-next-line no-console
@@ -24,6 +31,7 @@ async function getAccessToken(): Promise<string> {
     throw new Error('Analyzer client credentials missing: set ANALYZER_CLIENT_ID and ANALYZER_CLIENT_SECRET');
   }
   if (CACHED_TOKEN && Date.now() < TOKEN_EXPIRES_AT_MS) {
+    debug('getAccessToken: using cached token, expires in', Math.round((TOKEN_EXPIRES_AT_MS - Date.now()) / 1000), 'seconds');
     return CACHED_TOKEN;
   }
   debug('getAccessToken: POST', `${ANALYZER_BASE_URL}/oauth/token`, 'client_id:', maskValue(ANALYZER_CLIENT_ID));

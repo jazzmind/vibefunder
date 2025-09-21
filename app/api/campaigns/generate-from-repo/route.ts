@@ -18,6 +18,35 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Verify the user exists in the database
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { id: true, email: true }
+    });
+
+    if (!user) {
+      console.error(`[Campaign Generation] User not found in database: ${session.user.id}`);
+      
+      // If in LOCAL_API mode and user doesn't exist, create them
+      if (process.env.LOCAL_API === 'true' && session.user.email) {
+        console.log(`[Campaign Generation] Creating user for LOCAL_API mode: ${session.user.email}`);
+        const newUser = await prisma.user.create({
+          data: {
+            id: session.user.id,
+            email: session.user.email,
+            name: session.user.email.split('@')[0],
+            roles: session.user.roles || []
+          }
+        });
+        console.log(`[Campaign Generation] Created user: ${newUser.id}`);
+      } else {
+        return NextResponse.json({ 
+          error: 'User not found in database. Please log in again.',
+          details: 'Session contains invalid user ID' 
+        }, { status: 403 });
+      }
+    }
+
     const body = await req.json();
     const { repoUrl, userPrompt, autoCreate } = GenerateFromRepoSchema.parse(body);
 

@@ -28,7 +28,7 @@ import stripeMock from '../mocks/stripe.mock';
 
 const API_BASE = process.env.API_TEST_URL || 'http://localhost:3101';
 
-describe('Campaign Creation and Lifecycle Integration', () => {
+describe('Campaign Lifecycle Integration - Phase 4 Enhanced', () => {
   let creatorUser: any;
   let backerUser: any;
   let adminUser: any;
@@ -339,6 +339,155 @@ Our team combines decades of experience in AI research, data engineering, and pr
   });
 
   describe('Campaign Management and Updates', () => {
+
+    it('should enforce campaign owner permissions', async () => {
+      // Create another user who is not the campaign owner
+      const unauthorizedUser = await createTestUser({
+        email: generateTestEmail('unauthorized'),
+        name: 'Unauthorized User',
+        roles: ['user'],
+      });
+
+      // Attempt to update campaign as non-owner
+      const unauthorizedUpdateResponse = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}`, {
+        method: 'PUT',
+        headers: createAuthHeaders(unauthorizedUser),
+        body: JSON.stringify({
+          title: 'Hacked Title - Should Not Work',
+          description: 'This should fail due to permissions',
+        }),
+      });
+
+      expect(unauthorizedUpdateResponse.status).toBe(403);
+      const errorData = await unauthorizedUpdateResponse.json();
+      expect(errorData.success).toBe(false);
+      expect(errorData.error).toContain('permission');
+
+      // Verify campaign wasn't changed
+      const verifyResponse = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}`);
+      const verifiedCampaign = await verifyResponse.json();
+      expect(verifiedCampaign.title).toBe(testCampaign.title); // Original title unchanged
+    });
+
+    it('should validate state transitions', async () => {
+      // Create a new draft campaign for state transition testing
+      const draftCampaignResponse = await fetch(`${API_BASE}/api/campaigns`, {
+        method: 'POST',
+        headers: createAuthHeaders(creatorUser),
+        body: JSON.stringify({
+          title: 'State Transition Test Campaign',
+          summary: 'Testing campaign state transitions',
+          fundingGoalDollars: 25000,
+          organizationId: testOrganization.id,
+        }),
+      });
+
+      expect(draftCampaignResponse.status).toBe(201);
+      const draftCampaign = await draftCampaignResponse.json();
+      expect(draftCampaign.status).toBe('draft');
+
+      // Test invalid state transition (draft to completed without being published)
+      const invalidTransitionResponse = await fetch(`${API_BASE}/api/campaigns/${draftCampaign.id}`, {
+        method: 'PUT',
+        headers: createAuthHeaders(creatorUser),
+        body: JSON.stringify({
+          status: 'completed', // Invalid transition from draft
+        }),
+      });
+
+      expect(invalidTransitionResponse.status).toBe(400);
+      const invalidData = await invalidTransitionResponse.json();
+      expect(invalidData.success).toBe(false);
+      expect(invalidData.error).toContain('Invalid state transition');
+
+      // Test valid transition: draft -> published
+      const validTransitionResponse = await fetch(`${API_BASE}/api/campaigns/${draftCampaign.id}`, {
+        method: 'PUT',
+        headers: createAuthHeaders(creatorUser),
+        body: JSON.stringify({
+          status: 'published',
+          endsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days
+        }),
+      });
+
+      expect(validTransitionResponse.status).toBe(200);
+      const publishedCampaign = await validTransitionResponse.json();
+      expect(publishedCampaign.status).toBe('published');
+      expect(publishedCampaign.endsAt).toBeDefined();
+    });
+
+    it('should enforce business rule validations', async () => {
+      // Test minimum funding goal enforcement
+      const lowFundingResponse = await fetch(`${API_BASE}/api/campaigns`, {
+        method: 'POST',
+        headers: createAuthHeaders(creatorUser),
+        body: JSON.stringify({
+          title: 'Low Funding Campaign',
+          summary: 'Campaign with too low funding goal',
+          fundingGoalDollars: 100, // Below minimum
+          organizationId: testOrganization.id,
+        }),
+      });
+
+      expect(lowFundingResponse.status).toBe(400);
+      const lowFundingData = await lowFundingResponse.json();
+      expect(lowFundingData.success).toBe(false);
+      expect(lowFundingData.error).toContain('minimum');
+
+      // Test maximum funding goal enforcement
+      const highFundingResponse = await fetch(`${API_BASE}/api/campaigns`, {
+        method: 'POST',
+        headers: createAuthHeaders(creatorUser),
+        body: JSON.stringify({
+          title: 'High Funding Campaign',
+          summary: 'Campaign with too high funding goal',
+          fundingGoalDollars: 10000000, // Above maximum
+          organizationId: testOrganization.id,
+        }),
+      });
+
+      expect(highFundingResponse.status).toBe(400);
+      const highFundingData = await highFundingResponse.json();
+      expect(highFundingData.success).toBe(false);
+      expect(highFundingData.error).toContain('maximum');
+
+      // Test campaign duration limits
+      const longDurationResponse = await fetch(`${API_BASE}/api/campaigns`, {
+        method: 'POST',
+        headers: createAuthHeaders(creatorUser),
+        body: JSON.stringify({
+          title: 'Long Duration Campaign',
+          summary: 'Campaign with excessive duration',
+          fundingGoalDollars: 50000,
+          organizationId: testOrganization.id,
+          endsAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year
+        }),
+      });
+
+      expect(longDurationResponse.status).toBe(400);
+      const longDurationData = await longDurationResponse.json();
+      expect(longDurationData.success).toBe(false);
+      expect(longDurationData.error).toContain('duration');
+    });
+
+    it('should track campaign analytics events', async () => {
+      // View campaign to trigger analytics
+      const viewResponse = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}`);
+      expect(viewResponse.status).toBe(200);
+
+      // Check analytics were recorded
+      const analyticsResponse = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/analytics`, {
+        headers: createAuthHeaders(creatorUser),
+      });
+
+      expect(analyticsResponse.status).toBe(200);
+      const analytics = await analyticsResponse.json();
+      expect(analytics.viewCount).toBeGreaterThan(0);
+      expect(analytics.uniqueViews).toBeGreaterThanOrEqual(0);
+      expect(analytics.conversionRate).toBeDefined();
+      expect(analytics.dailyViews).toBeDefined();
+      expect(analytics.referrers).toBeDefined();
+    });
     it('should allow creator to post campaign updates', async () => {
       const updates = [
         {
@@ -403,6 +552,85 @@ This update is only visible to our backers as a thank you for your support!`,
       expect(analytics.pledgeCount).toBeGreaterThanOrEqual(0);
       expect(analytics.raisedAmount).toBeGreaterThanOrEqual(0);
       expect(analytics.fundingProgress).toBeDefined();
+    });
+  });
+
+  describe('Stretch Goal Implementation', () => {
+    it('should create and manage stretch goals', async () => {
+      const stretchGoals = [
+        {
+          title: 'Advanced AI Features',
+          description: 'Enhanced machine learning algorithms for better predictions',
+          targetDollars: 200000,
+          order: 1,
+        },
+        {
+          title: 'Mobile App Development',
+          description: 'Native iOS and Android applications',
+          targetDollars: 300000,
+          order: 2,
+        },
+        {
+          title: 'Enterprise Integrations',
+          description: 'Salesforce, HubSpot, and Microsoft integrations',
+          targetDollars: 450000,
+          order: 3,
+        },
+      ];
+
+      const createdStretchGoals = [];
+      for (const goal of stretchGoals) {
+        const goalResponse = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/stretch-goals`, {
+          method: 'POST',
+          headers: createAuthHeaders(creatorUser),
+          body: JSON.stringify(goal),
+        });
+
+        expect(goalResponse.status).toBe(201);
+        const createdGoal = await goalResponse.json();
+        expect(createdGoal.campaignId).toBe(testCampaign.id);
+        expect(createdGoal.title).toBe(goal.title);
+        expect(createdGoal.targetDollars).toBe(goal.targetDollars);
+        expect(createdGoal.isUnlocked).toBe(false);
+        createdStretchGoals.push(createdGoal);
+      }
+
+      expect(createdStretchGoals).toHaveLength(3);
+
+      // Verify stretch goals in database
+      const dbStretchGoals = await testPrisma.stretchGoal.findMany({
+        where: { campaignId: testCampaign.id },
+        orderBy: { order: 'asc' },
+      });
+      expect(dbStretchGoals).toHaveLength(3);
+      expect(dbStretchGoals[0].targetDollars).toBe(200000);
+      expect(dbStretchGoals[2].targetDollars).toBe(450000);
+    });
+
+    it('should unlock stretch goals when funding targets are met', async () => {
+      // Simulate campaign reaching first stretch goal
+      await testPrisma.campaign.update({
+        where: { id: testCampaign.id },
+        data: { raisedDollars: 250000 }, // Above first stretch goal
+      });
+
+      const unlockResponse = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/check-stretch-goals`, {
+        method: 'POST',
+        headers: createAuthHeaders(creatorUser),
+      });
+
+      expect(unlockResponse.status).toBe(200);
+      const unlockResult = await unlockResponse.json();
+      expect(unlockResult.unlockedGoals).toHaveLength(1);
+
+      // Verify first stretch goal is unlocked
+      const updatedGoals = await testPrisma.stretchGoal.findMany({
+        where: { campaignId: testCampaign.id },
+        orderBy: { order: 'asc' },
+      });
+      
+      expect(updatedGoals[0].isUnlocked).toBe(true);
+      expect(updatedGoals[1].isUnlocked).toBe(false); // Second goal not reached yet
     });
   });
 
@@ -621,6 +849,67 @@ This update is only visible to our backers as a thank you for your support!`,
     });
   });
 
+  describe('Campaign Progress Tracking', () => {
+    it('should track campaign funding progress over time', async () => {
+      // Create multiple pledges to track progress
+      const pledgeAmounts = [500, 1000, 750, 1200, 800];
+      
+      for (const amount of pledgeAmounts) {
+        const pledge = await testPrisma.pledge.create({
+          data: {
+            campaignId: testCampaign.id,
+            backerId: backerUser.id,
+            amountDollars: amount,
+            status: 'completed',
+          },
+        });
+        
+        // Update campaign raised amount
+        await testPrisma.campaign.update({
+          where: { id: testCampaign.id },
+          data: {
+            raisedDollars: { increment: amount },
+          },
+        });
+        
+        // Small delay to simulate time progression
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
+      // Check funding progress
+      const progressResponse = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/funding-progress`, {
+        headers: createAuthHeaders(creatorUser),
+      });
+
+      expect(progressResponse.status).toBe(200);
+      const progress = await progressResponse.json();
+      
+      expect(progress.totalRaised).toBe(4250); // Sum of pledge amounts
+      expect(progress.goalAmount).toBe(testCampaign.fundingGoalDollars);
+      expect(progress.percentFunded).toBeGreaterThan(0);
+      expect(progress.pledgeCount).toBe(pledgeAmounts.length);
+      expect(progress.averagePledge).toBe(850); // 4250 / 5
+      expect(progress.timeline).toBeDefined();
+      expect(progress.milestoneProgress).toBeDefined();
+    });
+
+    it('should calculate time-based metrics', async () => {
+      const metricsResponse = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/time-metrics`, {
+        headers: createAuthHeaders(creatorUser),
+      });
+
+      expect(metricsResponse.status).toBe(200);
+      const metrics = await metricsResponse.json();
+      
+      expect(metrics.daysRemaining).toBeDefined();
+      expect(metrics.daysElapsed).toBeDefined();
+      expect(metrics.totalDuration).toBeDefined();
+      expect(metrics.progressRate).toBeDefined(); // Funding per day
+      expect(metrics.projectedTotal).toBeDefined();
+      expect(metrics.timeToGoal).toBeDefined();
+    });
+  });
+
   describe('Campaign Completion and Fulfillment', () => {
     it('should handle campaign successful completion', async () => {
       // Simulate campaign reaching funding goal
@@ -669,6 +958,186 @@ This update is only visible to our backers as a thank you for your support!`,
     });
   });
 
+  describe('Campaign Cancellation Flow', () => {
+    it('should handle campaign cancellation by creator', async () => {
+      // Create a separate campaign for cancellation testing
+      const cancelTestCampaign = await createTestCampaign({
+        title: 'Campaign To Cancel',
+        summary: 'This campaign will be cancelled',
+        fundingGoalDollars: 25000,
+        status: 'published',
+        organizationId: testOrganization.id,
+        endsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      }, creatorUser.id);
+
+      // Create some pledges to test refund handling
+      const pledgesToRefund = [
+        { amount: 100, backerId: backerUser.id },
+        { amount: 250, backerId: backerUser.id },
+      ];
+
+      for (const pledge of pledgesToRefund) {
+        await testPrisma.pledge.create({
+          data: {
+            campaignId: cancelTestCampaign.id,
+            backerId: pledge.backerId,
+            amountDollars: pledge.amount,
+            status: 'completed',
+            paymentRef: `stripe_payment_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+          },
+        });
+      }
+
+      // Cancel the campaign
+      const cancelResponse = await fetch(`${API_BASE}/api/campaigns/${cancelTestCampaign.id}/cancel`, {
+        method: 'POST',
+        headers: createAuthHeaders(creatorUser),
+        body: JSON.stringify({
+          reason: 'Project scope changed significantly',
+          refundPolicy: 'full_refund',
+          notifyBackers: true,
+        }),
+      });
+
+      expect(cancelResponse.status).toBe(200);
+      const cancelResult = await cancelResponse.json();
+      expect(cancelResult.success).toBe(true);
+      expect(cancelResult.refundsInitiated).toBe(2);
+
+      // Verify campaign status updated
+      const updatedCampaign = await testPrisma.campaign.findUnique({
+        where: { id: cancelTestCampaign.id },
+      });
+      expect(updatedCampaign?.status).toBe('cancelled');
+
+      // Verify cancellation notifications sent
+      const cancellationEmails = emailMock.getEmailsBySubject('Campaign Cancelled');
+      expect(cancellationEmails.length).toBeGreaterThan(0);
+      
+      // Should notify both creator and backers
+      const creatorNotification = cancellationEmails.find(e => e.to === creatorUser.email);
+      const backerNotification = cancellationEmails.find(e => e.to === backerUser.email);
+      expect(creatorNotification).toBeDefined();
+      expect(backerNotification).toBeDefined();
+    });
+
+    it('should handle partial refunds for cancelled campaigns', async () => {
+      const partialRefundCampaign = await createTestCampaign({
+        title: 'Partial Refund Campaign',
+        summary: 'Testing partial refund scenario',
+        fundingGoalDollars: 50000,
+        status: 'published',
+        organizationId: testOrganization.id,
+        endsAt: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
+      }, creatorUser.id);
+
+      // Create pledge for partial refund testing
+      await testPrisma.pledge.create({
+        data: {
+          campaignId: partialRefundCampaign.id,
+          backerId: backerUser.id,
+          amountDollars: 500,
+          status: 'completed',
+          paymentRef: 'test_payment_partial_refund',
+        },
+      });
+
+      // Cancel with partial refund
+      const partialCancelResponse = await fetch(`${API_BASE}/api/campaigns/${partialRefundCampaign.id}/cancel`, {
+        method: 'POST',
+        headers: createAuthHeaders(creatorUser),
+        body: JSON.stringify({
+          reason: 'Partial work completed, keeping 30% for development costs',
+          refundPolicy: 'partial_refund',
+          refundPercentage: 70,
+          notifyBackers: true,
+        }),
+      });
+
+      expect(partialCancelResponse.status).toBe(200);
+      const partialResult = await partialCancelResponse.json();
+      expect(partialResult.success).toBe(true);
+      expect(partialResult.refundAmount).toBe(350); // 70% of 500
+      expect(partialResult.retainedAmount).toBe(150); // 30% of 500
+    });
+  });
+
+  describe('Campaign Notification System', () => {
+    it('should trigger notifications for campaign events', async () => {
+      emailMock.reset();
+      
+      // Test campaign publication notification
+      const pubNotifyResponse = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/notify-publication`, {
+        method: 'POST',
+        headers: createAuthHeaders(creatorUser),
+      });
+
+      expect(pubNotifyResponse.status).toBe(200);
+      
+      // Check publication emails sent
+      const publicationEmails = emailMock.getEmailsBySubject('Campaign Published');
+      expect(publicationEmails.length).toBeGreaterThan(0);
+
+      // Test milestone notification
+      const milestones = await testPrisma.milestone.findMany({
+        where: { campaignId: testCampaign.id },
+        orderBy: { pct: 'asc' },
+      });
+      
+      if (milestones.length > 0) {
+        const milestoneNotifyResponse = await fetch(`${API_BASE}/api/milestones/${milestones[0].id}/notify-backers`, {
+          method: 'POST',
+          headers: createAuthHeaders(creatorUser),
+          body: JSON.stringify({
+            message: 'First milestone has been completed ahead of schedule!',
+          }),
+        });
+
+        expect(milestoneNotifyResponse.status).toBe(200);
+        
+        // Verify milestone notification emails
+        const milestoneEmails = emailMock.getEmailsBySubject('Milestone Update');
+        expect(milestoneEmails.length).toBeGreaterThan(0);
+      }
+
+      // Test funding goal notification
+      const goalNotifyResponse = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/notify-goal-reached`, {
+        method: 'POST',
+        headers: createAuthHeaders(creatorUser),
+      });
+
+      expect(goalNotifyResponse.status).toBe(200);
+    });
+
+    it('should batch and throttle notification sending', async () => {
+      // Create multiple rapid events that should be batched
+      const rapidEvents = [];
+      
+      for (let i = 0; i < 10; i++) {
+        rapidEvents.push(
+          fetch(`${API_BASE}/api/campaigns/${testCampaign.id}/analytics`, {
+            method: 'POST',
+            headers: createAuthHeaders(creatorUser),
+            body: JSON.stringify({
+              event: 'campaign_view',
+              userId: backerUser.id,
+            }),
+          })
+        );
+      }
+
+      // Execute all events simultaneously
+      const responses = await Promise.all(rapidEvents);
+      responses.forEach(response => {
+        expect(response.status).toBe(200);
+      });
+
+      // Check that notifications were throttled (not 10 separate emails)
+      const analyticsEmails = emailMock.getEmailsBySubject('Campaign Analytics');
+      expect(analyticsEmails.length).toBeLessThanOrEqual(2); // Throttled to max 2 emails
+    });
+  });
+
   describe('Error Handling and Edge Cases', () => {
     it('should prevent unauthorized campaign modifications', async () => {
       // Try to modify campaign as non-creator
@@ -713,21 +1182,153 @@ This update is only visible to our backers as a thank you for your support!`,
       expect(conflictErrors.length).toBeLessThan(responses.length);
     });
 
-    it('should validate campaign data integrity', async () => {
-      // Test invalid funding goal
-      const invalidGoalResponse = await fetch(`${API_BASE}/api/campaigns`, {
+    it('should handle database connection failures gracefully', async () => {
+      // Test recovery from temporary database issues
+      const retryResponse = await fetch(`${API_BASE}/api/campaigns/${testCampaign.id}`, {
+        method: 'GET',
+        headers: {
+          'x-test-db-failure': 'temporary', // Simulate temporary DB issue
+        },
+      });
+
+      // Should either succeed after retry or return appropriate error
+      expect([200, 503]).toContain(retryResponse.status);
+      
+      if (retryResponse.status === 503) {
+        const errorData = await retryResponse.json();
+        expect(errorData.error).toContain('temporarily unavailable');
+        expect(errorData.retryAfter).toBeDefined();
+      }
+    });
+
+    it('should validate campaign data consistency', async () => {
+      // Test funding goal vs raised amount consistency
+      const inconsistentResponse = await fetch(`${API_BASE}/api/campaigns`, {
         method: 'POST',
         headers: createAuthHeaders(creatorUser),
         body: JSON.stringify({
-          title: 'Invalid Campaign',
-          summary: 'Campaign with invalid funding goal',
-          fundingGoalDollars: -1000, // Negative goal
+          title: 'Inconsistent Campaign',
+          summary: 'Testing data consistency',
+          fundingGoalDollars: 10000,
+          raisedDollars: 15000, // Raised more than goal - should be validated
         }),
       });
 
-      expect(invalidGoalResponse.status).toBe(400);
-      const invalidData = await invalidGoalResponse.json();
-      expect(invalidData.success).toBe(false);
+      expect(inconsistentResponse.status).toBe(400);
+      const inconsistentData = await inconsistentResponse.json();
+      expect(inconsistentData.success).toBe(false);
+      expect(inconsistentData.error).toContain('consistency');
+    });
+
+    it('should handle campaign deletion with cascade cleanup', async () => {
+      // Create campaign with related data for deletion testing
+      const deletionCampaign = await createTestCampaign({
+        title: 'Campaign for Deletion Test',
+        summary: 'This campaign will be deleted',
+        fundingGoalDollars: 15000,
+        organizationId: testOrganization.id,
+      }, creatorUser.id);
+
+      // Add related data
+      await createTestMilestone(deletionCampaign.id, {
+        name: 'Test Milestone for Deletion',
+        pct: 50,
+      });
+
+      await createTestPledgeTier(deletionCampaign.id, {
+        title: 'Test Tier for Deletion',
+        amountDollars: 25,
+      });
+
+      await createTestComment(deletionCampaign.id, backerUser.id, 'Test comment for deletion');
+
+      // Delete campaign
+      const deleteResponse = await fetch(`${API_BASE}/api/campaigns/${deletionCampaign.id}`, {
+        method: 'DELETE',
+        headers: createAuthHeaders(creatorUser),
+      });
+
+      expect(deleteResponse.status).toBe(200);
+      const deleteResult = await deleteResponse.json();
+      expect(deleteResult.success).toBe(true);
+
+      // Verify campaign and related data are deleted
+      const deletedCampaign = await testPrisma.campaign.findUnique({
+        where: { id: deletionCampaign.id },
+      });
+      expect(deletedCampaign).toBeNull();
+
+      // Verify cascaded deletions
+      const remainingMilestones = await testPrisma.milestone.findMany({
+        where: { campaignId: deletionCampaign.id },
+      });
+      expect(remainingMilestones).toHaveLength(0);
+
+      const remainingTiers = await testPrisma.pledgeTier.findMany({
+        where: { campaignId: deletionCampaign.id },
+      });
+      expect(remainingTiers).toHaveLength(0);
+
+      const remainingComments = await testPrisma.comment.findMany({
+        where: { campaignId: deletionCampaign.id },
+      });
+      expect(remainingComments).toHaveLength(0);
+    });
+
+    it('should validate comprehensive campaign data integrity', async () => {
+      // Test various invalid data scenarios
+      const invalidScenarios = [
+        {
+          name: 'negative funding goal',
+          data: {
+            title: 'Invalid Campaign',
+            summary: 'Campaign with invalid funding goal',
+            fundingGoalDollars: -1000,
+          },
+          expectedError: 'funding goal',
+        },
+        {
+          name: 'missing required fields',
+          data: {
+            summary: 'Missing title',
+            fundingGoalDollars: 10000,
+          },
+          expectedError: 'title',
+        },
+        {
+          name: 'invalid end date',
+          data: {
+            title: 'Past End Date Campaign',
+            summary: 'Campaign ending in the past',
+            fundingGoalDollars: 10000,
+            endsAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // Yesterday
+          },
+          expectedError: 'end date',
+        },
+        {
+          name: 'empty sectors array',
+          data: {
+            title: 'No Sectors Campaign',
+            summary: 'Campaign without sectors',
+            fundingGoalDollars: 10000,
+            sectors: [],
+          },
+          expectedError: 'sector',
+        },
+      ];
+
+      for (const scenario of invalidScenarios) {
+        const response = await fetch(`${API_BASE}/api/campaigns`, {
+          method: 'POST',
+          headers: createAuthHeaders(creatorUser),
+          body: JSON.stringify(scenario.data),
+        });
+
+        expect(response.status).toBe(400);
+        const errorData = await response.json();
+        expect(errorData.success).toBe(false);
+        expect(errorData.error.toLowerCase()).toContain(scenario.expectedError.toLowerCase());
+      }
     });
   });
 });

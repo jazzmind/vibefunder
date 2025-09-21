@@ -145,47 +145,49 @@ export async function auth(): Promise<{ user: SessionPayload } | null> {
     if (process.env.LOCAL_API === 'true') {
       console.log('[LOCAL_API] Bypassing authentication for localhost testing');
       
-      // Find a real test user from the database to use
+      // Find or create a real test user from the database to use
       try {
-        const testUser = await prisma.user.findFirst({
+        let testUser = await prisma.user.findFirst({
           where: { 
             OR: [
               { email: { contains: 'test' } },
-              { email: { contains: 'simple-campaign-test' } }
+              { email: { contains: 'simple-campaign-test' } },
+              { email: 'localhost@test.com' }
             ]
           },
-          select: { id: true, email: true },
+          select: { id: true, email: true, roles: true },
           orderBy: { createdAt: 'desc' } // Get the most recent test user
         });
         
-        if (testUser) {
-          console.log('[LOCAL_API] Using real test user:', testUser.id);
-          return {
-            user: {
-              id: testUser.id,
-              userId: testUser.id,
-              email: testUser.email,
-              roles: ['user', 'admin'],
-              iat: Date.now(),
-              exp: Date.now() + 7 * 24 * 60 * 60 * 1000
-            } as SessionPayload
-          };
+        // If no test user exists, create one
+        if (!testUser) {
+          console.log('[LOCAL_API] Creating default test user for local development');
+          testUser = await prisma.user.create({
+            data: {
+              email: 'localhost@test.com',
+              name: 'Local Test User',
+              roles: ['user', 'admin']
+            },
+            select: { id: true, email: true, roles: true }
+          });
         }
+        
+        console.log('[LOCAL_API] Using test user:', testUser.id);
+        return {
+          user: {
+            id: testUser.id,
+            userId: testUser.id,
+            email: testUser.email,
+            roles: testUser.roles || ['user', 'admin'],
+            iat: Date.now(),
+            exp: Date.now() + 7 * 24 * 60 * 60 * 1000
+          } as SessionPayload
+        };
       } catch (dbError) {
-        console.log('[LOCAL_API] Database query failed, using fallback user');
+        console.error('[LOCAL_API] Database error:', dbError);
+        // Return null if database is not available
+        return null;
       }
-      
-      // Fallback to mock session for testing
-      return {
-        user: {
-          id: 'test-session',
-          userId: 'localhost-user',
-          email: 'localhost@test.com',
-          roles: ['user', 'admin'],
-          iat: Date.now(),
-          exp: Date.now() + 7 * 24 * 60 * 60 * 1000
-        } as SessionPayload
-      };
     }
 
     const cookieStore = await cookies();

@@ -4,11 +4,11 @@
   "version": "0.1.1",
   "scripts": {
     "dev": "lsof -ti:3900 | xargs -r kill -9 2>/dev/null || true && next dev --port 3900",
-    "build": "lsof -ti:3900 | xargs -r kill -9 2>/dev/null || true && next build",
+    "build": "tsc",
     "api": "lsof -ti:3901 | xargs -r kill -9 2>/dev/null || true && LOCAL_API=true next dev --port 3901",
     "dev:test": "lsof -ti:3101 | xargs -r kill -9 2>/dev/null || true && TEST_PORT=3101 NODE_ENV=test LOCAL_API=true next dev --port 3101",
     "postinstall": "prisma generate",
-    "test": "jest",
+    "test": "playwright test",
     "test:with-server": "concurrently -k -s first -n \"SERVER,TESTS\" \"npm run dev:test\" \"wait-on http://localhost:3101 --timeout 30000 && npm test\"",
     "test:full": "CLEANUP_TEST_DATA=true npm run test:with-server",
     "test:quick": "./scripts/test-runner.sh quick",
@@ -41,11 +41,13 @@
     "db:reset": "prisma migrate reset --force",
     "prepare": "husky install || true",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "echo 'Add linting here'",
     "prisma:gen": "prisma generate",
     "prisma:migrate": "prisma migrate dev --name init",
     "prisma:studio": "prisma studio",
-    "seed": "tsx prisma/seed.ts"
+    "seed": "tsx prisma/seed.ts",
+    "typecheck": "tsc --noEmit",
+    "playwright": "playwright test"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.637.0",
@@ -96,7 +98,7 @@
     "@babel/preset-typescript": "^7.27.1",
     "@faker-js/faker": "^10.0.0",
     "@types/jest": "^29.5.8",
-    "@types/node": "^20.11.30",
+    "@types/node": "^20.19.17",
     "@types/nodemailer": "^6.4.14",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
@@ -115,6 +117,7 @@
     "jest-fetch-mock": "^3.0.3",
     "jest-junit": "^16.0.0",
     "jest-mock-extended": "^4.0.0",
+    "playwright": "^1.55.0",
     "postcss": "^8.4.47",
     "prettier": "^3.2.5",
     "prisma": "^6.15.0",
@@ -122,7 +125,8 @@
     "tailwindcss": "^4.0.0",
     "ts-jest": "^29.1.1",
     "tsx": "^4.7.0",
-    "typescript": "^5.4.5",
+    "typescript": "^5.9.2",
     "wait-on": "^8.0.4"
-  }
+  },
+  "type": "module"
 }

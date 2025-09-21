@@ -68,6 +68,13 @@ prisma/dev.db*
 # Generated output files
 output/
 
+
+# Jest cache
+node_modules/.cache/jest
+# Coverage reports
+coverage/
+junit.xml
+
 # Claude Flow generated files
 .claude/settings.local.json
 .mcp.json
@@ -92,9 +99,3 @@ claude-flow
 claude-flow.bat
 claude-flow.ps1
 hive-mind-prompt-*.txt
-.claude-flow/*
-# Jest cache
-node_modules/.cache/jest
-# Coverage reports
-coverage/
-junit.xml

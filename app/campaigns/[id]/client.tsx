@@ -58,7 +58,7 @@ export function PledgeButton({ campaignId, pledgeTiers = [] }: { campaignId: str
   }
   
   return(
-    <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-200">
+    <div className="bg-white dark:bg-gray-400 rounded-2xl p-8 shadow-sm border border-gray-200 dark:border-gray-700">
       <h3 className="text-xl font-semibold text-gray-900 mb-6">Back this project</h3>
       <div className="space-y-6">
         {/* Pledge Amount Selection */}

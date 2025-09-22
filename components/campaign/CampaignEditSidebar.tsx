@@ -155,7 +155,12 @@ export default function CampaignEditSidebar({
                 <span className="text-sm text-gray-700 dark:text-gray-300">Lead Image</span>
                 <div className="flex items-center">
                   {formData.imageUrl ? (
-                    <span className="text-green-500 text-xs font-medium">✓ Required</span>
+                    <span className="text-green-500 text-xs font-medium flex items-center">
+                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      Required
+                    </span>
                   ) : (
                     <span className="text-red-500 text-xs font-medium">✗ Required</span>
                   )}
@@ -165,7 +170,12 @@ export default function CampaignEditSidebar({
                 <span className="text-sm text-gray-700 dark:text-gray-300">Lead Video</span>
                 <div className="flex items-center">
                   {formData.leadVideoUrl ? (
-                    <span className="text-green-500 text-xs font-medium">✓ Recommended</span>
+                    <span className="text-green-500 text-xs font-medium flex items-center">
+                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      Recommended
+                    </span>
                   ) : (
                     <span className="text-gray-500 text-xs font-medium">⚬ Recommended</span>
                   )}
@@ -183,7 +193,12 @@ export default function CampaignEditSidebar({
               </span>
               <div className="flex items-center">
                 {formData.milestones.length > 0 ? (
-                  <span className="text-green-500 text-xs font-medium">✓ Created</span>
+                  <span className="text-green-500 text-xs font-medium flex items-center">
+                    <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Created
+                  </span>
                 ) : (
                   <span className="text-gray-500 text-xs font-medium">⚬ Optional</span>
                 )}
@@ -200,7 +215,12 @@ export default function CampaignEditSidebar({
               </span>
               <div className="flex items-center">
                 {formData.priceTiers.length > 0 ? (
-                  <span className="text-green-500 text-xs font-medium">✓ Created</span>
+                  <span className="text-green-500 text-xs font-medium flex items-center">
+                    <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Created
+                  </span>
                 ) : (
                   <span className="text-gray-500 text-xs font-medium">⚬ Optional</span>
                 )}
@@ -228,7 +248,12 @@ export default function CampaignEditSidebar({
               {campaign.reviewStatus === 'pending_review' ? (
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-gray-900 dark:text-white">Launch Status</span>
-                  <span className="text-blue-500 text-xs font-medium">📋 Under Review</span>
+                  <span className="text-blue-500 text-xs font-medium flex items-center">
+                    <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                    Under Review
+                  </span>
                 </div>
               ) : campaign.reviewStatus === 'approved' ? (
                 <div className="flex items-center justify-between">
@@ -258,9 +283,19 @@ export default function CampaignEditSidebar({
                     <span className="text-sm font-medium text-gray-900 dark:text-white">Ready to Launch</span>
                     <div className="flex items-center">
                       {formData.imageUrl ? (
-                        <span className="text-green-500 text-xs font-medium">✓ Ready</span>
+                        <span className="text-green-500 text-xs font-medium flex items-center">
+                          <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          Ready
+                        </span>
                       ) : (
-                        <span className="text-yellow-500 text-xs font-medium">⚠ Missing Required</span>
+                        <span className="text-yellow-500 text-xs font-medium flex items-center">
+                          <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 19.5c-.77.833.192 2.5 1.732 2.5z" />
+                          </svg>
+                          Missing Required
+                        </span>
                       )}
                     </div>
                   </div>
@@ -281,6 +316,31 @@ export default function CampaignEditSidebar({
               )}
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Team Management */}
+      <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white">Team</h3>
+          <a
+            href={`/campaigns/${campaign.id}/team`}
+            className="px-3 py-1 text-xs font-medium bg-brand text-white rounded-md hover:bg-brand/90 transition-colors"
+          >
+            Edit
+          </a>
+        </div>
+        
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-700 dark:text-gray-300">Team Members</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              Click Edit to manage
+            </span>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Add team members to collaborate on your campaign and share responsibilities for milestones and updates.
+          </p>
         </div>
       </div>
     </div>

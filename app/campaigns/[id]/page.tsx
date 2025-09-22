@@ -6,7 +6,7 @@ import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import Link from "next/link";
 import ImageGenerator from "@/components/campaign/ImageGenerator";
-import AutoImageGenerationWrapper from "./AutoImageGenerationWrapper";
+import AutoImageGenerationWrapper from "@/components/images/AutoImageGenerationWrapper";
 import { DEMO_CAMPAIGNS } from "@/app/demo/campaigns";
 import VideoEmbed from '@/components/campaign/VideoEmbed';
 
@@ -132,17 +132,7 @@ export default async function CampaignPage({params}:{params:Promise<{id:string}>
                       </svg>
                       Edit
                     </Link>
-                    {campaign.status === 'draft' && (
-                      <Link 
-                        href={`/campaigns/${campaign.id}/milestones`}
-                        className="inline-flex items-center px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                      >
-                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                        </svg>
-                        Milestones
-                      </Link>
-                    )}
+                   
                     <Link 
                       href={`/campaigns/${campaign.id}/team`}
                       className="inline-flex items-center px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
@@ -252,14 +242,7 @@ export default async function CampaignPage({params}:{params:Promise<{id:string}>
             <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-sm border border-gray-200 dark:border-gray-700">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Development Milestones</h3>
-                {canEdit && !isDemo && (
-                  <Link 
-                    href={`/campaigns/${campaign.id}/milestones`}
-                    className="btn-secondary text-sm px-4 py-2"
-                  >
-                    Manage Milestones
-                  </Link>
-                )}
+              
               </div>
               <div className="space-y-6">
                 {(campaign.milestones as any)?.map((milestone: any, index: number) => (
@@ -272,7 +255,11 @@ export default async function CampaignPage({params}:{params:Promise<{id:string}>
                         <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-white
                           ${milestone.status === 'completed' ? 'bg-green-500' : 
                             milestone.status === 'in_progress' ? 'bg-blue-500' : 'bg-gray-400'}`}>
-                          {milestone.status === 'completed' ? '✓' : index + 1}
+                          {milestone.status === 'completed' ? (
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          ) : index + 1}
                         </div>
                       </div>
                       <div className="flex-1 min-w-0">
@@ -338,7 +325,10 @@ export default async function CampaignPage({params}:{params:Promise<{id:string}>
                             </div>
                             {isUnlocked ? (
                               <span className="inline-flex items-center px-2 py-1 text-xs font-semibold bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full">
-                                ✓ Unlocked
+                                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                                Unlocked
                               </span>
                             ) : (
                               <span className="text-sm text-gray-500 dark:text-gray-400">{Math.round(progress)}%</span>
@@ -389,10 +379,10 @@ export default async function CampaignPage({params}:{params:Promise<{id:string}>
           </div>
           
           <div className="lg:col-span-1 space-y-6">
-            {!isDemo && <ArtifactUploader campaignId={campaign.id} />}
+            {false && !isDemo && <ArtifactUploader campaignId={campaign.id} />}
             
             {/* Image Generator for campaign owners */}
-            {!isDemo && canEdit && (
+            {false && !isDemo && canEdit && (
               <ImageGenerator 
                 campaignId={campaign.id} 
                 currentImage={campaign.image} 

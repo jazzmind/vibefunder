@@ -46,7 +46,10 @@ export default function CampaignEditHeader({
           )}
           {lastSaved && !autoSaving && (
             <div className="text-sm text-green-600 dark:text-green-400">
-              ✓ Last saved {lastSaved.toLocaleTimeString()}
+              <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              Last saved {lastSaved.toLocaleTimeString()}
             </div>
           )}
         </div>

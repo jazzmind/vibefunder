@@ -132,17 +132,50 @@ export default async function OrganizationDashboard({
   // Use allCampaigns instead of userOrganization.campaigns
   const campaigns = allCampaigns;
 
+  // Get backed campaigns (campaigns user has pledged to)
+  const backedCampaigns = await prisma.campaign.findMany({
+    where: {
+      pledges: {
+        some: {
+          backerId: session.user.id
+        }
+      }
+    },
+    include: {
+      _count: {
+        select: {
+          pledges: true,
+          comments: true,
+          milestones: true
+        }
+      },
+      maker: true,
+      pledges: {
+        where: { backerId: session.user.id },
+        select: { amountDollars: true, createdAt: true }
+      }
+    },
+    orderBy: { createdAt: 'desc' }
+  });
+
   // Calculate stats
   const totalRaised = campaigns.reduce((sum, c) => sum + c.raisedDollars, 0);
   const totalPledges = campaigns.reduce((sum, c) => sum + c._count.pledges, 0);
   const liveCampaigns = campaigns.filter(c => c.status === 'live');
   const draftCampaigns = campaigns.filter(c => c.status === 'draft');
+  const totalBacked = backedCampaigns.reduce((sum, c) => sum + (c.pledges[0]?.amountDollars || 0), 0);
   
   // Determine default tab based on content
   const hasCampaigns = campaigns.length > 0;
   const hasServices = userOrganization.services.length > 0;
+  const hasBackedCampaigns = backedCampaigns.length > 0;
   
-  const defaultTab = isServiceProvider 
+  // If user is only a backer (no organization campaigns/services), default to backed campaigns
+  const isOnlyBacker = !hasCampaigns && !hasServices && hasBackedCampaigns;
+  
+  const defaultTab = isOnlyBacker 
+    ? 'backed'
+    : isServiceProvider 
     ? (hasServices ? 'services' : 'services') // Service providers default to services
     : (hasCampaigns ? 'campaigns' : 'campaigns'); // Creators default to campaigns
     
@@ -222,13 +255,17 @@ export default async function OrganizationDashboard({
           defaultTab={defaultTab}
           hasCampaigns={hasCampaigns}
           hasServices={hasServices}
+          hasBackedCampaigns={hasBackedCampaigns}
           isServiceProvider={isServiceProvider}
+          isOnlyBacker={isOnlyBacker}
           campaigns={campaigns}
+          backedCampaigns={backedCampaigns}
           services={userOrganization.services}
           organization={userOrganization}
           canManage={canManage}
           serviceProviderAnalytics={serviceProviderMetrics}
           totalRaised={totalRaised}
+          totalBacked={totalBacked}
           liveCampaigns={liveCampaigns}
           draftCampaigns={draftCampaigns}
         />

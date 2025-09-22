@@ -199,7 +199,9 @@ export default function AIContentEnhancer({
             </>
           ) : (
             <>
-              <span>✨</span>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3l3.057-3L9 5.172 13.057 0 16 3l-1.943 2.172L16 7.344l-2.943 3L9 8.172 5 11.344 3.057 7.172z" />
+              </svg>
               <span>Enhance Content</span>
             </>
           )}

@@ -145,18 +145,23 @@ model PledgeTier {
 }
 
 model Comment {
-  id           String    @id @default(cuid())
+  id           String          @id @default(cuid())
   campaignId   String
   userId       String
   content      String
   parentId     String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  isTeamMember Boolean   @default(false)
-  campaign     Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  parent       Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
-  replies      Comment[] @relation("CommentReplies")
-  user         User      @relation(fields: [userId], references: [id])
+  // New fields for linking to specific campaign items
+  updateId     String?         // Link to specific campaign update
+  itemType     String          @default("campaign") // "campaign", "update", etc.
+  itemId       String?         // Generic reference to any campaign item
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  isTeamMember Boolean         @default(false)
+  campaign     Campaign        @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  update       CampaignUpdate? @relation(fields: [updateId], references: [id], onDelete: Cascade)
+  parent       Comment?        @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies      Comment[]       @relation("CommentReplies")
+  user         User            @relation(fields: [userId], references: [id])
 }
 
 model TeamMember {
@@ -172,17 +177,18 @@ model TeamMember {
 }
 
 model CampaignUpdate {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   campaignId String
   authorId   String
   title      String
   content    String
-  isPublic   Boolean  @default(true)
-  emailSent  Boolean  @default(false)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  author     User     @relation(fields: [authorId], references: [id])
-  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  isPublic   Boolean   @default(true)
+  emailSent  Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  author     User      @relation(fields: [authorId], references: [id])
+  campaign   Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  comments   Comment[] // Comments specific to this update
 }
 
 model OtpCode {

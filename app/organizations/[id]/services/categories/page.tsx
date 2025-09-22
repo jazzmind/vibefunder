@@ -148,7 +148,7 @@ export default async function ServiceCategoriesPage({ params }: ServiceCategorie
 
                 {/* Used overlay */}
                 {isUsed && (
-                  <div className="absolute inset-0 bg-gray-50 dark:bg-gray-800 bg-opacity-50 rounded-2xl flex items-center justify-center">
+                  <div className="absolute inset-0 bg-gray-50 dark:bg-gray-800/50 overflow-y-auto h-full w-full z-50 rounded-2xl flex items-center justify-center">
                     <div className="bg-white dark:bg-gray-700 px-4 py-2 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600">
                       <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
                         <svg className="w-4 h-4 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">

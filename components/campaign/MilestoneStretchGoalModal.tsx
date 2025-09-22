@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Modal from '@/components/shared/Modal';
 
 export interface MilestoneFormData {
   name: string;
   pct: number;
   checklistItems: string[];
+  sow?: string;
 }
 
 export interface StretchGoalFormData {
@@ -60,6 +61,7 @@ export default function MilestoneStretchGoalModal({
         name: milestoneData?.name || '',
         pct: milestoneData?.pct || 0,
         checklistItems: milestoneData?.checklistItems || [''],
+        sow: milestoneData?.sow || '',
         title: '',
         description: '',
         targetDollars: 0
@@ -72,12 +74,42 @@ export default function MilestoneStretchGoalModal({
         targetDollars: stretchGoalData?.targetDollars || fundingGoal * 2,
         name: '',
         pct: 0,
-        checklistItems: ['']
+        checklistItems: [''],
+        sow: ''
       };
     }
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Update form data when editData changes
+  useEffect(() => {
+    if (editData && isOpen) {
+      if (isMilestone) {
+        const milestoneData = editData as MilestoneFormData;
+        setFormData({
+          name: milestoneData?.name || '',
+          pct: milestoneData?.pct || 0,
+          checklistItems: milestoneData?.checklistItems || [''],
+          sow: milestoneData?.sow || '',
+          title: '',
+          description: '',
+          targetDollars: 0
+        });
+      } else {
+        const stretchGoalData = editData as StretchGoalFormData;
+        setFormData({
+          title: stretchGoalData?.title || '',
+          description: stretchGoalData?.description || '',
+          targetDollars: stretchGoalData?.targetDollars || fundingGoal * 2,
+          name: '',
+          pct: 0,
+          checklistItems: [''],
+          sow: ''
+        });
+      }
+    }
+  }, [editData, isOpen, isMilestone, fundingGoal]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -112,7 +144,8 @@ export default function MilestoneStretchGoalModal({
         onSubmit({
           name: formData.name || '',
           pct: formData.pct || 0,
-          checklistItems: (formData.checklistItems || []).filter(item => item.trim())
+          checklistItems: (formData.checklistItems || []).filter(item => item.trim()),
+          sow: formData.sow || ''
         } as MilestoneFormData);
       } else {
         onSubmit({
@@ -130,6 +163,7 @@ export default function MilestoneStretchGoalModal({
       name: '',
       pct: 0,
       checklistItems: [''],
+      sow: '',
       title: '',
       description: '',
       targetDollars: 0
@@ -139,7 +173,8 @@ export default function MilestoneStretchGoalModal({
       targetDollars: fundingGoal * 2,
       name: '',
       pct: 0,
-      checklistItems: ['']
+      checklistItems: [''],
+      sow: ''
     });
     setErrors({});
     onClose();
@@ -247,6 +282,23 @@ export default function MilestoneStretchGoalModal({
                 </button>
               </div>
               {errors.checklistItems && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.checklistItems}</p>}
+            </div>
+
+            {/* Statement of Work Field */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Statement of Work
+              </label>
+              <textarea
+                value={formData.sow}
+                onChange={(e) => setFormData(prev => ({ ...prev, sow: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-mono text-sm"
+                placeholder="Enter detailed statement of work (supports markdown)..."
+                rows={6}
+              />
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Detailed description of work to be completed for this milestone. Supports markdown formatting.
+              </p>
             </div>
           </>
         ) : (

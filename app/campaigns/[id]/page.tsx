@@ -302,8 +302,8 @@ export default async function CampaignPage({params}:{params:Promise<{id:string}>
               </div>
             </div>
 
-            {/* Stretch Goals */}
-            {((campaign.stretchGoals as any)?.length > 0 || canEdit) && (
+            {/* Stretch Goals - Hidden for now */}
+            {false && ((campaign.stretchGoals as any)?.length > 0 || canEdit) && (
               <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-sm border border-gray-200 dark:border-gray-700">
                 <div className="flex justify-between items-center mb-6">
                   <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Stretch Goals</h3>

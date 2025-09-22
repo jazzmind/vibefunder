@@ -54,6 +54,11 @@ model Campaign {
   sectors              String[]         @default([])
   leadVideoUrl         String?
   websiteUrl           String?
+  reviewStatus         String?          @default("not_submitted") // not_submitted, pending_review, approved, needs_changes
+  submittedForReviewAt DateTime?
+  reviewFeedback       String?
+  reviewedBy           String?
+  reviewedAt           DateTime?
   badges               Badge[]
   maker                User             @relation("MakerCampaigns", fields: [makerId], references: [id])
   organization         Organization?    @relation("OrganizationCampaigns", fields: [organizationId], references: [id])

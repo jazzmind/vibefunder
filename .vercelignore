@@ -1,0 +1,82 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Testing
+__tests__/
+__mocks__/
+tests/
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+
+# Development
+.env.local
+.env.development
+.env.test
+*.log
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Git
+.git/
+.github/
+.gitignore
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Scripts
+scripts/
+prisma/seed.ts
+
+# Config files
+.prettierrc
+.eslintrc*
+jest.config.*
+playwright.config.ts
+tsconfig.test.json
+
+# Temporary files
+tmp/
+temp/
+.claude-flow/
+memory/
+
+# Build artifacts
+.next/
+out/
+dist/
+build/
+
+# AI assisted coding tools (Claude Code, Claude Flow & Turbo Flow)
+.claude/
+.cursor/
+.hive-mind/
+.mcp.json
+.swarm/
+agents/
+coordination/
+memory/
+CCFOREVER.md
+CLAUDE*
+claude-flow*
+FEEDCLAUD.md
+cf-with-context.sh
+
+# DevPods and devcontainers
+devpods/
+.devcontainer.json
+boot.sh

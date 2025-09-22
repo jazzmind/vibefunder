@@ -1,25 +1,57 @@
 import nodemailer from 'nodemailer';
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'localhost',
-  port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: process.env.SMTP_SECURE === 'true',
-  auth: process.env.SMTP_USER ? {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  } : undefined,
-});
+// Check if we're in development mode without SMTP config
+const isDevelopment = process.env.NODE_ENV !== 'production';
+const hasSmtpConfig = Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+
+// Create appropriate transporter based on environment
+const transporter = !hasSmtpConfig && isDevelopment
+  ? nodemailer.createTransport({
+      // Use ethereal email for development (catches emails without sending)
+      host: 'localhost',
+      port: 1025,
+      ignoreTLS: true,
+      // This will prevent connection errors in dev
+      tls: {
+        rejectUnauthorized: false
+      }
+    })
+  : nodemailer.createTransport({
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: parseInt(process.env.SMTP_PORT || '587'),
+      secure: process.env.SMTP_SECURE === 'true',
+      auth: process.env.SMTP_USER ? {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      } : undefined,
+    });
 
 export async function sendOtpEmail(email: string, code: string) {
   const subject = 'Your VibeFunder Sign-in Code';
-  
+
+  // In development without SMTP, just log the code
+  if (!hasSmtpConfig && isDevelopment) {
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('📧 DEVELOPMENT MODE - Email Not Sent');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log(`To: ${email}`);
+    console.log(`Subject: ${subject}`);
+    console.log(`OTP Code: ${code}`);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('💡 To enable real email sending:');
+    console.log('   1. Add SMTP credentials to .env file');
+    console.log('   2. Or use a local mail catcher like MailHog');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    return true; // Return true so the flow continues
+  }
+
   const html = `
     <div style="font-family: system-ui, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
       <div style="background: linear-gradient(135deg, #6757f5 0%, #9d93ff 100%); padding: 30px; border-radius: 12px; text-align: center; margin-bottom: 30px;">
         <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 800;">VibeFunder</h1>
         <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 16px;">Ship the vibe. Not the pitch deck.</p>
       </div>
-      
+
       <div style="background: #f8fafc; padding: 30px; border-radius: 12px; text-align: center; margin-bottom: 30px;">
         <h2 style="color: #1e293b; margin: 0 0 16px 0; font-size: 24px;">Your Sign-in Code</h2>
         <div style="background: white; padding: 20px; border-radius: 8px; border: 2px solid #e2e8f0; margin: 20px 0;">
@@ -27,7 +59,7 @@ export async function sendOtpEmail(email: string, code: string) {
         </div>
         <p style="color: #64748b; margin: 16px 0 0 0; font-size: 14px;">This code expires in 10 minutes</p>
       </div>
-      
+
       <div style="text-align: center; color: #64748b; font-size: 14px;">
         <p>If you didn't request this code, you can safely ignore this email.</p>
         <p style="margin-top: 20px;">
@@ -53,11 +85,20 @@ If you didn't request this code, you can safely ignore this email.
       text,
       html,
     });
-    
+
     console.log(`✓ OTP email sent to ${email}`);
     return true;
   } catch (error) {
     console.error('Failed to send OTP email:', error);
+    // In development, still return true but log the error
+    if (isDevelopment) {
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('⚠️  DEVELOPMENT MODE - Email Failed');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log(`OTP Code for ${email}: ${code}`);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      return true; // Still return true in dev mode
+    }
     return false;
   }
 }

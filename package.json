@@ -4,7 +4,8 @@
   "version": "0.1.1",
   "scripts": {
     "dev": "lsof -ti:3900 | xargs -r kill -9 2>/dev/null || true && next dev --port 3900",
-    "build": "tsc",
+    "build": "next build",
+    "build:check": "tsc --noEmit",
     "api": "lsof -ti:3901 | xargs -r kill -9 2>/dev/null || true && LOCAL_API=true next dev --port 3901",
     "dev:test": "lsof -ti:3101 | xargs -r kill -9 2>/dev/null || true && TEST_PORT=3101 NODE_ENV=test LOCAL_API=true next dev --port 3101",
     "postinstall": "prisma generate",
@@ -95,6 +96,8 @@
   },
   "devDependencies": {
     "@faker-js/faker": "^10.0.0",
+    "@playwright/test": "^1.55.0",
+    "@types/bcryptjs": "^2.4.6",
     "@types/jest": "^29.5.8",
     "@types/node": "^20.19.17",
     "@types/nodemailer": "^6.4.14",

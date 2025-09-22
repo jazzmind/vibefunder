@@ -181,7 +181,7 @@ export default function AIContentEnhancer({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h4 className="text-lg font-medium text-gray-900 dark:text-white">🤖 AI Content Enhancer</h4>
+          <h4 className="text-lg font-medium text-gray-900 dark:text-white">AI Content Enhancer</h4>
           <p className="text-sm text-gray-600 dark:text-gray-400">
             Get AI-powered suggestions to improve your campaign description
           </p>

@@ -108,6 +108,68 @@ export default async function AdminCampaignDetail({
     }
   }
 
+  async function approveCampaign(formData: FormData) {
+    "use server";
+    
+    const session = await auth();
+    if (!session?.user?.roles?.includes('admin')) {
+      redirect('/signin');
+    }
+
+    const campaignId = formData.get("campaignId") as string;
+
+    try {
+      await prisma.campaign.update({
+        where: { id: campaignId },
+        data: {
+          reviewStatus: 'approved',
+          reviewedBy: session.user.id,
+          reviewedAt: new Date(),
+          reviewFeedback: null,
+        }
+      });
+      
+      redirect(`/admin/campaigns/${campaignId}?success=Campaign approved for launch`);
+    } catch (error) {
+      console.error('Error approving campaign:', error);
+      redirect(`/admin/campaigns/${campaignId}?error=Failed to approve campaign`);
+    }
+  }
+
+  async function requestChanges(formData: FormData) {
+    "use server";
+    
+    const session = await auth();
+    if (!session?.user?.roles?.includes('admin')) {
+      redirect('/signin');
+    }
+
+    const campaignId = formData.get("campaignId") as string;
+    const feedback = formData.get("feedback") as string;
+
+    if (!feedback.trim()) {
+      redirect(`/admin/campaigns/${campaignId}?error=Feedback is required when requesting changes`);
+      return;
+    }
+
+    try {
+      await prisma.campaign.update({
+        where: { id: campaignId },
+        data: {
+          reviewStatus: 'needs_changes',
+          reviewedBy: session.user.id,
+          reviewedAt: new Date(),
+          reviewFeedback: feedback.trim(),
+        }
+      });
+      
+      redirect(`/admin/campaigns/${campaignId}?success=Changes requested successfully`);
+    } catch (error) {
+      console.error('Error requesting changes:', error);
+      redirect(`/admin/campaigns/${campaignId}?error=Failed to request changes`);
+    }
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
@@ -341,6 +403,95 @@ export default async function AdminCampaignDetail({
               </button>
             </form>
           </div>
+
+          {/* Review Management */}
+          {campaign.reviewStatus === 'pending_review' && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                Review Management
+              </h3>
+              
+              <div className="space-y-4">
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                  <p className="text-sm text-blue-700 dark:text-blue-300">
+                    This campaign has been submitted for review on{' '}
+                    {campaign.submittedForReviewAt ? new Date(campaign.submittedForReviewAt).toLocaleDateString() : 'unknown date'}.
+                  </p>
+                </div>
+
+                <form action={approveCampaign} className="space-y-3">
+                  <input type="hidden" name="campaignId" value={campaign.id} />
+                  <button type="submit" className="w-full btn bg-green-600 hover:bg-green-700 text-white">
+                    ✅ Approve for Launch
+                  </button>
+                </form>
+
+                <form action={requestChanges} className="space-y-3">
+                  <input type="hidden" name="campaignId" value={campaign.id} />
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Feedback for Changes Required:
+                  </label>
+                  <textarea
+                    name="feedback"
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    placeholder="Explain what changes are needed..."
+                    required
+                  />
+                  <button type="submit" className="w-full btn bg-yellow-600 hover:bg-yellow-700 text-white">
+                    ⚠ Request Changes
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* Review Status Display */}
+          {campaign.reviewStatus && campaign.reviewStatus !== 'not_submitted' && campaign.reviewStatus !== 'pending_review' && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                Review Status
+              </h3>
+              
+              <div className="space-y-3">
+                <div className={`p-3 rounded-lg ${
+                  campaign.reviewStatus === 'approved' 
+                    ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
+                    : 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800'
+                }`}>
+                  <div className="flex items-center space-x-2 mb-2">
+                    <span className={`font-medium ${
+                      campaign.reviewStatus === 'approved' 
+                        ? 'text-green-700 dark:text-green-300'
+                        : 'text-yellow-700 dark:text-yellow-300'
+                    }`}>
+                      {campaign.reviewStatus === 'approved' ? '✅ Approved' : '⚠ Changes Requested'}
+                    </span>
+                  </div>
+                  {campaign.reviewedAt && (
+                    <p className={`text-sm ${
+                      campaign.reviewStatus === 'approved' 
+                        ? 'text-green-600 dark:text-green-400'
+                        : 'text-yellow-600 dark:text-yellow-400'
+                    }`}>
+                      Reviewed on {new Date(campaign.reviewedAt).toLocaleDateString()}
+                    </p>
+                  )}
+                  {campaign.reviewFeedback && (
+                    <div className="mt-2 pt-2 border-t border-current border-opacity-20">
+                      <p className={`text-sm ${
+                        campaign.reviewStatus === 'approved' 
+                          ? 'text-green-700 dark:text-green-300'
+                          : 'text-yellow-700 dark:text-yellow-300'
+                      }`}>
+                        <strong>Feedback:</strong> {campaign.reviewFeedback}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Quick Actions */}
           <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">

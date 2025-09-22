@@ -16,7 +16,11 @@ export default async function AdminCampaigns({
   }
 
   const campaigns = await prisma.campaign.findMany({
-    orderBy: { createdAt: 'desc' },
+    orderBy: [
+      { reviewStatus: 'asc' }, // pending_review first
+      { submittedForReviewAt: 'desc' }, // newest submissions first within review status
+      { createdAt: 'desc' }
+    ],
     include: {
       maker: true,
       organization: true,
@@ -31,13 +35,34 @@ export default async function AdminCampaigns({
     }
   });
 
+  // Group campaigns by review status for better organization
+  const pendingReviewCampaigns = campaigns.filter(c => c.reviewStatus === 'pending_review');
+  const needsChangesCampaigns = campaigns.filter(c => c.reviewStatus === 'needs_changes');
+  const otherCampaigns = campaigns.filter(c => !['pending_review', 'needs_changes'].includes(c.reviewStatus || ''));
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Campaign Management</h1>
-        <p className="text-gray-600 dark:text-gray-300 mt-2">
-          Click on any campaign to view details and manage status, edit, or delete.
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Campaign Management</h1>
+            <p className="text-gray-600 dark:text-gray-300 mt-2">
+              Click on any campaign to view details and manage status, edit, or delete.
+            </p>
+          </div>
+          <div className="flex items-center space-x-4 text-sm">
+            {pendingReviewCampaigns.length > 0 && (
+              <div className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-3 py-1 rounded-full">
+                {pendingReviewCampaigns.length} pending review{pendingReviewCampaigns.length !== 1 ? 's' : ''}
+              </div>
+            )}
+            {needsChangesCampaigns.length > 0 && (
+              <div className="bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 px-3 py-1 rounded-full">
+                {needsChangesCampaigns.length} need{needsChangesCampaigns.length === 1 ? 's' : ''} changes
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {params.error && (
@@ -65,6 +90,9 @@ export default async function AdminCampaigns({
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Review Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Funding
@@ -130,6 +158,27 @@ export default async function AdminCampaigns({
                         }`}>
                           {campaign.status}
                         </span>
+                      </Link>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <Link href={`/admin/campaigns/${campaign.id}`} className="block">
+                        {campaign.reviewStatus === 'pending_review' ? (
+                          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
+                            📋 Pending Review
+                          </span>
+                        ) : campaign.reviewStatus === 'approved' ? (
+                          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
+                            ✅ Approved
+                          </span>
+                        ) : campaign.reviewStatus === 'needs_changes' ? (
+                          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200">
+                            ⚠ Needs Changes
+                          </span>
+                        ) : (
+                          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">
+                            Not Submitted
+                          </span>
+                        )}
                       </Link>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">

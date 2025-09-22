@@ -51,6 +51,11 @@ model Campaign {
   sectors              String[]         @default([])
   requireBackerAccount Boolean          @default(true)
   onlyBackersComment   Boolean          @default(false)
+  reviewStatus         String?          @default("not_submitted") // not_submitted, pending_review, approved, needs_changes
+  submittedForReviewAt DateTime?
+  reviewFeedback       String?
+  reviewedBy           String?
+  reviewedAt           DateTime?
   createdAt            DateTime         @default(now())
   updatedAt            DateTime         @default(now()) @updatedAt
   endsAt               DateTime?
